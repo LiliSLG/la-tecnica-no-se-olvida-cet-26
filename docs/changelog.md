@@ -1,5 +1,23 @@
 # Changelog
 
+# Changelog
+
+## 2024-06-01
+
+- Migrated from Firebase Firestore to Supabase/Postgres relational model.
+- Created core tables:
+    - personas
+    - temas
+    - organizaciones
+    - noticias
+    - entrevistas
+    - proyectos
+- Created all N:M relationship tables.
+- Defined usage of Supabase Storage instead of Firebase Storage.
+- Defined phase-based migration approach: Phase 1 (schema), Phase 2 (services adaptation), Phase 3 (AI integration).
+
+
+
 ## 31/05/2025
 - Started centralizing project context for AI (Firebase Studio) interaction.
 - Defined `docs/schemas.md` with current TypeScript interfaces.

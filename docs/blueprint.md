@@ -1,17 +1,37 @@
 # **App Name**: La técnica no se olvida
+
 ## Core Features:
 
-- Project Intro: A landing page that will describe the goals and scope of the project: the preservation of rural knowledge and technical projects from the students of the CET N°26 of Ingeniero Jacobacci.
-- Project Catalog: Organize student technical projects in a clear, filterable manner (by year/topic).  Require users to log in to view the projects.
-- Oral History Archive: Present interviews (text, audio, video) with rural families.
-- Documentation: Provide instructions on usage, documentation and maintenance for future students and teachers.
-- AI-powered Knowledge Base: Enable a user login, then respond to freeform questions based on the project information and documentation. An AI tool should identify whether the available documentation contains an answer to the question, and if so, present it to the user.
+- **Project Intro:** A landing page that describes the goals and scope of the project: the preservation of rural knowledge and technical projects from the students of the CET N°26 of Ingeniero Jacobacci.
+- **Project Catalog:** Organizes student technical projects in a clear, filterable manner (by year/topic). Requires users to log in to view the projects.
+- **Oral History Archive:** Presents interviews (text, audio, video) with rural families and local knowledge holders.
+- **Documentation:** Provides instructions on usage, documentation, and maintenance for future students and teachers.
+- **AI-powered Knowledge Base:** Enables user login, then responds to freeform questions based on project information and documentation. The AI identifies whether available documentation contains an answer and presents it to the user.
+- **Admin Panel:** Allows authorized users to manage personas, organizations, projects, news, interviews.
+- **Rural Community Visibility:** Highlights the role of the CET in the local rural context and fosters intergenerational knowledge sharing.
+
+## Tech Stack:
+
+- **Frontend:** Next.js + React
+- **Backend:** Supabase (Postgres + Storage + Auth)
+- **Database:** Fully relational model with N:M relations, using enums, arrays, jsonb where appropriate.
+- **Storage:** Supabase Storage for images, documents, videos.
+- **AI:** Planned future integration with RAG-based system over Postgres + Storage.
+- **Auth:** Supabase Auth (email-based, possibly extendable to OAuth).
 
 ## Style Guidelines:
 
-- The primary color will be a muted violet (#A994D9) to represent creativity and wisdom, as this is a project that promotes education. It balances the technical aspect with the ingenuity required to realize each student project.
-- Background color: Use a very light blue (#EBF4FA) to create a calming and trustworthy base.
-- Accent color: A desaturated green (#98D9A2), lighter than the primary color, that complements the primary while recalling the rural origins of the technical school, as well as the color present on the logo of CET N°26 Ingeniero Jacobacci.
-- Use clean, readable sans-serif fonts.
-- Icons should be simple and illustrative, reflecting the technical and rural aspects of the content.
-- Maintain a clear, structured layout with easy navigation.
+- **Primary color:** Muted violet (#A994D9), representing creativity and wisdom, aligned with education.
+- **Background color:** Very light blue (#EBF4FA), creating a calming and trustworthy base.
+- **Accent color:** Desaturated green (#98D9A2), evoking the rural origins of the technical school and matching the CET N°26 logo.
+- **Typography:** Clean, readable sans-serif fonts.
+- **Icons:** Simple and illustrative, reflecting both technical and rural aspects of the content.
+- **Layout:** Clear, structured layout with intuitive navigation.
+
+## Design Considerations:
+
+- The system should remain easy to maintain and evolve by future CET students and teachers.
+- Data structure and UX must prioritize clarity and accessibility for non-technical users.
+- The platform should showcase student work while preserving and honoring local rural knowledge.
+- Content curation and editorial roles may evolve — the system must be flexible to accommodate this.
+
