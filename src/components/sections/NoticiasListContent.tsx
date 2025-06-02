@@ -4,10 +4,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getPublicadasNoticias } from '@/lib/firebase/noticiasService';
+import { getPublicadasNoticias } from '@/lib/supabase/noticiasService';
 import type { Noticia, Persona } from '@/lib/types'; // Import Persona
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { getPersonaById } from '@/lib/firebase/personasService'; // Import getPersonaById
+import { getPersonaById } from "@/lib/supabase/personasService"; // Import getPersonaById
 import { useToast } from '@/hooks/use-toast';
 import { Newspaper, CalendarDays, Link as LinkIconLucide, ChevronRight, RefreshCw, AlertTriangle, PlusCircle, Filter, XCircle } from 'lucide-react'; // Added PlusCircle, Filter, XCircle
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,7 @@ const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
 
   useEffect(() => {
     if (noticia.fechaPublicacion) {
-      const dateObj = noticia.fechaPublicacion instanceof Timestamp ? noticia.fechaPublicacion.toDate() : new Date(noticia.fechaPublicacion);
+      const dateObj = new Date(noticia.fechaPublicacion);
       setFormattedDate(dateObj.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }));
     }
   }, [noticia.fechaPublicacion]);
@@ -43,7 +43,7 @@ const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
             src={noticia.imagenPrincipalURL}
             alt={`Imagen de ${noticia.titulo}`}
             fill
-            style={{objectFit:"cover"}}
+            style={{ objectFit: "cover" }}
             className="transition-transform duration-300 group-hover:scale-105"
             data-ai-hint="news article image"
           />
@@ -51,39 +51,58 @@ const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
       )}
       <CardHeader className="pb-3">
         <Link {...linkProps} className="block">
-            <CardTitle className="text-xl text-primary group-hover:underline">{noticia.titulo}</CardTitle>
+          <CardTitle className="text-xl text-primary group-hover:underline">
+            {noticia.titulo}
+          </CardTitle>
         </Link>
-        {noticia.subtitulo && <CardDescription className="text-sm text-muted-foreground pt-1">{noticia.subtitulo}</CardDescription>}
+        {noticia.subtitulo && (
+          <CardDescription className="text-sm text-muted-foreground pt-1">
+            {noticia.subtitulo}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-grow space-y-3 pb-3">
-        {noticia.tipoContenido === 'articulo_propio' && noticia.contenido && (
+        {noticia.tipoContenido === "articulo_propio" && noticia.contenido && (
           <p className="text-sm text-foreground/80 h-16 overflow-hidden text-ellipsis">
             {noticia.contenido.substring(0, 120)}...
           </p>
         )}
-        {noticia.tipoContenido === 'enlace_externo' && noticia.resumenOContextoInterno && (
-          <p className="text-sm text-foreground/80 h-16 overflow-hidden text-ellipsis">
-            {noticia.resumenOContextoInterno.substring(0, 120)}...
-          </p>
-        )}
+        {noticia.tipoContenido === "enlace_externo" &&
+          noticia.resumenOContextoInterno && (
+            <p className="text-sm text-foreground/80 h-16 overflow-hidden text-ellipsis">
+              {noticia.resumenOContextoInterno.substring(0, 120)}...
+            </p>
+          )}
         <div className="text-xs text-muted-foreground flex items-center gap-1.5">
           <CalendarDays className="h-3.5 w-3.5 text-primary/70" />
-          {formattedDate || 'Cargando fecha...'}
+          {formattedDate || "Cargando fecha..."}
           {noticia.fuenteExterna && (
-            <span className="ml-1 pl-1 border-l border-border">Fuente: {noticia.fuenteExterna}</span>
+            <span className="ml-1 pl-1 border-l border-border">
+              Fuente: {noticia.fuenteExterna}
+            </span>
           )}
         </div>
-        {noticia.categoriasNoticia && noticia.categoriasNoticia.length > 0 && (
+        {noticia.temas && noticia.temas.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-2">
-            {noticia.categoriasNoticia.map(cat => <Badge key={cat} variant="secondary" className="text-xs">{cat}</Badge>)}
+            {noticia.temas.map((t) => (
+              <Badge key={t.id} variant="secondary" className="text-xs">
+                {t.nombre}
+              </Badge>
+            ))}
           </div>
         )}
       </CardContent>
       <CardFooter className="pt-0 pb-4">
-        <Button asChild variant="link" className="p-0 h-auto text-primary text-sm font-medium">
+        <Button
+          asChild
+          variant="link"
+          className="p-0 h-auto text-primary text-sm font-medium"
+        >
           <Link {...linkProps}>
-            Leer Más 
-            {noticia.tipoContenido === 'enlace_externo' && <LinkIconLucide className="ml-1.5 h-3.5 w-3.5"/>}
+            Leer Más
+            {noticia.tipoContenido === "enlace_externo" && (
+              <LinkIconLucide className="ml-1.5 h-3.5 w-3.5" />
+            )}
             <ChevronRight className="ml-1 h-4 w-4" />
           </Link>
         </Button>
@@ -109,7 +128,7 @@ export default function NoticiasListContent() {
   useEffect(() => {
     if (user) {
       const fetchPersonaData = async () => {
-        const pData = await getPersonaById(user.uid);
+        const pData = await getPersonaById(user.id);
         setPersona(pData);
         if (pData?.capacidadesPlataforma?.includes('es_admin_noticias')) {
           setCanCreateNoticias(true);
@@ -133,20 +152,27 @@ export default function NoticiasListContent() {
     setLoading(true);
     setError(null);
     try {
-      const options: { limit?: number; esDestacada?: boolean | 'all'; categoria?: string | 'all' } = { limit: 20 }; // Limit inicial
-      if (esDestacadaFilter !== 'all') options.esDestacada = esDestacadaFilter;
-      if (selectedCategoriaFilter !== 'all') options.categoria = selectedCategoriaFilter;
-      
+      const options: {
+        limit?: number;
+        esDestacada?: boolean | "all";
+        categoria?: string | "all";
+      } = { limit: 20 }; // Limit inicial
+      if (esDestacadaFilter !== "all") options.esDestacada = esDestacadaFilter;
+      if (selectedCategoriaFilter !== "all")
+        options.categoria = selectedCategoriaFilter;
+
       const fetchedNoticias = await getPublicadasNoticias(options);
       setNoticias(fetchedNoticias);
 
-      // Extraer categorías únicas solo de las noticias publicadas inicialmente (sin filtros aplicados a la query)
-      if (selectedCategoriaFilter === 'all' && esDestacadaFilter === 'all') {
+      // Extraer nombres únicos de temas solo de las noticias publicadas inicialmente (sin filtros aplicados a la query)
+      if (selectedCategoriaFilter === "all" && esDestacadaFilter === "all") {
         const uniqueCats = new Set<string>();
-        fetchedNoticias.forEach(n => n.categoriasNoticia?.forEach(cat => uniqueCats.add(cat)));
+        fetchedNoticias.forEach((n) =>
+          n.temas?.forEach((t) => uniqueCats.add(t.nombre))
+        );
         setAllUniqueCategorias(Array.from(uniqueCats).sort());
       }
-
+      
     } catch (err) {
       console.error("Error fetching public noticias:", err);
       setError("No se pudieron cargar las noticias.");

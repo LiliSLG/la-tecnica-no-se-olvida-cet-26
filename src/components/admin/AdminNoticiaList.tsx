@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllNoticiasForAdmin, logicalDeleteNoticia, restoreNoticia } from '@/lib/firebase/noticiasService';
+import { getAllNoticiasForAdmin, logicalDeleteNoticia, restoreNoticia } from '@/lib/supabase/noticiasService';
 import type { Noticia } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,7 +75,7 @@ export default function AdminNoticiaList() {
   const handleLogicalDelete = async () => {
     if (!itemToDelete || !itemToDelete.id || !user) return;
     try {
-      await logicalDeleteNoticia(itemToDelete.id, user.uid);
+      await logicalDeleteNoticia(itemToDelete.id, user.id);
       toast({ title: "Éxito", description: "Noticia eliminada lógicamente." });
       fetchNoticias(); // Refetch to update list
     } catch (error) {
@@ -90,7 +90,7 @@ export default function AdminNoticiaList() {
   const handleRestore = async (noticiaId: string) => {
     if (!user) return;
     try {
-      await restoreNoticia(noticiaId, user.uid);
+      await restoreNoticia(noticiaId, user.id);
       toast({ title: "Éxito", description: "Noticia restaurada." });
       fetchNoticias(); // Refetch to update list
     } catch (error) {

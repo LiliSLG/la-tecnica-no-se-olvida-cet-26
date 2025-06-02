@@ -1,37 +1,65 @@
 "use server";
 
 import { supabase } from "@/lib/supabase/supabaseClient";
-import type { Noticia } from "@/lib/types";
+import type { Noticia, TemaOption } from "@/lib/types";
 import type { NoticiaFormData } from "@/lib/schemas/noticiaSchema";
-import { convertFormDataForFirestoreNoticia } from "@/lib/schemas/noticiaSchema";
 
 const TABLE = "noticias";
+const PIVOT_TABLE = "noticia_tema";
 
 export const addNoticia = async (
   data: NoticiaFormData,
   adminUid: string
 ): Promise<string> => {
-  const newNoticia = {
-    ...convertFormDataForFirestoreNoticia(data),
+  // 1) Insertar la noticia sin CREATED_AT / UPDATED_AT
+  const newNoticia: Partial<Noticia> = {
+    tipoContenido: data.tipoContenido,
+    titulo: data.titulo,
+    subtitulo: data.subtitulo || null,
+    contenido: data.contenido || null,
+    urlExterna: data.urlExterna || null,
+    fuenteExterna: data.fuenteExterna || null,
+    resumenOContextoInterno: data.resumenOContextoInterno || null,
+    fechaPublicacion: data.fechaPublicacion.toISOString(),
+    autorNoticia: data.autorNoticia || null,
+    imagenPrincipalURL: data.imagenPrincipalURL || null,
+    esDestacada: data.esDestacada ?? false,
+    estaPublicada: data.estaPublicada ?? false,
     creadoPorUid: adminUid,
     modificadoPorUid: adminUid,
-    creadoEn: new Date().toISOString(),
-    actualizadoEn: new Date().toISOString(),
     estaEliminada: false,
+    // ⚠ No enviamos creadoEn / actualizadoEn aquí
   };
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error: insertError } = await supabase
     .from(TABLE)
     .insert([newNoticia])
-    .select()
+    .select("id")
     .single();
 
-  if (error) {
-    console.error("Error adding noticia:", error);
-    throw error;
+  if (insertError || !inserted) {
+    console.error("Error adding noticia:", insertError);
+    throw insertError;
+  }
+  const noticiaId = inserted.id;
+
+  // 2) Insertar filas en el pivot noticia_tema
+  const temasIds = (data.temas || []).map((t: TemaOption) => t.id);
+  if (temasIds.length > 0) {
+    const pivotRows = temasIds.map((temaId) => ({
+      noticia_id: noticiaId,
+      tema_id: temaId,
+    }));
+    const { error: pivotError } = await supabase
+      .from(PIVOT_TABLE)
+      .insert(pivotRows);
+    if (pivotError) {
+      console.error("Error inserting noticia_tema pivot:", pivotError);
+      throw pivotError;
+    }
   }
 
-  return inserted.id;
+  return noticiaId;
 };
 
 export const updateNoticia = async (
@@ -39,17 +67,64 @@ export const updateNoticia = async (
   data: NoticiaFormData,
   adminUid: string
 ): Promise<void> => {
-  const updatedData = {
-    ...convertFormDataForFirestoreNoticia(data),
+  // 1) Actualizar la fila principal en "noticias" (sin UPDATED_AT manual)
+  const updatedData: Partial<Noticia> = {
+    tipoContenido: data.tipoContenido,
+    titulo: data.titulo,
+    subtitulo: data.subtitulo || null,
+    contenido: data.contenido || null,
+    urlExterna: data.urlExterna || null,
+    fuenteExterna: data.fuenteExterna || null,
+    resumenOContextoInterno: data.resumenOContextoInterno || null,
+    fechaPublicacion: data.fechaPublicacion.toISOString(),
+    autorNoticia: data.autorNoticia || null,
+    imagenPrincipalURL: data.imagenPrincipalURL || null,
+    esDestacada: data.esDestacada ?? false,
+    estaPublicada: data.estaPublicada ?? false,
     modificadoPorUid: adminUid,
-    actualizadoEn: new Date().toISOString(),
+    // ⚠ No enviamos actualizadoEn aquí: que el DEFAULT de la tabla se encargue
   };
 
-  const { error } = await supabase.from(TABLE).update(updatedData).eq("id", id);
+  const { error: updateError } = await supabase
+    .from(TABLE)
+    .update(updatedData)
+    .eq("id", id);
 
-  if (error) {
-    console.error("Error updating noticia:", error);
-    throw error;
+  if (updateError) {
+    console.error("Error updating noticia:", updateError);
+    throw updateError;
+  }
+
+  // 2) Sincronizar el pivot noticia_tema
+  const { error: deletePivotError } = await supabase
+    .from(PIVOT_TABLE)
+    .delete()
+    .eq("noticia_id", id);
+
+  if (deletePivotError) {
+    console.error(
+      "Error deleting existing noticia_tema pivot rows:",
+      deletePivotError
+    );
+    throw deletePivotError;
+  }
+
+  const temasIds = (data.temas || []).map((t: TemaOption) => t.id);
+  if (temasIds.length > 0) {
+    const pivotRows = temasIds.map((temaId) => ({
+      noticia_id: id,
+      tema_id: temaId,
+    }));
+    const { error: insertPivotError } = await supabase
+      .from(PIVOT_TABLE)
+      .insert(pivotRows);
+    if (insertPivotError) {
+      console.error(
+        "Error inserting noticia_tema pivot rows:",
+        insertPivotError
+      );
+      throw insertPivotError;
+    }
   }
 };
 
@@ -64,7 +139,7 @@ export const logicalDeleteNoticia = async (
       eliminadaPorUid: adminUid,
       eliminadaEn: new Date().toISOString(),
       modificadoPorUid: adminUid,
-      actualizadoEn: new Date().toISOString(),
+      // ⚠ No enviamos actualizadoEn aquí
       estaPublicada: false,
     })
     .eq("id", id);
@@ -86,7 +161,7 @@ export const restoreNoticia = async (
       eliminadaPorUid: null,
       eliminadaEn: null,
       modificadoPorUid: adminUid,
-      actualizadoEn: new Date().toISOString(),
+      // ⚠ No enviamos actualizadoEn
     })
     .eq("id", id);
 
@@ -97,18 +172,37 @@ export const restoreNoticia = async (
 };
 
 export const getNoticiaById = async (id: string): Promise<Noticia | null> => {
-  const { data, error } = await supabase
+  const { data: noticiaData, error: noticiaError } = await supabase
     .from(TABLE)
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error) {
-    console.error("Error getting noticia by ID:", error);
+  if (noticiaError || !noticiaData) {
+    console.error("Error getting noticia by ID:", noticiaError);
     return null;
   }
 
-  return data as Noticia;
+  // Traer temas desde pivote
+  const { data: pivotRows, error: pivotError } = await supabase
+    .from(PIVOT_TABLE)
+    .select("tema_id, temas(id, nombre)")
+    .eq("noticia_id", id);
+
+  if (pivotError) {
+    console.error("Error fetching noticia_tema pivot rows:", pivotError);
+    return noticiaData as Noticia;
+  }
+
+  const temas: TemaOption[] = (pivotRows || []).map((row: any) => ({
+    id: row.tema_id,
+    nombre: row.temas.nombre,
+  }));
+
+  return {
+    ...noticiaData,
+    temas,
+  } as unknown as Noticia;
 };
 
 interface AdminNoticiasFilters {
@@ -166,6 +260,46 @@ interface PublicNoticiasOptions {
 export const getPublicadasNoticias = async (
   options?: PublicNoticiasOptions
 ): Promise<Noticia[]> => {
+  if (options?.categoria && options.categoria !== "all") {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select(
+        `
+        *, 
+        noticia_tema!inner(
+          tema_id
+        )
+      `
+      )
+      .eq("estaPublicada", true)
+      .neq("estaEliminada", true)
+      .eq("noticia_tema.tema_id", options.categoria)
+      .order("fechaPublicacion", { ascending: false });
+
+    if (error) {
+      console.error("Error filtering published noticias by category:", error);
+      throw error;
+    }
+
+    const uniqueMap = new Map<string, any>();
+    data?.forEach((row: any) => {
+      const noticiaId = row.id;
+      if (!uniqueMap.has(noticiaId)) {
+        uniqueMap.set(noticiaId, {
+          ...row,
+          temas: [{ id: row.noticia_tema.tema_id, nombre: row.temas?.nombre }],
+        });
+      } else {
+        (uniqueMap.get(noticiaId).temas as TemaOption[]).push({
+          id: row.noticia_tema.tema_id,
+          nombre: row.temas?.nombre,
+        });
+      }
+    });
+
+    return Array.from(uniqueMap.values()) as Noticia[];
+  }
+
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -174,9 +308,6 @@ export const getPublicadasNoticias = async (
 
   if (options?.esDestacada !== undefined && options.esDestacada !== "all") {
     query = query.eq("esDestacada", options.esDestacada);
-  }
-  if (options?.categoria && options.categoria !== "all") {
-    query = query.contains("idsTemas", [options.categoria]);
   }
   if (options?.limit) {
     query = query.limit(options.limit);

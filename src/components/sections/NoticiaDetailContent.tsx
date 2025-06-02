@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getNoticiaById } from '@/lib/firebase/noticiasService';
+import { getNoticiaById } from '@/lib/supabase/noticiasService';
 import type { Noticia } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Newspaper, CalendarDays, UserCircle, Tag, ArrowLeft, AlertTriangle, RefreshCw, Link as LinkIcon } from 'lucide-react';
@@ -96,36 +96,70 @@ export default function NoticiaDetailContent({ noticiaId }: NoticiaDetailContent
     <div className="space-y-8 max-w-4xl mx-auto">
       <Breadcrumbs items={breadcrumbItems} />
       <Button asChild variant="outline" size="sm" className="mb-6">
-        <Link href="/noticias"><ArrowLeft className="mr-2 h-4 w-4" /> Volver a Noticias</Link>
+        <Link href="/noticias">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Noticias
+        </Link>
       </Button>
 
       <article className="bg-card p-6 sm:p-8 md:p-10 rounded-xl shadow-xl">
         {noticia.imagenPrincipalURL && (
           <div className="relative w-full h-64 sm:h-80 md:h-96 mb-8 rounded-lg overflow-hidden shadow-lg">
-            <Image src={noticia.imagenPrincipalURL} alt={`Imagen de ${noticia.titulo}`} fill style={{objectFit: 'cover'}} data-ai-hint="news article image"/>
+            <Image
+              src={noticia.imagenPrincipalURL}
+              alt={`Imagen de ${noticia.titulo}`}
+              fill
+              style={{ objectFit: "cover" }}
+              data-ai-hint="news article image"
+            />
           </div>
         )}
 
         <header className="mb-8 pb-6 border-b border-border">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary mb-3">{noticia.titulo}</h1>
-          {noticia.subtitulo && <p className="text-lg sm:text-xl text-muted-foreground mb-4">{noticia.subtitulo}</p>}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary mb-3">
+            {noticia.titulo}
+          </h1>
+          {noticia.subtitulo && (
+            <p className="text-lg sm:text-xl text-muted-foreground mb-4">
+              {noticia.subtitulo}
+            </p>
+          )}
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <span className="flex items-center"><CalendarDays className="h-4 w-4 mr-1.5 text-primary/70" /> Publicado: {formatDateSafe(noticia.fechaPublicacion)}</span>
-            {noticia.autorNoticia && <span className="flex items-center"><UserCircle className="h-4 w-4 mr-1.5 text-primary/70" /> Por: {noticia.autorNoticia}</span>}
+            <span className="flex items-center">
+              <CalendarDays className="h-4 w-4 mr-1.5 text-primary/70" />{" "}
+              Publicado: {formatDateSafe(noticia.fechaPublicacion)}
+            </span>
+            {noticia.autorNoticia && (
+              <span className="flex items-center">
+                <UserCircle className="h-4 w-4 mr-1.5 text-primary/70" /> Por:{" "}
+                {noticia.autorNoticia}
+              </span>
+            )}
           </div>
         </header>
 
         {noticia.contenido && (
-          <section className="prose prose-lg dark:prose-invert max-w-none text-foreground/90 whitespace-pre-line leading-relaxed" dangerouslySetInnerHTML={{ __html: noticia.contenido.replace(/\n/g, '<br />') }} />
+          <section
+            className="prose prose-lg dark:prose-invert max-w-none text-foreground/90 whitespace-pre-line leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: noticia.contenido.replace(/\n/g, "<br />"),
+            }}
+          />
         )}
-        
-        {noticia.categoriasNoticia && noticia.categoriasNoticia.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-border">
-                <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-1.5"><Tag className="h-5 w-5"/>Categorías</h3>
-                <div className="flex flex-wrap gap-2">
-                    {noticia.categoriasNoticia.map(cat => <Badge key={cat} variant="secondary">{cat}</Badge>)}
-                </div>
+
+        {noticia.temas && noticia.temas.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-border">
+            <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-1.5">
+              <Tag className="h-5 w-5" />
+              Categorías
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {noticia.temas.map((t) => (
+                <Badge key={t.id} variant="secondary">
+                  {t.nombre}
+                </Badge>
+              ))}
             </div>
+          </div>
         )}
       </article>
     </div>

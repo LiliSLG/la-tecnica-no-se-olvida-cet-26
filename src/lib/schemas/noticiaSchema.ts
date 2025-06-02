@@ -1,124 +1,135 @@
-
 "use client";
 
-import { z } from 'zod';
-import { Timestamp } from 'firebase/firestore';
-import type { Noticia } from '@/lib/types';
-import { stringToArrayZod } from '@/lib/schemas/projectSchema'; // Importar desde projectSchema
+import { z } from "zod";
+import type { Noticia, Tema, TemaOption } from "@/lib/types";
+import { stringToArrayZod } from "@/lib/schemas/projectSchema";
 
-export const tipoContenidoNoticia = ['articulo_propio', 'enlace_externo'] as const;
+/**
+ * Opciones literales para el campo tipoContenido de Noticia.
+ */
+export const tipoContenidoNoticia = ["articulo_propio", "enlace_externo"] as const;
 export type TipoContenidoNoticia = typeof tipoContenidoNoticia[number];
 
+/**
+ * Etiquetas legibles para los tipos de contenido.
+ */
 export const tipoContenidoNoticiaLabels: Record<TipoContenidoNoticia, string> = {
-  articulo_propio: 'Artículo Propio',
-  enlace_externo: 'Enlace a Noticia Externa',
+  articulo_propio: "Artículo Propio",
+  enlace_externo: "Enlace a Noticia Externa",
 };
 
-export const noticiaSchema = z.object({
-  tipoContenido: z.enum(tipoContenidoNoticia, {
-    required_error: "El tipo de contenido es requerido."
-  }),
-  titulo: z.string().min(5, "El título debe tener al menos 5 caracteres."),
-  subtitulo: z.string().optional().nullable(),
+/**
+ * Esquema Zod para validar los datos del formulario de Noticia.
+ *
+ * - Se reemplaza `idsTemas: string[]` por `temas: TemaOption[]`.
+ * - Se elimina todo lo relacionado con Firebase Timestamp.
+ */
+export const noticiaSchema = z
+  .object({
+    tipoContenido: z.enum(tipoContenidoNoticia, {
+      required_error: "El tipo de contenido es requerido.",
+    }),
 
-  contenido: z.string().optional().nullable(),
-  urlExterna: z.string().url("Debe ser una URL válida.").or(z.literal('')).optional().nullable(),
-  fuenteExterna: z.string().optional().nullable(),
-  resumenOContextoInterno: z.string().optional().nullable(),
+    titulo: z
+      .string()
+      .min(5, "El título debe tener al menos 5 caracteres."),
 
-  fechaPublicacion: z.date({
-    required_error: "La fecha de publicación es requerida.",
-    invalid_type_error: "Debe ser una fecha válida.",
-  }),
-  autorNoticia: z.string().optional().nullable(),
+    subtitulo: z.string().optional().nullable(),
 
-  imagenPrincipalURL: z.string().url("Debe ser una URL válida.").or(z.literal('')).or(z.literal('PENDING_UPLOAD')).optional().nullable(),
+    contenido: z.string().optional().nullable(),
 
-  idsTemas: z.array(z.string()).optional().nullable().default([]), // Manejará IDs de temas
+    urlExterna: z
+      .string()
+      .url("Debe ser una URL válida.")
+      .or(z.literal(""))
+      .optional()
+      .nullable(),
 
-  esDestacada: z.boolean().default(false),
-  estaPublicada: z.boolean().default(false),
-}).superRefine((data, ctx) => {
-  if (data.tipoContenido === 'articulo_propio') {
-    if (!data.contenido || data.contenido.trim().length < 10) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El contenido es requerido para artículos propios y debe tener al menos 10 caracteres.",
-        path: ['contenido'],
-      });
+    fuenteExterna: z.string().optional().nullable(),
+
+    resumenOContextoInterno: z.string().optional().nullable(),
+
+    fechaPublicacion: z.date({
+      required_error: "La fecha de publicación es requerida.",
+      invalid_type_error: "Debe ser una fecha válida.",
+    }),
+
+    autorNoticia: z.string().optional().nullable(),
+
+    imagenPrincipalURL: z
+      .string()
+      .url("Debe ser una URL válida.")
+      .or(z.literal(""))
+      .or(z.literal("PENDING_UPLOAD"))
+      .optional()
+      .nullable(),
+
+    /**
+     * Ahora `temas` es un arreglo de objetos `TemaOption` (solo `id` y `nombre`),
+     * en lugar de `idsTemas: string[]`.
+     */
+    temas: z
+      .array(
+        z.object({
+          id: z.string(),
+          nombre: z.string(),
+          // Si en algún caso quieres validar más campos de Tema, agrégalo aquí:
+          // ejemplo: categoriaTema: z.string().optional(),
+        })
+      )
+      .optional()
+      .default([]),
+
+    esDestacada: z.boolean().default(false),
+
+    estaPublicada: z.boolean().default(false),
+  })
+  .superRefine((data, ctx) => {
+    if (data.tipoContenido === "articulo_propio") {
+      if (!data.contenido || data.contenido.trim().length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "El contenido es requerido para artículos propios y debe tener al menos 10 caracteres.",
+          path: ["contenido"],
+        });
+      }
+    } else if (data.tipoContenido === "enlace_externo") {
+      if (!data.urlExterna || data.urlExterna.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "La URL externa es requerida para enlaces externos.",
+          path: ["urlExterna"],
+        });
+      }
+      if (
+        !data.resumenOContextoInterno ||
+        data.resumenOContextoInterno.trim().length < 10
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "El resumen interno es requerido para enlaces externos y debe tener al menos 10 caracteres (para la IA).",
+          path: ["resumenOContextoInterno"],
+        });
+      }
     }
-  } else if (data.tipoContenido === 'enlace_externo') {
-    if (!data.urlExterna || data.urlExterna.trim() === '') {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "La URL externa es requerida para enlaces externos.",
-        path: ['urlExterna'],
-      });
-    }
-    if (!data.resumenOContextoInterno || data.resumenOContextoInterno.trim().length < 10) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El resumen interno es requerido para enlaces externos y debe tener al menos 10 caracteres (para la IA).",
-        path: ['resumenOContextoInterno'],
-      });
-    }
-  }
-});
+  });
 
+/**
+ * A partir del esquema, inferimos el tipo que usará React Hook Form.
+ * En este tipo, `temas` es `TemaOption[]` en lugar de `idsTemas: string[]`.
+ */
 export type NoticiaFormData = z.infer<typeof noticiaSchema>;
 
-export function convertFormDataForFirestoreNoticia(data: NoticiaFormData): Partial<Noticia> {
-  const firestoreData: { [key: string]: any } = { ...data };
-
-  firestoreData.fechaPublicacion = Timestamp.fromDate(data.fechaPublicacion);
-
-  firestoreData.esDestacada = data.esDestacada ?? false;
-  firestoreData.estaPublicada = data.estaPublicada ?? false;
-
-  const optionalFields: (keyof NoticiaFormData)[] = [
-    'subtitulo', 'contenido', 'urlExterna', 'fuenteExterna',
-    'resumenOContextoInterno', 'autorNoticia', 'imagenPrincipalURL'
-  ];
-  optionalFields.forEach(key => {
-    if (firestoreData[key] === '' || firestoreData[key] === undefined) {
-      firestoreData[key] = null;
-    }
-  });
-
-  if (firestoreData.imagenPrincipalURL === 'PENDING_UPLOAD') {
-    firestoreData.imagenPrincipalURL = null;
-  }
-
-  firestoreData.idsTemas = (Array.isArray(data.idsTemas) && data.idsTemas.length > 0)
-    ? data.idsTemas.filter(Boolean)
-    : null;
-
-  return firestoreData as Partial<Noticia>;
-}
-
-export function convertFirestoreDataToFormNoticia(noticiaData: Noticia): NoticiaFormData {
-  const formData: { [key: string]: any } = { ...noticiaData };
-
-  formData.fechaPublicacion = noticiaData.fechaPublicacion instanceof Timestamp
-    ? noticiaData.fechaPublicacion.toDate()
-    : new Date();
-
-  // idsTemas ya es un array de IDs, no necesita conversión de string a array.
-  formData.idsTemas = Array.isArray(noticiaData.idsTemas)
-    ? noticiaData.idsTemas
-    : [];
-
-  const optionalStringFields: (keyof NoticiaFormData)[] = [
-    'subtitulo', 'contenido', 'urlExterna', 'fuenteExterna',
-    'resumenOContextoInterno', 'autorNoticia', 'imagenPrincipalURL'
-  ];
-  optionalStringFields.forEach(key => {
-    formData[key] = noticiaData[key as keyof Noticia] || '';
-  });
-
-  formData.esDestacada = noticiaData.esDestacada ?? false;
-  formData.estaPublicada = noticiaData.estaPublicada ?? false;
-
-  return noticiaSchema.parse(formData) as NoticiaFormData;
-}
-    
+/*
+  ----------------------------------------------------------------------------
+  NOTA IMPORTANTE:
+  Con Supabase no necesitas conversiones explícitas de timestamp de Firebase.
+  Al momento de enviar datos a Supabase, convierte la fecha a ISO string:
+      formData.fechaPublicacion.toISOString()
+  y, si tu columna en Postgres es de tipo `text[]`, envía directamente arrays
+  de IDs o empty array `[]`. Las funciones de conversión a/desde Firestore ya
+  no aplican en un entorno Supabase.
+  ----------------------------------------------------------------------------
+*/

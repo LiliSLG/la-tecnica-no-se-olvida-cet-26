@@ -295,6 +295,14 @@ export interface Noticia {
 }
 
 export interface Entrevista {
+  intervieweeName: string;
+  summary: string;
+  type: string;
+  mediaUrl: string;
+  content: string;
+  imageUrl: string;
+  date: string;
+  dataAiHint: string;
   id: string;
   tipoContenido: TipoContenidoEntrevista;
   tituloSaber: string;

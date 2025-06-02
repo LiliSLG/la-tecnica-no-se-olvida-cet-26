@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllEntrevistasForAdmin, logicalDeleteEntrevista, restoreEntrevista } from '@/lib/firebase/entrevistasService';
+import { getAllEntrevistasForAdmin, logicalDeleteEntrevista, restoreEntrevista } from '@/lib/supabase/entrevistasService';
 import type { Entrevista } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -72,7 +72,7 @@ export default function AdminEntrevistaList() {
   const handleLogicalDelete = async () => {
     if (!itemToDelete || !itemToDelete.id || !user) return;
     try {
-      await logicalDeleteEntrevista(itemToDelete.id, user.uid);
+      await logicalDeleteEntrevista(itemToDelete.id, user.id);
       toast({ title: "Éxito", description: "Entrevista eliminada lógicamente." });
       fetchEntrevistas(); 
     } catch (error) {
@@ -87,7 +87,7 @@ export default function AdminEntrevistaList() {
   const handleRestore = async (entrevistaId: string) => {
     if (!user) return;
     try {
-      await restoreEntrevista(entrevistaId, user.uid);
+      await restoreEntrevista(entrevistaId, user.id);
       toast({ title: "Éxito", description: "Entrevista restaurada." });
       fetchEntrevistas();
     } catch (error) {
