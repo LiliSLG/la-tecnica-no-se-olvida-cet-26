@@ -2,19 +2,20 @@
 
 import { supabase } from "@/lib/supabase/supabaseClient";
 import type { Tema } from "@/lib/types";
-import type {
+
+import {
+  convertFormDataToSupabaseTema,
+  convertSupabaseDataToFormTema,
   TemaFormData,
-  AddTemaModalFormData,
 } from "@/lib/schemas/temaSchema";
-import { convertFormDataForFirestoreTema } from "@/lib/schemas/temaSchema";
 
 const TABLE = "temas";
 
 export const addTema = async (
-  data: TemaFormData | AddTemaModalFormData,
+  data: TemaFormData,
   adminUid: string
 ): Promise<Tema> => {
-  const temaDataForCreation = convertFormDataForFirestoreTema(data, adminUid);
+  const temaDataForCreation = convertFormDataToSupabaseTema(data, adminUid);
   temaDataForCreation.creadoEn = new Date().toISOString();
   temaDataForCreation.actualizadoEn = new Date().toISOString();
   temaDataForCreation.estaEliminada = false;
@@ -95,9 +96,10 @@ export const updateTema = async (
   data: TemaFormData,
   adminUid: string
 ): Promise<void> => {
-  const temaDataForUpdate = convertFormDataForFirestoreTema(data, adminUid, {
+  const temaDataForUpdate = convertFormDataToSupabaseTema(data, adminUid, {
     id,
-  });
+  } as Tema);
+
   temaDataForUpdate.actualizadoEn = new Date().toISOString();
 
   const { error } = await supabase

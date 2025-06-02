@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TemaForm from '@/components/forms/TemaForm';
 import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { addTema } from '@/lib/firebase/temasService';
-import { convertFormDataForFirestoreTema } from '@/lib/schemas/temaSchema';
+import { addTema } from '@/lib/supabase/temasService';
+import { convertFormDataToSupabaseTema } from "@/lib/schemas/temaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle } from 'lucide-react';
@@ -24,9 +24,9 @@ export default function NuevoTemaPage() {
     }
     setIsSubmitting(true);
     try {
-      const dataForFirestore = convertFormDataForFirestoreTema(data, user.uid);
+      const dataForSupabase = convertFormDataToSupabaseTema(data, user.id);
       // addTema in service now handles setting timestamps and other audit fields
-      const temaId = await addTema(dataForFirestore as TemaFormData, user.uid); // Cast needed if service expects more complete data
+      const temaId = await addTema(dataForSupabase as TemaFormData, user.id); // Cast needed if service expects more complete data
       toast({ title: "Éxito", description: "Tema creado correctamente." });
       router.push('/admin/gestion-temas'); 
       return true;

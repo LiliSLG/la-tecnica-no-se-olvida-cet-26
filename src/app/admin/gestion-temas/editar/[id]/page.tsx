@@ -5,8 +5,11 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TemaForm from '@/components/forms/TemaForm';
 import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { getTemaById, updateTema } from '@/lib/firebase/temasService';
-import { convertFirestoreDataToFormTema, convertFormDataForFirestoreTema } from '@/lib/schemas/temaSchema';
+import { getTemaById, updateTema } from '@/lib/supabase/temasService';
+import {
+  convertFormDataToSupabaseTema,
+  convertSupabaseDataToFormTema,
+} from "@/lib/schemas/temaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Tema } from '@/lib/types';
@@ -39,7 +42,7 @@ export default function EditarTemaPage({ params: paramsProp }: EditarTemaPagePro
       try {
         const tema = await getTemaById(temaId);
         if (tema) {
-          setInitialData(convertFirestoreDataToFormTema(tema));
+          setInitialData(convertSupabaseDataToFormTema(tema));
         } else {
           setError("Tema no encontrado.");
           toast({ title: "Error", description: "Tema no encontrado.", variant: "destructive" });
@@ -68,8 +71,12 @@ export default function EditarTemaPage({ params: paramsProp }: EditarTemaPagePro
 
     setIsSubmitting(true);
     try {
-      const dataForFirestore = convertFormDataForFirestoreTema(data, user.uid, initialData);
-      await updateTema(temaId, dataForFirestore as TemaFormData, user.uid); // Cast if service expects more complete data
+      const dataForSupabase = convertFormDataToSupabaseTema(
+        data,
+        user.id,
+        initialData as Tema
+      );
+      await updateTema(temaId, dataForSupabase as TemaFormData, user.id); // Cast if service expects more complete data
       toast({ title: "Éxito", description: "Tema actualizado correctamente." });
       router.push(volverAPath);
       return true;
