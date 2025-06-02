@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import NoticiaForm from '@/components/forms/NoticiaForm';
 import type { NoticiaFormData } from '@/lib/schemas/noticiaSchema';
 import { getNoticiaById, updateNoticia } from '@/lib/supabase/noticiasService';
-import { convertFirestoreDataToFormNoticia } from '@/lib/schemas/noticiaSchema';
+import { convertSupabaseDataToFormNoticia } from "@/lib/schemas/noticiaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Noticia } from '@/lib/types';
@@ -39,7 +39,7 @@ export default function EditarNoticiaPage({ params: paramsProp }: EditarNoticiaP
       try {
         const noticia = await getNoticiaById(noticiaId);
         if (noticia) {
-          setInitialData(convertFirestoreDataToFormNoticia(noticia));
+          setInitialData(convertSupabaseDataToFormNoticia(noticia));
         } else {
           setError("Noticia no encontrada.");
           toast({ title: "Error", description: "Noticia no encontrada.", variant: "destructive" });

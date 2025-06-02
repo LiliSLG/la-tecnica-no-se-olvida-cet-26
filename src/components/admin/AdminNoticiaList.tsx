@@ -33,7 +33,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { tipoContenidoNoticiaLabels } from '@/lib/schemas/noticiaSchema';
-import { Timestamp } from 'firebase/firestore';
 
 export default function AdminNoticiaList() {
   const [noticias, setNoticias] = useState<Noticia[]>([]);
@@ -102,7 +101,7 @@ export default function AdminNoticiaList() {
   const formatDateSafe = (timestamp: any) => {
     if (!timestamp) return 'No especificada';
     try {
-      const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
+      const date = new Date(timestamp);
       return format(date, 'P p', { locale: es });
     } catch (e) { 
       console.warn("Error formatting date:", timestamp, e);

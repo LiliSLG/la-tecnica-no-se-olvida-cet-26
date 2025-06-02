@@ -116,20 +116,45 @@ export const noticiaSchema = z
     }
   });
 
+  // -----------------------------------------------------------------------------
+// Función para convertir un objeto Noticia (visto desde Supabase) a NoticiaFormData
+// -----------------------------------------------------------------------------
+export function convertSupabaseDataToFormNoticia(
+  noticiaData: Noticia
+): NoticiaFormData {
+  // 1) Convertir la fecha de ISO string a Date
+  const fechaPub = new Date(noticiaData.fechaPublicacion);
+
+  // 2) Extraer IDs de temas si existen (en Noticia, el campo se llama `temas`)
+  //    y devolverlos como array de strings; si no hay, dejar []
+  const idsTemas = Array.isArray(noticiaData.temas)
+    ? (noticiaData.temas as TemaOption[]).map((t) => t.id)
+    : [];
+
+  // 3) Normalizar campos opcionales que pueden venir null o undefined
+  const obj: any = {
+    tipoContenido: noticiaData.tipoContenido,
+    titulo: noticiaData.titulo,
+    subtitulo: noticiaData.subtitulo ?? "",
+    contenido: noticiaData.contenido ?? "",
+    urlExterna: noticiaData.urlExterna ?? "",
+    fuenteExterna: noticiaData.fuenteExterna ?? "",
+    resumenOContextoInterno: noticiaData.resumenOContextoInterno ?? "",
+    fechaPublicacion: fechaPub,
+    autorNoticia: noticiaData.autorNoticia ?? "",
+    imagenPrincipalURL: noticiaData.imagenPrincipalURL ?? "",
+    idsTemas: idsTemas,
+    esDestacada: noticiaData.esDestacada ?? false,
+    estaPublicada: noticiaData.estaPublicada ?? false,
+  };
+
+  // 4) Validar/parsear con el esquema Zod para asegurar coalescencia
+  return noticiaSchema.parse(obj) as NoticiaFormData;
+}
 /**
  * A partir del esquema, inferimos el tipo que usará React Hook Form.
  * En este tipo, `temas` es `TemaOption[]` en lugar de `idsTemas: string[]`.
  */
 export type NoticiaFormData = z.infer<typeof noticiaSchema>;
 
-/*
-  ----------------------------------------------------------------------------
-  NOTA IMPORTANTE:
-  Con Supabase no necesitas conversiones explícitas de timestamp de Firebase.
-  Al momento de enviar datos a Supabase, convierte la fecha a ISO string:
-      formData.fechaPublicacion.toISOString()
-  y, si tu columna en Postgres es de tipo `text[]`, envía directamente arrays
-  de IDs o empty array `[]`. Las funciones de conversión a/desde Firestore ya
-  no aplican en un entorno Supabase.
-  ----------------------------------------------------------------------------
-*/
+

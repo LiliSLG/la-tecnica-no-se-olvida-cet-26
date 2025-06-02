@@ -1,94 +1,115 @@
-
 "use client";
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
-import type { Persona } from '@/lib/types';
-import AdminSidebar from '@/components/admin/AdminSidebar';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/supabaseClient";
+import type { User } from "@supabase/supabase-js";
+import type { Persona } from "@/lib/types";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import { Loader2 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
-      return; // Wait for Firebase Auth to initialize
-    }
+    // 1) Obtener el usuario actual de Supabase Auth
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        setUser(user);
+      })
+      .catch(() => {
+        setUser(null);
+      })
+      .finally(() => {
+        setLoadingUser(false);
+      });
 
+    // 2) Escuchar cambios de sesión (opcional, para redirecciones en tiempo real)
+    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Esperar hasta saber si hay usuario
+    if (loadingUser) return;
+
+    // Si no hay usuario autenticado, redirigir a login
     if (!user) {
-      router.push('/login?redirect=/admin'); // Redirect to login if not authenticated
+      router.push("/login?redirect=/admin");
       return;
     }
 
-    // Fetch persona data to check for admin status
+    // Verificar en Supabase DB si esta persona es admin
     const checkAdminStatus = async () => {
-      if (user) {
-        try {
-          const personaDocRef = doc(db, 'personas', user.uid);
-          const docSnap = await getDoc(personaDocRef);
-          if (docSnap.exists()) {
-            const personaData = docSnap.data() as Persona;
-            if (personaData.esAdmin) {
-              setIsAdmin(true);
-            } else {
-              // Not an admin, redirect to home or a 'not authorized' page
-              console.warn("User is not an admin. Redirecting.");
-              router.push('/'); 
-            }
-          } else {
-            // Persona document doesn't exist, treat as not admin
-            console.warn("Persona document not found for user. Redirecting.");
-            router.push('/');
-          }
-        } catch (error) {
-          console.error("Error fetching admin status:", error);
-          router.push('/'); // Redirect on error
-        } finally {
-          setStatusLoading(false);
+      try {
+        const { data, error } = await supabase
+          .from("personas")
+          .select("esAdmin")
+          .eq("id", user.id)
+          .single();
+
+        if (error || !data) {
+          // 1) Ocurrió un error en la consulta, o no existe el registro “personas” para este user
+          //    En cualquiera de los dos casos, conviene redirigir fuera del área de admin.
+          console.warn("No se encontró la persona o hubo un error:", error);
+          router.push("/");
+          return;
         }
-      } else {
-        // This case should be caught by the !user check above, but as a safeguard:
+
+        // Si llegamos aquí, data tiene { esAdmin: boolean }
+        if (data.esAdmin) {
+          setIsAdmin(true);
+        } else {
+          router.push("/");
+        }
+      
+
+      } catch (err) {
+        console.error("Error verificando admin:", err);
+        router.push("/");
+      } finally {
         setStatusLoading(false);
       }
     };
 
     checkAdminStatus();
+  }, [loadingUser, user, router]);
 
-  }, [user, authLoading, router]);
-
-  if (authLoading || statusLoading) {
+  if (loadingUser || statusLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-muted-foreground">Verificando acceso...</p>
+        <p className="ml-4 text-lg text-muted-foreground">
+          Verificando acceso...
+        </p>
       </div>
     );
   }
 
   if (!isAdmin) {
-    // This should ideally be caught by the redirect in useEffect,
-    // but it's a good fallback.
-    // You might want to render a specific "Not Authorized" component here
-    // or ensure the redirect has completed.
     return (
-         <div className="flex items-center justify-center min-h-screen bg-background">
-            <p className="text-lg text-destructive">Acceso denegado. Redirigiendo...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-lg text-destructive">
+          Acceso denegado. Redirigiendo...
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-muted/40">
       <AdminSidebar />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {children}
-      </main>
+      <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
     </div>
   );
 }

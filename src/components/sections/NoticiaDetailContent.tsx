@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 
@@ -64,12 +63,15 @@ export default function NoticiaDetailContent({ noticiaId }: NoticiaDetailContent
     fetchNoticiaData();
   }, [noticiaId, toast, router]);
 
-  const formatDateSafe = (timestamp: any) => {
-    if (!timestamp) return 'Fecha no disponible';
+  const formatDateSafe = (value: string | Date | null | undefined) => {
+    if (!value) return "Fecha no disponible";
     try {
-      const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
-      return format(date, 'PPP', { locale: es });
-    } catch (e) { return "Fecha inválida"; }
+      // Si ya es un Date lo usamos, si es string ISO lo convertimos:
+      const date = value instanceof Date ? value : new Date(value);
+      return format(date, "PPP", { locale: es });
+    } catch {
+      return "Fecha inválida";
+    }
   };
 
   const breadcrumbItems = noticia

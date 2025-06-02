@@ -20,10 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
-// ✅ Eliminada importación innecesaria:
-// import { Timestamp } from 'firebase/firestore';
-
-// ✅ Eliminada prop innecesaria (temasMap), ya no se usa.
 interface EntrevistaCardProps {
   entrevista: Entrevista;
 }

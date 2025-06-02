@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import type {
-  Entrevista,
+  Entrevista, TemaOption,
   TipoContenidoEntrevista,
   PlataformaVideo,
   Tema,
@@ -171,6 +171,63 @@ export const entrevistaSchema = z
     }
   });
 
+
+  // -----------------------------------------------------------------------------
+// Función para convertir un objeto Entrevista (visto desde Supabase) a EntrevistaFormData
+// -----------------------------------------------------------------------------
+export function convertSupabaseDataToFormEntrevista(
+  entrevistaData: Entrevista
+): EntrevistaFormData {
+  // 1) Convertir la fecha de ISO string a Date
+  const dateGrab = new Date(entrevistaData.fechaGrabacionORecopilacion);
+
+  // 2) Extraer IDs de temas si existen (en Entrevista, el campo se llama `temas`)
+  //    y devolverlos como array de strings; si no hay, dejar []
+  const idsTemasSaber = Array.isArray(entrevistaData.temas)
+    ? entrevistaData.temas.map((t: TemaOption) => t.id)
+    : [];
+
+  // 3) Convertir los arrays de supabase (si vienen null) a array vacío
+  const palabrasClaveSaber = Array.isArray(entrevistaData.palabrasClaveSaber)
+    ? entrevistaData.palabrasClaveSaber
+    : [];
+  const fuentesInformacion = Array.isArray(entrevistaData.fuentesInformacion)
+    ? entrevistaData.fuentesInformacion
+    : [];
+  const recopiladoPorUids = Array.isArray(entrevistaData.recopiladoPorUids)
+    ? entrevistaData.recopiladoPorUids
+    : [];
+
+  // 4) Todos los campos opcionales que en BD pueden venir null, asegurarlos como null o valor por defecto
+  const obj: any = {
+    tipoContenido: entrevistaData.tipoContenido,
+    tituloSaber: entrevistaData.tituloSaber,
+    descripcionSaber: entrevistaData.descripcionSaber,
+    videoPropioURL: entrevistaData.videoPropioURL ?? "",
+    plataformaVideoPropio: entrevistaData.plataformaVideoPropio ?? null,
+    urlVideoExterno: entrevistaData.urlVideoExterno ?? "",
+    plataformaVideoExterno: entrevistaData.plataformaVideoExterno ?? null,
+    fuenteVideoExterno: entrevistaData.fuenteVideoExterno ?? "",
+    fechaGrabacionORecopilacion: dateGrab,
+    ambitoSaber: entrevistaData.ambitoSaber ?? "",
+    idsTemasSaber: idsTemasSaber,
+    palabrasClaveSaber,
+    fuentesInformacion,
+    recopiladoPorUids,
+    transcripcionTextoCompleto: entrevistaData.transcripcionTextoCompleto ?? "",
+    transcripcionFileURL: entrevistaData.transcripcionFileURL ?? "",
+    imagenMiniaturaURL: entrevistaData.imagenMiniaturaURL ?? "",
+    duracionMediaMinutos:
+      entrevistaData.duracionMediaMinutos !== null &&
+      entrevistaData.duracionMediaMinutos !== undefined
+        ? entrevistaData.duracionMediaMinutos
+        : undefined,
+    estaPublicada: entrevistaData.estaPublicada ?? false,
+  };
+
+  // 5) Validar / parsear con el esquema zod para asegurarnos de que coincida
+  return entrevistaSchema.parse(obj) as EntrevistaFormData;
+}
 /**
  * TypeScript: inferimos el tipo a partir de `entrevistaSchema`.
  * Ahora `EntrevistaFormData` incluye:
@@ -179,12 +236,4 @@ export const entrevistaSchema = z
  */
 export type EntrevistaFormData = z.infer<typeof entrevistaSchema>;
 
-/*
-  --------------------------------------------------------------------------
-  NOTA IMPORTANTE:
-  Hemos eliminado las funciones de conversión a/desde Firestore y Firebase
-  (`Timestamp`) porque ahora tu backend es Supabase. Si necesitas
-  funciones de conversión para Supabase, debes crearlas en un archivo distinto,
-  usando la API de Supabase (p. ej. supabase.from("entrevistas").insert(...) ).
-  --------------------------------------------------------------------------
-*/
+

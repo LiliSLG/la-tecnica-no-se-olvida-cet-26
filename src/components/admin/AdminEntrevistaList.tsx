@@ -31,7 +31,6 @@ import { Edit, Trash2, RotateCcw, PlusCircle, AlertTriangle, Loader2, CheckCircl
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Timestamp } from 'firebase/firestore';
 
 export default function AdminEntrevistaList() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -99,7 +98,8 @@ export default function AdminEntrevistaList() {
   const formatDateSafe = (timestamp: any) => {
     if (!timestamp) return 'No especificada';
     try {
-      const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
+      const date = new Date(timestamp);
+      
       return format(date, 'P p', { locale: es });
     } catch (e) { return "Fecha inválida"; }
   };

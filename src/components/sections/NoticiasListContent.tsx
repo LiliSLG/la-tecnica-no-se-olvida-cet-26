@@ -18,7 +18,6 @@ import { Label } from '@/components/ui/label'; // For filter labels
 import { Switch } from '@/components/ui/switch'; // For esDestacada filter
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Timestamp } from 'firebase/firestore';
 import Breadcrumbs from '@/components/ui/Breadcrumbs'; 
 
 const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {

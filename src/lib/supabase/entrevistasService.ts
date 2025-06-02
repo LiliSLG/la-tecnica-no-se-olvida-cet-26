@@ -14,7 +14,6 @@ export const addEntrevista = async (
   data: EntrevistaFormData,
   adminUid: string
 ): Promise<string> => {
-  // 1) Construir el objeto principal sin campos Firestore ni array de IDs
   const newEntrevista: Partial<Entrevista> = {
     tipoContenido: data.tipoContenido,
     tituloSaber: data.tituloSaber,
@@ -90,7 +89,6 @@ export const updateEntrevista = async (
   data: EntrevistaFormData,
   adminUid: string
 ): Promise<void> => {
-  // 1) Actualizar la fila principal sin timestamp Firestore
   const updatedData: Partial<Entrevista> = {
     tipoContenido: data.tipoContenido,
     tituloSaber: data.tituloSaber,

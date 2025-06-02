@@ -5,9 +5,8 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import EntrevistaForm from '@/components/forms/EntrevistaForm';
 import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
-import { getEntrevistaById, updateEntrevista } from '@/lib/firebase/entrevistasService';
-import { convertFirestoreDataToFormEntrevista } from '@/lib/schemas/entrevistaSchema';
-import { useAuth } from '@/contexts/AuthContext';
+import { getEntrevistaById, updateEntrevista } from '@/lib/supabase/entrevistasService';
+import { convertSupabaseDataToFormEntrevista } from "@/lib/schemas/entrevistaSchema";import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,7 @@ export default function EditarEntrevistaPage({ params: paramsProp }: EditarEntre
       try {
         const entrevista = await getEntrevistaById(entrevistaId);
         if (entrevista) {
-          setInitialData(convertFirestoreDataToFormEntrevista(entrevista));
+          setInitialData(convertSupabaseDataToFormEntrevista(entrevista));
         } else {
           setError("Entrevista no encontrada.");
           toast({ title: "Error", description: "Entrevista no encontrada.", variant: "destructive" });
@@ -67,7 +66,7 @@ export default function EditarEntrevistaPage({ params: paramsProp }: EditarEntre
 
     setIsSubmitting(true);
     try {
-      await updateEntrevista(entrevistaId, data, user.uid);
+      await updateEntrevista(entrevistaId, data, user.id);
       toast({ title: "Éxito", description: "Entrevista actualizada correctamente." });
       router.push(volverAPath);
       return true;
@@ -127,5 +126,3 @@ export default function EditarEntrevistaPage({ params: paramsProp }: EditarEntre
     </div>
   );
 }
-
-    
