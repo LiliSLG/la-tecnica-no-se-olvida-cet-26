@@ -11,68 +11,77 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllTemasActivos } from '@/lib/firebase/temasService';
-import { Timestamp } from 'firebase/firestore';
+import { getAllTemasActivos } from '@/lib/supabase/temasService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Mock Data - Reemplazar con datos de Firestore
 const mockOfertas: OfertaTrabajo[] = [
   {
-    id: '1',
-    titulo: 'Desarrollador Full-Stack para Proyecto AgroTech',
-    publicadoPorNombre: 'AgroSoluciones S.A.',
+    id: "1",
+    titulo: "Desarrollador Full-Stack para Proyecto AgroTech",
+    publicadoPorNombre: "AgroSoluciones S.A.",
     esEmpresa: true,
-    descripcion: 'Buscamos un desarrollador full-stack con experiencia en Python y React para un innovador proyecto de tecnología aplicada al agro. Responsabilidades incluyen desarrollo frontend y backend, integración con APIs de sensores y manejo de bases de datos.',
-    descripcionCorta: 'Desarrollador con experiencia en Python y React para proyecto AgroTech.',
-    ubicacionTexto: 'Remoto (Argentina)',
-    tipoContrato: 'jornada_completa',
-    idsTemasRequeridos: ['tecnologico', 'agropecuario'], // IDs de temas
-    categoriaOferta: 'Desarrollo de Software',
-    requisitos: 'Experiencia de 3+ años en Python y React. Conocimiento de Docker. Experiencia con GIS es un plus.',
-    beneficios: 'Salario competitivo. Obra Social. Capacitación continua. Horario flexible.',
-    comoAplicar: 'Enviar CV y portfolio a rrhh@agrosoluciones.example.com',
-    fechaPublicacion: Timestamp.fromDate(new Date('2024-07-15T09:00:00')),
-    creadoPorUid: 'adminUserUid',
-    creadoEn: Timestamp.now(),
-    actualizadoEn: Timestamp.now(),
+    descripcion:
+      "Buscamos un desarrollador full-stack con experiencia en Python y React para un innovador proyecto de tecnología aplicada al agro. Responsabilidades incluyen desarrollo frontend y backend, integración con APIs de sensores y manejo de bases de datos.",
+    descripcionCorta:
+      "Desarrollador con experiencia en Python y React para proyecto AgroTech.",
+    ubicacionTexto: "Remoto (Argentina)",
+    tipoContrato: "jornada_completa",
+    idsTemasRequeridos: ["tecnologico", "agropecuario"], // IDs de temas
+    categoriaOferta: "Desarrollo de Software",
+    requisitos:
+      "Experiencia de 3+ años en Python y React. Conocimiento de Docker. Experiencia con GIS es un plus.",
+    beneficios:
+      "Salario competitivo. Obra Social. Capacitación continua. Horario flexible.",
+    comoAplicar: "Enviar CV y portfolio a rrhh@agrosoluciones.example.com",
+    fechaPublicacion: "2024-07-15",
+    creadoPorUid: "adminUserUid",
+    creadoEn: new Date().toISOString(),
+    actualizadoEn: new Date().toISOString(),
     estaActiva: true,
   },
   {
-    id: '2',
-    titulo: 'Técnico de Campo para Relevamiento de Suelos',
+    id: "2",
+    titulo: "Técnico de Campo para Relevamiento de Suelos",
     publicadoPorNombre: 'Estancia "La Esperanza"',
     esEmpresa: true, // Estancia es una empresa/producción
-    descripcion: 'Se necesita técnico agrónomo o estudiante avanzado para realizar relevamiento de suelos y seguimiento de cultivos en estancia ubicada en la zona de Jacobacci. Movilidad propia excluyente.',
-    descripcionCorta: 'Técnico agrónomo para relevamiento de suelos y seguimiento de cultivos.',
-    ubicacionTexto: 'Ing. Jacobacci, Río Negro',
-    tipoContrato: 'media_jornada',
-    idsTemasRequeridos: ['manejo_suelo', 'agropecuario'],
-    categoriaOferta: 'Trabajo de Campo',
-    requisitos: 'Título de Técnico Agrónomo o estudiante avanzado. Experiencia en muestreo de suelos. Carnet de conducir.',
-    comoAplicar: 'Contactar al Sr.Perez al 294-4XXXXXX',
-    fechaPublicacion: Timestamp.fromDate(new Date('2024-07-20T14:30:00')),
-    creadoPorUid: 'adminUserUid',
-    creadoEn: Timestamp.now(),
-    actualizadoEn: Timestamp.now(),
+    descripcion:
+      "Se necesita técnico agrónomo o estudiante avanzado para realizar relevamiento de suelos y seguimiento de cultivos en estancia ubicada en la zona de Jacobacci. Movilidad propia excluyente.",
+    descripcionCorta:
+      "Técnico agrónomo para relevamiento de suelos y seguimiento de cultivos.",
+    ubicacionTexto: "Ing. Jacobacci, Río Negro",
+    tipoContrato: "media_jornada",
+    idsTemasRequeridos: ["manejo_suelo", "agropecuario"],
+    categoriaOferta: "Trabajo de Campo",
+    requisitos:
+      "Título de Técnico Agrónomo o estudiante avanzado. Experiencia en muestreo de suelos. Carnet de conducir.",
+    comoAplicar: "Contactar al Sr.Perez al 294-4XXXXXX",
+    fechaPublicacion: "2024-07-20",
+    creadoPorUid: "adminUserUid",
+    creadoEn: new Date().toISOString(),
+    actualizadoEn: new Date().toISOString(),
     estaActiva: true,
   },
   {
-    id: '3',
-    titulo: 'Pasantía en Administración Rural',
-    publicadoPorNombre: 'Cooperativa Agropecuaria Jacobacci Ltda.',
+    id: "3",
+    titulo: "Pasantía en Administración Rural",
+    publicadoPorNombre: "Cooperativa Agropecuaria Jacobacci Ltda.",
     esEmpresa: true,
-    descripcion: 'Ofrecemos una pasantía rentada para estudiantes de carreras afines a la administración de empresas agropecuarias. El pasante colaborará en tareas administrativas, contables y de gestión de proyectos.',
-    descripcionCorta: 'Pasantía rentada para estudiantes de administración de empresas agropecuarias.',
-    ubicacionTexto: 'Ing. Jacobacci, Río Negro',
-    tipoContrato: 'pasantia',
-    idsTemasRequeridos: ['social', 'agropecuario'],
-    categoriaOferta: 'Administración',
-    requisitos: 'Estudiante regular de Administración, Economía o carreras afines. Buen manejo de Office. Proactividad.',
-    comoAplicar: 'Presentar CV en las oficinas de la Cooperativa, Av. San Martín 123.',
-    fechaPublicacion: Timestamp.fromDate(new Date('2024-07-22T11:00:00')),
-    creadoPorUid: 'adminUserUid',
-    creadoEn: Timestamp.now(),
-    actualizadoEn: Timestamp.now(),
+    descripcion:
+      "Ofrecemos una pasantía rentada para estudiantes de carreras afines a la administración de empresas agropecuarias. El pasante colaborará en tareas administrativas, contables y de gestión de proyectos.",
+    descripcionCorta:
+      "Pasantía rentada para estudiantes de administración de empresas agropecuarias.",
+    ubicacionTexto: "Ing. Jacobacci, Río Negro",
+    tipoContrato: "pasantia",
+    idsTemasRequeridos: ["social", "agropecuario"],
+    categoriaOferta: "Administración",
+    requisitos:
+      "Estudiante regular de Administración, Economía o carreras afines. Buen manejo de Office. Proactividad.",
+    comoAplicar:
+      "Presentar CV en las oficinas de la Cooperativa, Av. San Martín 123.",
+    fechaPublicacion: "2024-07-22",
+    creadoPorUid: "adminUserUid",
+    creadoEn: new Date().toISOString(),
+    actualizadoEn: new Date().toISOString(),
     estaActiva: true,
   },
 ];
@@ -92,7 +101,11 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
 
   useEffect(() => {
     if (oferta.fechaPublicacion) {
-      const dateObj = oferta.fechaPublicacion instanceof Timestamp ? oferta.fechaPublicacion.toDate() : new Date(oferta.fechaPublicacion);
+      const dateObj =
+        typeof oferta.fechaPublicacion === "string"
+          ? new Date(oferta.fechaPublicacion)
+          : oferta.fechaPublicacion;
+
       setFormattedDate(dateObj.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }));
     }
   }, [oferta.fechaPublicacion]);
@@ -153,7 +166,7 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
 export default function JobBoardContent() {
   const [ofertas, setOfertas] = useState<OfertaTrabajo[]>(mockOfertas); // Usar mock data por ahora
   const [filteredOfertas, setFilteredOfertas] = useState<OfertaTrabajo[]>(mockOfertas);
-  const [loading, setLoading] = useState(false); // Cambiar a true cuando se cargue de Firestore
+  const [loading, setLoading] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemaFilter, setSelectedTemaFilter] = useState<string | 'all'>('all');
@@ -164,7 +177,6 @@ export default function JobBoardContent() {
 
 
   useEffect(() => {
-    // Simular carga de temas (reemplazar con llamada a Firestore)
     const fetchTemas = async () => {
       try {
         // const temasFromDb = await getAllTemasActivos(); // Descomentar cuando el servicio esté listo
@@ -175,10 +187,34 @@ export default function JobBoardContent() {
 
         // Mock temas mientras tanto
         const mockTemas: Tema[] = [
-          { id: 'tecnologico', nombre: 'Tecnológico', creadoEn: Timestamp.now(), actualizadoEn: Timestamp.now() },
-          { id: 'agropecuario', nombre: 'Agropecuario', creadoEn: Timestamp.now(), actualizadoEn: Timestamp.now() },
-          { id: 'manejo_suelo', nombre: 'Manejo de Suelo', creadoEn: Timestamp.now(), actualizadoEn: Timestamp.now() },
-          { id: 'social', nombre: 'Social', creadoEn: Timestamp.now(), actualizadoEn: Timestamp.now() },
+          {
+            id: "tecnologico",
+            nombre: "Tecnológico",
+            creadoEn: new Date().toISOString(),
+            actualizadoEn: new Date().toISOString(),
+            estaEliminada: false,
+          },
+          {
+            id: "agropecuario",
+            nombre: "Agropecuario",
+            creadoEn: new Date().toISOString(),
+            actualizadoEn: new Date().toISOString(),
+            estaEliminada: false,
+          },
+          {
+            id: "manejo_suelo",
+            nombre: "Manejo de Suelo",
+            creadoEn: new Date().toISOString(),
+            actualizadoEn: new Date().toISOString(),
+            estaEliminada: false,
+          },
+          {
+            id: "social",
+            nombre: "Social",
+            creadoEn: new Date().toISOString(),
+            actualizadoEn: new Date().toISOString(),
+            estaEliminada: false,
+          },
         ];
         setAllAvailableTemas(mockTemas);
         const map = new Map<string,string>();

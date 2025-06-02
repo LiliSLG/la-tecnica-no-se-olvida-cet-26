@@ -335,3 +335,37 @@ export interface Entrevista {
   eliminadoEn?: string | null;
   eliminadoPorUid?: string | null;
 }
+
+export type TipoContratoOferta =
+  | "jornada_completa"
+  | "media_jornada"
+  | "freelance"
+  | "pasantia"
+  | "voluntariado"
+  | "otro";
+
+export interface OfertaTrabajo {
+  id: string;
+  titulo: string;
+  publicadoPorNombre: string;
+  publicadoPorId?: string | null;
+  esEmpresa: boolean;
+  descripcion: string;
+  descripcionCorta?: string;
+  ubicacionTexto: string;
+  tipoContrato: TipoContratoOferta;
+  idsTemasRequeridos?: string[] | null;
+  categoriaOferta?: string | null;
+  requisitos?: string | null;
+  beneficios?: string | null;
+  comoAplicar: string;
+  enlaceExterno?: string | null;
+  salarioEstimado?: string | null;
+  fechaPublicacion: string;
+  fechaCierre?: string | null;
+  creadoPorUid: string;
+  creadoEn: string;
+  actualizadoEn: string;
+  estaActiva: boolean;
+  estaEliminada?: boolean | null;
+}
