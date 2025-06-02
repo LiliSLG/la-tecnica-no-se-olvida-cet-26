@@ -1,5 +1,3 @@
-// lib/supabaseStorage.ts
-
 import { supabase } from "./supabaseClient";
 import { toast } from "@/hooks/use-toast";
 

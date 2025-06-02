@@ -5,8 +5,8 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import OrganizacionForm from '@/components/forms/OrganizacionForm';
 import type { OrganizacionFormData } from '@/lib/schemas/organizacionSchema';
-import { getOrganizacionById, updateOrganizacion } from '@/lib/firebase/organizacionesService';
-import { convertFormDataForFirestoreOrganizacion } from '@/lib/schemas/organizacionSchema';
+import { getOrganizacionById, updateOrganizacion } from '@/lib/supabase/organizacionesService';
+import { convertFormDataToSupabaseOrganizacion } from "@/lib/schemas/organizacionSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Organizacion } from '@/lib/types';
@@ -67,8 +67,10 @@ export default function EditarOrganizacionPage({ params: paramsProp }: EditarOrg
 
     setIsSubmitting(true);
     try {
-      const dataForFirestore = convertFormDataForFirestoreOrganizacion(data);
-      await updateOrganizacion(initialData.id, dataForFirestore, user.uid);
+      const dataForSupabase = convertFormDataToSupabaseOrganizacion(
+        data,
+        user.id)
+      await updateOrganizacion(initialData.id, dataForSupabase, user.id);
       toast({ title: "Éxito", description: "Organización actualizada correctamente." });
       
       const volverAPath = searchParams.get('volverA');
