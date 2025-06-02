@@ -19,6 +19,12 @@
 - **AI:** Planned future integration with RAG-based system over Postgres + Storage.
 - **Auth:** Supabase Auth (email-based, possibly extendable to OAuth).
 
+## Backend
+
+- La app ahora utiliza Supabase (Postgres SQL) como base de datos.
+- Las tablas relacionales (many-to-many) fueron creadas para soportar las relaciones entre proyectos, personas, temas, entrevistas y noticias.
+
+
 ## Style Guidelines:
 
 - **Primary color:** Muted violet (#A994D9), representing creativity and wisdom, aligned with education.

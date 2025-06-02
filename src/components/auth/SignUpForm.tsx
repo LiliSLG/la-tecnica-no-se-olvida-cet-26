@@ -8,8 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Mail, Lock, User, UserPlus } from 'lucide-react'; // Added User icon
 import Image from 'next/image';
+import { Mail, Lock, User, UserPlus } from 'lucide-react'; // Added User icon
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';

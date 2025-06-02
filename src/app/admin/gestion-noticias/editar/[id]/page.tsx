@@ -5,7 +5,7 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import NoticiaForm from '@/components/forms/NoticiaForm';
 import type { NoticiaFormData } from '@/lib/schemas/noticiaSchema';
-import { getNoticiaById, updateNoticia } from '@/lib/firebase/noticiasService';
+import { getNoticiaById, updateNoticia } from '@/lib/supabase/noticiasService';
 import { convertFirestoreDataToFormNoticia } from '@/lib/schemas/noticiaSchema';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -68,7 +68,7 @@ export default function EditarNoticiaPage({ params: paramsProp }: EditarNoticiaP
 
     setIsSubmitting(true);
     try {
-      await updateNoticia(noticiaId, data, user.uid);
+      await updateNoticia(noticiaId, data, user.id);
       toast({ title: "Éxito", description: "Noticia actualizada correctamente." });
       router.push(volverAPath);
       return true;

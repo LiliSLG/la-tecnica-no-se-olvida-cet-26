@@ -1,21 +1,27 @@
 # Changelog
 
-# Changelog
 
-## 2024-06-01
+## [2025-06-01] Migración Firestore → Supabase (Fase 1 y Fase 2)
 
-- Migrated from Firebase Firestore to Supabase/Postgres relational model.
-- Created core tables:
-    - personas
-    - temas
-    - organizaciones
-    - noticias
-    - entrevistas
-    - proyectos
-- Created all N:M relationship tables.
-- Defined usage of Supabase Storage instead of Firebase Storage.
-- Defined phase-based migration approach: Phase 1 (schema), Phase 2 (services adaptation), Phase 3 (AI integration).
-
+- Migración completa de servicios:
+    - Personas → `personasService.ts`
+    - Proyectos → `proyectosService.ts`
+    - Entrevistas → `entrevistasService.ts`
+    - Noticias → `noticiasService.ts`
+    - Organizaciones → `organizacionesService.ts`
+    - Temas → `temasService.ts`
+- Creación de tablas relacionales en Supabase:
+    - `persona_tema`
+    - `proyecto_tema`
+    - `entrevista_tema`
+    - `noticia_tema`
+    - `proyecto_persona_rol`
+    - `proyecto_organizacion_rol`
+- Ajuste en `src/lib/supabase/supabaseClient.ts`
+- Estándar de timestamps → `new Date().toISOString()`
+- Eliminación de `serverTimestamp` y conversión de Firestore `Timestamp` a `string`
+- Uso de `logical delete` unificado en todos los servicios (`estaEliminada`, `eliminadoPorUid`, `eliminadoEn`)
+- Eliminación de hacks Firestore (chunking de 30 IDs, `documentId`, `array-contains`, etc.)
 
 
 ## 31/05/2025

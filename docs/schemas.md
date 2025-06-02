@@ -1,53 +1,46 @@
-# Current Data Schemas — as of 2024-05-31
+# Base de datos Supabase
 
-## personas
-- Core table for all users/persons in the system.
-- Includes special fields for CET alumni (may later be normalized).
-- Uses enums, arrays and jsonb.
-- Relationships:
-    - persona_tema (N:M with temas)
+## Tablas principales
 
-## temas
-- Simple table of themes/categories.
-- Used in multiple entities.
+### personas
+- id (UUID, PK)
+- nombre, apellido, email, fotoURL, categoriaPrincipal, capacidadesPlataforma (array), ...
+- ingresadoPor, creadoEn, modificadoPor, actualizadoEn, estaEliminada, eliminadoPorUid, eliminadoEn
 
-## organizaciones
-- Table of organizations.
-- Uses jsonb for location.
+### proyectos
+- id (UUID, PK)
+- titulo, descripcionGeneral, resumenEjecutivo, estadoActual, ...
+- creadoPorUid, actualizadoPorUid, creadoEn, actualizadoEn, estaEliminado, eliminadoPorUid, eliminadoEn
 
-## noticias
-- Articles and external links.
-- Relationship:
-    - noticia_tema (N:M with temas)
+### entrevistas
+- id (UUID, PK)
+- tipoContenido, tituloSaber, descripcionSaber, ...
+- creadoPorUid, actualizadoEn, estaPublicada, estaEliminada
 
-## entrevistas
-- Interviews (oral history archive).
-- Uses enums and arrays.
-- Relationships:
-    - entrevista_tema (N:M with temas)
+### noticias
+- id (UUID, PK)
+- tipoContenido, titulo, contenido/urlExterna, ...
+- creadoPorUid, actualizadoEn, estaPublicada, esDestacada, estaEliminada
 
-## proyectos
-- Student projects.
-- Main entity.
-- Relationships:
-    - proyecto_tema
-    - proyecto_autor
-    - proyecto_tutor
-    - proyecto_colaborador
-    - proyecto_organizacion_tutoria
-    - proyecto_entrevista
-    - proyecto_archivo (replaces previous `archivosAdjuntos` array)
+### organizaciones
+- id (UUID, PK)
+- nombreOficial, tipo, descripcion, ...
+- creadoEn, actualizadoEn, estaEliminada
 
-## Tables N:M
-- persona_tema
-- noticia_tema
-- entrevista_tema
-- proyecto_tema
-- proyecto_autor
-- proyecto_tutor
-- proyecto_colaborador
-- proyecto_organizacion_tutoria
-- proyecto_entrevista
+### temas
+- id (UUID, PK)
+- nombre, descripcion, categoriaTema, ...
+- creadoEn, actualizadoEn, estaEliminada
+
+## Tablas relacionales (many-to-many)
+
+- persona_tema (persona_id, tema_id)
+- proyecto_tema (proyecto_id, tema_id)
+- entrevista_tema (entrevista_id, tema_id)
+- noticia_tema (noticia_id, tema_id)
+- proyecto_persona_rol (proyecto_id, persona_id, rol)
+- proyecto_organizacion_rol (proyecto_id, organizacion_id, rol)
+
 
 ## Notes:
 - All tables include created/updated timestamps and logical deletion (`estaEliminada`).

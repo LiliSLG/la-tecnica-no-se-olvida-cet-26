@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import NoticiaForm from '@/components/forms/NoticiaForm';
 import type { NoticiaFormData } from '@/lib/schemas/noticiaSchema';
-import { addNoticia } from '@/lib/firebase/noticiasService';
+import { addNoticia } from '@/lib/supabase/noticiasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function NuevaNoticiaPage() {
     }
     setIsSubmitting(true);
     try {
-      await addNoticia(data, user.uid);
+      await addNoticia(data, user.id);
       toast({ title: "Éxito", description: "Noticia creada correctamente." });
       router.push('/admin/gestion-noticias'); 
       return true;
