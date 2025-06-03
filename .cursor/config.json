@@ -1,0 +1,15 @@
+{
+    "context": {
+      "include": [
+        "docs/blueprint.md",
+        "docs/schemas.md",
+        "docs/changelog.md",
+        "docs/future-developments.md",
+        "rules.md",
+        "src/lib/types",
+        "src/lib/supabase",
+        "src/components"
+      ]
+    }
+  }
+  
