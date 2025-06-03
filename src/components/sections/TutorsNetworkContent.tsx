@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Persona, Organizacion, CategoriaPrincipalPersona, TipoOrganizacion } from '@/lib/types';
-import { getPublicTutoresYColaboradores } from '@/lib/firebase/personasService';
-import { getPublicOrganizaciones } from '@/lib/firebase/organizacionesService';
+import { getPublicTutoresYColaboradores } from '@/lib/supabase/personasService';
+import { getPublicOrganizaciones } from '@/lib/supabase/organizacionesService';
 import { useToast } from '@/hooks/use-toast';
 import PersonaCard from '@/components/cards/PersonaCard';
 import OrganizacionCard from '@/components/cards/OrganizacionCard';

@@ -1,10 +1,11 @@
-
+// src/lib/schemas/projectSchema.ts
 "use client";
 
 import { z } from "zod";
-import { Timestamp } from "firebase/firestore";
 import type { Proyecto } from "@/lib/types";
 
+// ————————————————————————————————————————————————————————————————
+// Opciones y tipos para “estadoActual”
 export const estadoOptions = [
   "idea",
   "en_desarrollo",
@@ -24,7 +25,8 @@ export const estadoLabels: Record<EstadoProyecto, string> = {
   cancelado: "Cancelado",
 };
 
-// Zod preprocessor para convertir string separado por comas a array de strings
+// ————————————————————————————————————————————————————————————————
+// Preprocesador Zod para convertir “a,b,c” en ["a","b","c"]
 export const stringToArrayZod = z.preprocess((val) => {
   if (typeof val === "string" && val.trim() !== "") {
     return val
@@ -40,7 +42,6 @@ export const stringToArrayZod = z.preprocess((val) => {
   return [];
 }, z.array(z.string()));
 
-// Helper function (not a Zod preprocessor) para el form, si es necesario
 export const stringToArray = (
   val: string | string[] | undefined | null
 ): string[] => {
@@ -58,6 +59,8 @@ export const stringToArray = (
   return [];
 };
 
+// ————————————————————————————————————————————————————————————————
+// Schema para archivos adjuntos dentro de un proyecto
 const AttachedFileSchema = z.object({
   nombre: z.string().min(1, "El nombre del archivo es requerido."),
   url: z
@@ -68,6 +71,8 @@ const AttachedFileSchema = z.object({
   descripcion: z.string().optional().nullable(),
 });
 
+// ————————————————————————————————————————————————————————————————
+// Schema principal de formulario de proyecto (ProjectFormData)
 export const projectSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres."),
   descripcionGeneral: z
@@ -76,10 +81,10 @@ export const projectSchema = z.object({
   resumenEjecutivo: z.string().optional().nullable(),
 
   idsTemas: z.array(z.string()).min(1, "Debe seleccionar al menos un tema."),
-  palabrasClave: stringToArrayZod.refine((value) => value.length > 0, {
+  palabrasClave: stringToArrayZod.refine((arr) => arr.length > 0, {
     message: "Debe ingresar al menos una palabra clave.",
   }),
-  idsOrganizacionesTutoria: stringToArrayZod.optional().default([]), // Changed to use stringToArrayZod for comma-separated string input
+  idsOrganizacionesTutoria: stringToArrayZod.optional().default([]),
 
   anoProyecto: z.coerce
     .number()
@@ -90,6 +95,7 @@ export const projectSchema = z.object({
     required_error: "El estado actual es requerido.",
   }),
 
+  // Fechas en JavaScript (opcional / puede ser null)
   fechaInicio: z.date().nullable().optional(),
   fechaFinalizacionEstimada: z.date().nullable().optional(),
   fechaFinalizacionReal: z.date().nullable().optional(),
@@ -97,7 +103,6 @@ export const projectSchema = z.object({
 
   idsAutores: z.array(z.string()).min(1, "Debe seleccionar al menos un autor."),
   idsTutoresPersonas: z.array(z.string()).optional().default([]),
-  // idsOrganizacionesTutoria: z.array(z.string()).optional().default([]), // Reverted this to stringToArrayZod
   idsColaboradores: z.array(z.string()).optional().default([]),
 
   archivoPrincipalURL: z
@@ -109,17 +114,42 @@ export const projectSchema = z.object({
   nombreArchivoPrincipal: z.string().optional().nullable(),
 
   archivosAdjuntos: z.array(AttachedFileSchema).optional().default([]),
-  estaEliminado: z.boolean().optional(),
+  estaEliminado: z.boolean().optional().default(false),
 });
 
 export type ProjectFormData = z.infer<typeof projectSchema>;
 
-export const convertFormDataForFirestore = (
-  data: ProjectFormData
-): Record<string, any> => {
-  const firestoreData: { [key: string]: any } = { ...data };
+// ————————————————————————————————————————————————————————————————
+// Convierten entre ProjectFormData ↔ “lo que venga de Supabase”
+//
+// Observación: en la tabla `proyectos` no existen columnas arrays para
+// “idsTemas” ni “idsAutores” directamente.  Esas relaciones se manejan
+// mediante tablas pivote (proyecto_tema, proyecto_autor, etc.).
+// Por simplicidad aquí asumimos que, al hacer un JOIN desde Supabase,
+// el objeto resultante (que recibimos como `projectData`) sí trae propiedades
+// como `idsTemas: string[]`, `idsAutores: string[]`, etc. Si no las trae
+// en bruto, tu consulta a Supabase debe usar `.select('*, proyecto_tema(idsTemas), ...')`
+// o lo que corresponda.
+//
+// Dado que TS no sabe de antemano si vendrán esos campos, en la firma usamos
+// `projectData: Record<string, any>`, para que no dé error de “propiedad no existe”.
+// Si todavía quieres tiparlo más estrictamente, puedes crear un tipo intermedio
+// que incluya esas propiedades extra.
 
-  const arrayIdKeys: (keyof Pick<
+/**
+ * Convertir datos de formulario (ProjectFormData) a un objeto
+ * listo para enviar a Supabase (Postgres).
+ * - Las fechas (`Date`) se convierten a string ISO con `.toISOString()`.
+ * - Los arrays vacíos se transforman en `null` para columnas array NULLABLE.
+ * - Los strings vacíos pasan a `null`.
+ */
+export function convertFormDataToSupabaseProject(
+  data: ProjectFormData
+): Partial<Proyecto> {
+  const supaData: { [key: string]: any } = { ...data };
+
+  // Campos de arreglo que, si quedan vacíos, pasan a `null`.
+  const arrayFields: (keyof Pick<
     ProjectFormData,
     | "idsTemas"
     | "idsAutores"
@@ -135,136 +165,107 @@ export const convertFormDataForFirestore = (
     "idsOrganizacionesTutoria",
     "palabrasClave",
   ];
-  arrayIdKeys.forEach((key) => {
-    if (Array.isArray(firestoreData[key]) && firestoreData[key].length === 0) {
-      firestoreData[key] = null;
-    } else if (firestoreData[key] === undefined) {
-      firestoreData[key] = null;
+  arrayFields.forEach((key) => {
+    if (
+      !Array.isArray(supaData[key]) ||
+      (Array.isArray(supaData[key]) && supaData[key].length === 0)
+    ) {
+      supaData[key] = null;
     }
   });
 
-  const optionalStringKeys: (keyof Pick<
+  // Campos string opcionales que, si están vacíos, pasan a `null`.
+  const optionalStringFields: (keyof Pick<
     ProjectFormData,
     "resumenEjecutivo" | "archivoPrincipalURL" | "nombreArchivoPrincipal"
   >)[] = ["resumenEjecutivo", "archivoPrincipalURL", "nombreArchivoPrincipal"];
-  optionalStringKeys.forEach((key) => {
-    if (firestoreData[key] === "" || firestoreData[key] === undefined) {
-      firestoreData[key] = null;
+  optionalStringFields.forEach((key) => {
+    if (supaData[key] === "" || supaData[key] === undefined) {
+      supaData[key] = null;
     }
   });
 
-  if (
-    firestoreData.archivosAdjuntos &&
-    Array.isArray(firestoreData.archivosAdjuntos)
-  ) {
-    firestoreData.archivosAdjuntos = firestoreData.archivosAdjuntos.map(
-      (adjunto: any) => {
-        const newAdjunto = { ...adjunto };
-        newAdjunto.tipo = adjunto.tipo || null;
-        newAdjunto.descripcion = adjunto.descripcion || null;
-        return newAdjunto;
-      }
-    );
-    if (firestoreData.archivosAdjuntos.length === 0)
-      firestoreData.archivosAdjuntos = null;
-  } else {
-    firestoreData.archivosAdjuntos = null;
-  }
-
-  firestoreData.fechaInicio = data.fechaInicio
-    ? Timestamp.fromDate(data.fechaInicio)
+  // Convertir fechas JS `Date` → ISO string. Si no hay fecha, queda `null`.
+  supaData.fechaInicio = data.fechaInicio
+    ? data.fechaInicio.toISOString()
     : null;
-  firestoreData.fechaFinalizacionEstimada = data.fechaFinalizacionEstimada
-    ? Timestamp.fromDate(data.fechaFinalizacionEstimada)
+  supaData.fechaFinalizacionEstimada = data.fechaFinalizacionEstimada
+    ? data.fechaFinalizacionEstimada.toISOString()
     : null;
-  firestoreData.fechaFinalizacionReal = data.fechaFinalizacionReal
-    ? Timestamp.fromDate(data.fechaFinalizacionReal)
+  supaData.fechaFinalizacionReal = data.fechaFinalizacionReal
+    ? data.fechaFinalizacionReal.toISOString()
     : null;
-  firestoreData.fechaPresentacion = data.fechaPresentacion
-    ? Timestamp.fromDate(data.fechaPresentacion)
+  supaData.fechaPresentacion = data.fechaPresentacion
+    ? data.fechaPresentacion.toISOString()
     : null;
 
-  return firestoreData;
-};
+  // `estaEliminado` ya viene como boolean o undefined; si es undefined, queda `false`.
+  supaData.estaEliminado = data.estaEliminado ?? false;
 
-export const convertFirestoreDataToForm = (
-  projectData: Partial<Proyecto>
-): ProjectFormData => {
-  const convertTimestampToDate = (timestamp: any): Date | null =>
-    timestamp && typeof timestamp.toDate === "function"
-      ? timestamp.toDate()
-      : null;
+  return supaData as Partial<Proyecto>;
+}
 
-  const formValues: { [key: string]: any } = { ...projectData };
+/**
+ * Convertir datos crudos que vienen de Supabase (filas de `proyectos`) a
+ * valores pre-poblados en el formulario (ProjectFormData).
+ * - Las fechas pueden llegar como string ISO o `Date`; las parsea con `new Date(...)`.
+ * - Los arrays de columna Postgres (por ej. `string[]` o `null`) se normalizan a `string[]`.
+ * - Los archivos adjuntos llegan como array de objetos con `{nombre,url,tipo,descripcion}`
+ */
+export function convertSupabaseDataToFormProject(
+  projectData: Record<string, any>
+): ProjectFormData {
+  // Helper: parsear string ISO o Date → Date | null
+  const parseDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Date) return val;
+    const parsed = new Date(val);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
 
-  formValues.fechaInicio = convertTimestampToDate(projectData.fechaInicio);
-  formValues.fechaFinalizacionEstimada = convertTimestampToDate(
-    projectData.fechaFinalizacionEstimada
-  );
-  formValues.fechaFinalizacionReal = convertTimestampToDate(
-    projectData.fechaFinalizacionReal
-  );
-  formValues.fechaPresentacion = convertTimestampToDate(
-    projectData.fechaPresentacion
-  );
-
-  const arrayFieldToArray = (fieldValue: any): string[] => {
-    if (Array.isArray(fieldValue)) return fieldValue;
+  // Helper: asegurarse de que un campo sea `string[]`
+  const parseArray = (val: any): string[] => {
+    if (Array.isArray(val)) return val as string[];
     return [];
   };
 
-  formValues.idsTemas = arrayFieldToArray(projectData.idsTemas);
-  formValues.palabrasClave = arrayFieldToArray(projectData.palabrasClave);
-  formValues.idsAutores = arrayFieldToArray(projectData.idsAutores);
-  formValues.idsTutoresPersonas = arrayFieldToArray(
-    projectData.idsTutoresPersonas
-  );
-  formValues.idsOrganizacionesTutoria = arrayFieldToArray(
-    projectData.idsOrganizacionesTutoria
-  );
-  formValues.idsColaboradores = arrayFieldToArray(projectData.idsColaboradores);
+  // Construimos un objeto intermedio con defaults mínimos
+  const formValues: { [key: string]: any } = {
+    titulo: projectData.titulo ?? "",
+    descripcionGeneral: projectData.descripcionGeneral ?? "",
+    resumenEjecutivo: projectData.resumenEjecutivo ?? null,
 
-  formValues.archivosAdjuntos = Array.isArray(projectData.archivosAdjuntos)
-    ? projectData.archivosAdjuntos.map((adjunto: any) => ({
-        nombre: adjunto.nombre || "",
-        url: adjunto.url || "",
-        tipo: adjunto.tipo || "",
-        descripcion: adjunto.descripcion || "",
-      }))
-    : [];
+    idsTemas: parseArray(projectData.idsTemas),
+    palabrasClave: parseArray(projectData.palabrasClave),
+    idsOrganizacionesTutoria: parseArray(projectData.idsOrganizacionesTutoria),
 
-  formValues.resumenEjecutivo = projectData.resumenEjecutivo || "";
-  formValues.archivoPrincipalURL = projectData.archivoPrincipalURL || "";
-  formValues.nombreArchivoPrincipal = projectData.nombreArchivoPrincipal || "";
+    anoProyecto: projectData.anoProyecto ?? new Date().getFullYear(),
+    estadoActual: (projectData.estadoActual as EstadoProyecto) ?? "idea",
 
-  formValues.estaEliminado = projectData.estaEliminado ?? false;
-  formValues.anoProyecto = projectData.anoProyecto || new Date().getFullYear();
-  formValues.estadoActual = projectData.estadoActual || "idea";
+    fechaInicio: parseDate(projectData.fechaInicio),
+    fechaFinalizacionEstimada: parseDate(projectData.fechaFinalizacionEstimada),
+    fechaFinalizacionReal: parseDate(projectData.fechaFinalizacionReal),
+    fechaPresentacion: parseDate(projectData.fechaPresentacion),
 
-  // The following line was causing the error when initialData.idsTemas was []
-  // return projectSchema.parse(formValues);
+    idsAutores: parseArray(projectData.idsAutores),
+    idsTutoresPersonas: parseArray(projectData.idsTutoresPersonas),
+    idsColaboradores: parseArray(projectData.idsColaboradores),
 
-  // Directly return the transformed values. Validation will be handled by the form resolver.
-  // Ensure all fields expected by ProjectFormData are present with defaults if necessary.
-  return {
-    titulo: formValues.titulo || "",
-    descripcionGeneral: formValues.descripcionGeneral || "",
-    resumenEjecutivo: formValues.resumenEjecutivo || null,
-    idsTemas: formValues.idsTemas || [],
-    palabrasClave: formValues.palabrasClave || [],
-    idsOrganizacionesTutoria: formValues.idsOrganizacionesTutoria || [],
-    anoProyecto: formValues.anoProyecto || new Date().getFullYear(),
-    estadoActual: formValues.estadoActual || "idea",
-    fechaInicio: formValues.fechaInicio || null,
-    fechaFinalizacionEstimada: formValues.fechaFinalizacionEstimada || null,
-    fechaFinalizacionReal: formValues.fechaFinalizacionReal || null,
-    fechaPresentacion: formValues.fechaPresentacion || null,
-    idsAutores: formValues.idsAutores || [],
-    idsTutoresPersonas: formValues.idsTutoresPersonas || [],
-    idsColaboradores: formValues.idsColaboradores || [],
-    archivoPrincipalURL: formValues.archivoPrincipalURL || null,
-    nombreArchivoPrincipal: formValues.nombreArchivoPrincipal || null,
-    archivosAdjuntos: formValues.archivosAdjuntos || [],
-    estaEliminado: formValues.estaEliminado ?? false,
-  } as ProjectFormData; // Cast to ensure type compliance after manual construction
-};
+    archivoPrincipalURL: projectData.archivoPrincipalURL ?? null,
+    nombreArchivoPrincipal: projectData.nombreArchivoPrincipal ?? null,
+
+    archivosAdjuntos: Array.isArray(projectData.archivosAdjuntos)
+      ? (projectData.archivosAdjuntos as any[]).map((adj: any) => ({
+          nombre: adj.nombre ?? "",
+          url: adj.url ?? "",
+          tipo: adj.tipo ?? null,
+          descripcion: adj.descripcion ?? null,
+        }))
+      : [],
+
+    estaEliminado: projectData.estaEliminado ?? false,
+  };
+
+  // Finalmente devolvemos en la forma exacta que exige nuestro `ProjectFormData`.
+  return formValues as ProjectFormData;
+}

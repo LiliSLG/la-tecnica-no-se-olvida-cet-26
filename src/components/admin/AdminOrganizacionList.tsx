@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllOrganizacionesForAdmin, logicalDeleteOrganizacion, restoreOrganizacion } from '@/lib/firebase/organizacionesService'; // Removed permanentlyDeleteOrganizacion
+import { getAllOrganizacionesForAdmin, logicalDeleteOrganizacion, restoreOrganizacion } from '@/lib/supabase/organizacionesService'; // Removed permanentlyDeleteOrganizacion
 import type { Organizacion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,7 +61,7 @@ export default function AdminOrganizacionList() {
   const handleLogicalDelete = async (orgId: string) => {
     if (!user) return;
     try {
-      await logicalDeleteOrganizacion(orgId, user.uid);
+      await logicalDeleteOrganizacion(orgId, user.id);
       toast({ title: "Éxito", description: "Organización eliminada lógicamente." });
       fetchOrganizaciones();
     } catch (error) {
@@ -73,7 +73,7 @@ export default function AdminOrganizacionList() {
   const handleRestore = async (orgId: string) => {
     if (!user) return;
     try {
-      await restoreOrganizacion(orgId, user.uid);
+      await restoreOrganizacion(orgId, user.id);
       toast({ title: "Éxito", description: "Organización restaurada." });
       fetchOrganizaciones();
     } catch (error) {

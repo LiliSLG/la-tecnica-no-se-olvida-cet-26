@@ -315,3 +315,35 @@ export function convertFormDataToSupabaseOrganizacion(
 
   return orgPayload;
 }
+
+export const addOrganizacionModalSchema = z.object({
+  nombreOficial: z
+    .string()
+    .min(
+      2,
+      "El nombre oficial es requerido y debe tener al menos 2 caracteres."
+    ),
+
+  tipo: z.enum(
+    organizacionTipos as unknown as [TipoOrganizacion, ...TipoOrganizacion[]],
+    { required_error: "Debes seleccionar un tipo de organización." }
+  ),
+
+  nombreFantasia: z.string().optional().nullable(),
+
+  emailContacto: z
+    .string()
+    .email("Debe ser un correo electrónico válido.")
+    .optional()
+    .or(z.literal("")),
+
+  sitioWeb: z
+    .string()
+    .url("Debe ser una URL válida.")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type AddOrganizacionModalFormData = z.infer<
+  typeof addOrganizacionModalSchema
+>;

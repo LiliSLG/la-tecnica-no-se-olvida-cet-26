@@ -2,10 +2,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { getPublicadasEntrevistas } from '@/lib/firebase/entrevistasService';
+import { getPublicadasEntrevistas } from '@/lib/supabase/entrevistasService';
 import type { Entrevista, Tema } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPersonaById } from '@/lib/firebase/personasService';
+import { getPersonaById } from '@/lib/supabase/personasService';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, CalendarDays, Filter, XCircle, RefreshCw, AlertTriangle, PlusCircle, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import EntrevistaCard from '@/components/cards/EntrevistaCard';
-import { getAllTemasActivos } from '@/lib/firebase/temasService';
+import { getAllTemasActivos } from '@/lib/supabase/temasService';
 import Link from 'next/link';
 
 export default function HistoriaOralListContent() {
@@ -39,10 +39,11 @@ export default function HistoriaOralListContent() {
   const [allUniqueAmbitos, setAllUniqueAmbitos] = useState<string[]>([]);
 
 
+
   useEffect(() => {
     if (user) {
       const fetchPersonaData = async () => {
-        const pData = await getPersonaById(user.uid);
+        const pData = await getPersonaById(user.id);
         setPersona(pData);
         if (pData?.capacidadesPlataforma?.includes('es_admin_entrevistas')) {
           setCanCreateEntrevistas(true);

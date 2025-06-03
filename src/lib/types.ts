@@ -48,7 +48,8 @@ export type VisibilidadPerfil =
   | "publico"
   | "solo_registrados_plataforma"
   | "privado"
-  | "solo_admins_y_propio";
+  | "solo_admins_y_propio"
+  | "solo_registrados";
 
 export type TemaCategoria =
   | "agropecuario"
@@ -80,12 +81,15 @@ export interface TemaOption {
 }
 
 export type PlataformaVideo =
-  | "firebase_storage"
+  | "supabase_storage"
   | "youtube_propio"
   | "youtube"
   | "facebook"
   | "vimeo"
   | "otro";
+
+
+
 
 export interface Proyecto {
   id: string; // ahora siempre UUID generado por Postgres (antes era optional string)
@@ -226,6 +230,24 @@ export interface Tema {
   estaEliminada: boolean;
   eliminadoEn?: string | null;
   eliminadoPorUid?: string | null;
+}
+
+// --- FormAuthor: Used for selection in ProjectForm ---
+export interface FormAuthor {
+  id: string;
+  nombre: string;
+  apellido: string;
+  email?: string | null;
+  fotoURL?: string | null;
+  isNewPlaceholder?: boolean; // True if this was just created via modal
+}
+
+// --- FormOrganizacion: Used for selection in ProjectForm ---
+export interface FormOrganizacion {
+  id: string;
+  nombreOficial: string;
+  tipo: TipoOrganizacion;
+  isNewPlaceholder?: boolean;
 }
 
 export interface Organizacion {

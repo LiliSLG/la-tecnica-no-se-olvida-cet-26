@@ -22,6 +22,7 @@ import { useState, useEffect } from "react";
 
 interface EntrevistaCardProps {
   entrevista: Entrevista;
+  temasMap: Map<string, string>;
 }
 
 export default function EntrevistaCard({ entrevista }: EntrevistaCardProps) {

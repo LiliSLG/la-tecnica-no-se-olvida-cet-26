@@ -21,8 +21,6 @@ export const tipoContenidoNoticiaLabels: Record<TipoContenidoNoticia, string> = 
 /**
  * Esquema Zod para validar los datos del formulario de Noticia.
  *
- * - Se reemplaza `idsTemas: string[]` por `temas: TemaOption[]`.
- * - Se elimina todo lo relacionado con Firebase Timestamp.
  */
 export const noticiaSchema = z
   .object({

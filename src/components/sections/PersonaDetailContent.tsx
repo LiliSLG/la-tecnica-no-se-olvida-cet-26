@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getPersonaById } from '@/lib/firebase/personasService';
+import { getPersonaById } from '@/lib/supabase/personasService';
 import type { Persona, EstadoSituacionLaboral } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -60,7 +60,7 @@ export default function PersonaDetailContent({ personaId }: PersonaDetailContent
         const fetchedPersona = await getPersonaById(personaId);
         if (fetchedPersona && !fetchedPersona.estaEliminada && fetchedPersona.activo) {
           // Basic visibility check based on general profile settings
-          if (fetchedPersona.visibilidadPerfil === 'privado' && currentUser?.uid !== fetchedPersona.id) {
+          if (fetchedPersona.visibilidadPerfil === 'privado' && currentUser?.id !== fetchedPersona.id) {
             // Further check: if the current user is an admin, they should be able to see it.
             // This requires knowing if currentUser is an admin. For now, we'll stick to simpler logic.
             // We'd need to fetch current user's admin status if not already in useAuth context.
@@ -85,7 +85,7 @@ export default function PersonaDetailContent({ personaId }: PersonaDetailContent
 
   const canViewSensitiveInfo = (targetPersona: Persona | null): boolean => {
     if (authLoading || !targetPersona) return false;
-    if (currentUser?.uid === targetPersona.id) return true; // Owner can always see
+    if (currentUser?.id === targetPersona.id) return true; // Owner can always see
     if (targetPersona.visibilidadPerfil === 'publico') return true;
     if (currentUser && (targetPersona.visibilidadPerfil === 'solo_registrados_plataforma' || targetPersona.visibilidadPerfil === 'solo_registrados')) return true;
     // TODO: Add admin check if admins should see all

@@ -6,32 +6,38 @@ import type { Tema } from "@/lib/types";
 import {
   convertFormDataToSupabaseTema,
   convertSupabaseDataToFormTema,
+} from "@/lib/schemas/temaSchema";
+import type {
   TemaFormData,
+  AddTemaModalFormData,
 } from "@/lib/schemas/temaSchema";
 
 const TABLE = "temas";
 
 export const addTema = async (
-  data: TemaFormData,
+  data: TemaFormData | AddTemaModalFormData,
   adminUid: string
 ): Promise<Tema> => {
+  // convertFormDataToSupabaseTema ya convierte "_ninguna_categoria_" a null
   const temaDataForCreation = convertFormDataToSupabaseTema(data, adminUid);
+
+  // Añadimos los campos de auditoría que no usa DEFAULT en la tabla
   temaDataForCreation.creadoEn = new Date().toISOString();
   temaDataForCreation.actualizadoEn = new Date().toISOString();
   temaDataForCreation.estaEliminada = false;
 
-  const { data: inserted, error } = await supabase
+  const { data: insertedTema, error: insertError } = await supabase
     .from(TABLE)
     .insert([temaDataForCreation])
     .select()
     .single();
 
-  if (error) {
-    console.error("Error adding tema:", error);
-    throw error;
-  }
+    if (insertError) {
+      console.error("Error adding tema:", insertError);
+      throw insertError;
+    }
 
-  return inserted as Tema;
+    return insertedTema as Tema;
 };
 
 export const getAllTemasForAdmin = async (): Promise<Tema[]> => {

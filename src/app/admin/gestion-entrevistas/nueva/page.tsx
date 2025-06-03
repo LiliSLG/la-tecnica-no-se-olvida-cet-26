@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EntrevistaForm from '@/components/forms/EntrevistaForm';
 import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
-import { addEntrevista } from '@/lib/firebase/entrevistasService';
+import { addEntrevista } from '@/lib/supabase/entrevistasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, MessageSquare } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function NuevaEntrevistaPage() {
     }
     setIsSubmitting(true);
     try {
-      await addEntrevista(data, user.uid);
+      await addEntrevista(data, user.id);
       toast({ title: "Éxito", description: "Entrevista creada correctamente." });
       router.push('/admin/entrevistas-gestion'); 
       return true;

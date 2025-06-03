@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, Tag as TagIcon, TagsIcon, Text } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addTema } from '@/lib/firebase/temasService';
+import { addTema } from '@/lib/supabase/temasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -64,7 +64,7 @@ export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddT
         dataForService.categoriaTema = null;
       }
 
-      const newTema = await addTema(dataForService, user.uid);
+      const newTema = await addTema(dataForService, user.id);
       
       toast({ title: "Éxito", description: `Tema "${newTema.nombre}" añadido.` });
       onTemaCreated(newTema);

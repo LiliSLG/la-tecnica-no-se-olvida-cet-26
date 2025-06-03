@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllTemasForAdmin, logicalDeleteTema, restoreTema } from '@/lib/firebase/temasService';
+import { getAllTemasForAdmin, logicalDeleteTema, restoreTema } from '@/lib/supabase/temasService';
 import type { Tema } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,7 +74,7 @@ export default function AdminTemaList() {
   const handleLogicalDelete = async () => {
     if (!temaToDelete || !temaToDelete.id || !user) return;
     try {
-      await logicalDeleteTema(temaToDelete.id, user.uid);
+      await logicalDeleteTema(temaToDelete.id, user.id);
       toast({ title: "Éxito", description: "Tema eliminado lógicamente." });
       fetchTemas();
     } catch (error) {
@@ -89,7 +89,7 @@ export default function AdminTemaList() {
   const handleRestore = async (temaId: string) => {
     if (!user) return;
     try {
-      await restoreTema(temaId, user.uid);
+      await restoreTema(temaId, user.id);
       toast({ title: "Éxito", description: "Tema restaurado." });
       fetchTemas();
     } catch (error) {

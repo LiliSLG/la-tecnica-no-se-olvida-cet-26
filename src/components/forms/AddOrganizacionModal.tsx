@@ -4,7 +4,13 @@
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { addOrganizacionModalSchema, type AddOrganizacionModalFormData, organizacionTipos, organizacionTipoLabels } from '@/lib/schemas/organizacionSchema';
+import {
+  addOrganizacionModalSchema,
+  type AddOrganizacionModalFormData,
+  organizacionTipos,
+  organizacionTipoLabels,
+  OrganizacionFormData,
+} from "@/lib/schemas/organizacionSchema";
 import type { Organizacion, TipoOrganizacion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addOrganizacion } from '@/lib/firebase/organizacionesService';
+import { addOrganizacion } from '@/lib/supabase/organizacionesService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -73,7 +79,7 @@ export default function AddOrganizacionModal({ open, onOpenChange, onOrganizacio
         // Let addOrganizacion handle audit fields, estaEliminada, etc.
       };
 
-      const orgId = await addOrganizacion(dataForService as OrganizacionFormData, user.uid); // Cast if addOrganizacion expects more fields
+      const orgId = await addOrganizacion(dataForService as OrganizacionFormData, user.id); // Cast if addOrganizacion expects more fields
       
       toast({ title: "Éxito", description: `${data.nombreOficial} añadida como nueva organización.` });
       onOrganizacionCreated({ id: orgId, nombreOficial: data.nombreOficial, tipo: data.tipo });

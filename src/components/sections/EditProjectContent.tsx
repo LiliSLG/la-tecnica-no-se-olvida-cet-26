@@ -5,11 +5,14 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProjectForm from '@/components/forms/ProjectForm';
 import type { ProjectFormData } from '@/lib/schemas/projectSchema';
-import { getProjectById, updateProject } from '@/lib/firebase/projectsService';
+import { getProjectById, updateProject } from '@/lib/supabase/proyectosService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Proyecto } from '@/lib/types';
-import { convertFormDataForFirestore, convertFirestoreDataToForm } from '@/lib/schemas/projectSchema';
+import {
+  convertFormDataToSupabaseProject,
+  convertSupabaseDataToFormProject,
+} from "@/lib/schemas/projectSchema";
 import { Edit, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button'; // Corrected import for Button
 
@@ -37,7 +40,7 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
         const project = await getProjectById(projectId);
         if (project) {
           // Convert Firestore data to form-compatible data before setting initialData
-          setInitialData(convertFirestoreDataToForm(project));
+          setInitialData(convertSupabaseDataToFormProject(project));
         } else {
           setError("Proyecto no encontrado.");
           toast({ title: "Error", description: "Proyecto no encontrado.", variant: "destructive" });
@@ -54,35 +57,56 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
     fetchProject();
   }, [projectId, router, toast]);
 
-  const handleSubmit = async (data: ProjectFormData) => {
+  const handleSubmitProject = async (
+    data: ProjectFormData
+  ): Promise<boolean> => {
     if (!user) {
-      toast({ title: "Error", description: "Debes estar autenticado para editar un proyecto.", variant: "destructive" });
-      return;
+      toast({
+        title: "Error",
+        description: "Debes estar autenticado para editar un proyecto.",
+        variant: "destructive",
+      });
+      return false;
     }
     if (!projectId) {
-      toast({ title: "Error", description: "No se pudo identificar el proyecto a editar.", variant: "destructive" });
-      return;
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el proyecto a editar.",
+        variant: "destructive",
+      });
+      return false;
     }
 
     setIsSubmitting(true);
     try {
-      const dataForFirestore = convertFormDataForFirestore(data);
-      await updateProject(projectId, dataForFirestore, user.uid);
-      toast({ title: "Éxito", description: "Proyecto actualizado correctamente." });
-      
-      const volverAPath = searchParams.get('volverA');
+      const dataForSupabase = convertFormDataToSupabaseProject(data);
+      await updateProject(projectId, dataForSupabase, user.id);
+      toast({
+        title: "Éxito",
+        description: "Proyecto actualizado correctamente.",
+      });
+
+      const volverAPath = searchParams.get("volverA");
       if (volverAPath) {
         router.push(volverAPath);
       } else {
-        router.push(`/admin/proyectos-gestion`); 
+        router.push("/admin/proyectos-gestion");
       }
+
+      return true;
     } catch (error) {
       console.error("Error updating project:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el proyecto.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el proyecto.",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   };
+  
 
   if (loading) {
     return (
@@ -120,12 +144,13 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
         <h1 className="text-4xl font-bold text-primary">Editar Proyecto</h1>
       </header>
       <p className="text-muted-foreground">
-        Modifica la información del proyecto "{initialData.titulo || ' proyecto sin título'}".
+        Modifica la información del proyecto "
+        {initialData.titulo || " proyecto sin título"}".
       </p>
-      <ProjectForm 
-        onSubmit={handleSubmit} 
-        initialData={initialData} 
-        isSubmitting={isSubmitting} 
+      <ProjectForm
+        onSubmit={handleSubmitProject}
+        initialData={initialData}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

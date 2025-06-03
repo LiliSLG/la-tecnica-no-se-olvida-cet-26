@@ -42,11 +42,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import NextImage from "next/image"; // Renamed to avoid conflict with lucide-react Image icon
-import {
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL,
-} from "firebase/storage";
+
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 

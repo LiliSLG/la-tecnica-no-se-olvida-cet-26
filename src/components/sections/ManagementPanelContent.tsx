@@ -1,17 +1,36 @@
-
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Mail, Briefcase, Shield, Edit3, FolderKanban, MicVocal, Settings, AlertTriangle, ExternalLink, CheckCircle, XCircle, GraduationCap, GanttChartSquare, PlusCircle } from 'lucide-react';
-import Link from 'next/link';
-import type { Persona } from '@/lib/types';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  User,
+  Mail,
+  Briefcase,
+  Shield,
+  Edit3,
+  FolderKanban,
+  MicVocal,
+  Settings,
+  AlertTriangle,
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+  PlusCircle,
+  GanttChartSquare,
+} from "lucide-react";
+import Link from "next/link";
+import type { Persona, Proyecto } from "@/lib/types";
 import { supabase } from "@/lib/supabase/supabaseClient";
-
 
 export default function ManagementPanelContent() {
   const { user, loading: authLoading } = useAuth();
@@ -19,6 +38,9 @@ export default function ManagementPanelContent() {
 
   const [personaData, setPersonaData] = useState<Persona | null>(null);
   const [personaLoading, setPersonaLoading] = useState(false);
+
+  const [myProjects, setMyProjects] = useState<Proyecto[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -30,7 +52,6 @@ export default function ManagementPanelContent() {
       const fetchPersona = async () => {
         setPersonaLoading(true);
         try {
-          // 1) Hacemos la consulta sin genéricos en select:
           const { data, error } = await supabase
             .from("personas")
             .select("*")
@@ -45,7 +66,6 @@ export default function ManagementPanelContent() {
             );
             setPersonaData(null);
           } else {
-            // 2) Casteamos explícitamente a Persona
             setPersonaData(data as Persona);
           }
         } catch (err) {
@@ -60,6 +80,62 @@ export default function ManagementPanelContent() {
     }
   }, [user, authLoading, router]);
 
+  // Fetch projects where user is author or collaborator
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchMyProjects = async () => {
+      setProjectsLoading(true);
+      try {
+        // 1) Obtener proyectos donde figura como autor
+        const { data: authorRows, error: authorError } = await supabase
+          .from("proyecto_autor")
+          .select("proyecto(*)")
+          .eq("persona_id", user.id);
+
+        if (authorError) {
+          throw authorError;
+        }
+
+        // 2) Obtener proyectos donde figura como colaborador
+        const { data: collaboratorRows, error: collaboratorError } =
+          await supabase
+            .from("proyecto_colaborador")
+            .select("proyecto(*)")
+            .eq("persona_id", user.id);
+
+        if (collaboratorError) {
+          throw collaboratorError;
+        }
+
+        // 3) Extraer proyectos de ambas consultas, evitando duplicados
+        const authorProjects =
+          authorRows?.map((row: any) => row.proyecto as Proyecto) || [];
+        const collaboratorProjects =
+          collaboratorRows?.map((row: any) => row.proyecto as Proyecto) || [];
+      
+
+        // Unir y filtrar duplicados por id
+        const combined = [...authorProjects, ...collaboratorProjects];
+        const uniqueMap = new Map<string, Proyecto>();
+        combined.forEach((proj) => {
+          if (proj.id) {
+            uniqueMap.set(proj.id, proj);
+          }
+        });
+
+        setMyProjects(Array.from(uniqueMap.values()));
+      } catch (err) {
+        console.error("Error al traer proyectos del usuario:", err);
+        setMyProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    fetchMyProjects();
+  }, [user]);
+
   if (authLoading || personaLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
@@ -69,7 +145,7 @@ export default function ManagementPanelContent() {
   }
 
   if (!user) {
-    // This case should ideally be caught by the useEffect redirect, but it's a fallback.
+    // Fallback de seguridad; normalmente redirige antes
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -95,13 +171,13 @@ export default function ManagementPanelContent() {
       : (user?.email?.charAt(0) || "?").toUpperCase();
   };
 
-  // Usamos email como fallback, o “Usuario Anónimo” si no hay email:
+  // Nombre a mostrar: si existe personaData, usamos nombre + apellido; sino email
   const displayName = personaData
     ? `${personaData.nombre || ""} ${personaData.apellido || ""}`.trim()
     : user.email || "Usuario Anónimo";
   const displayEmail =
     personaData?.email || user.email || "Email no disponible";
-  const avatarSrc = personaData?.fotoURL ||  undefined;
+  const avatarSrc = personaData?.fotoURL || undefined;
 
   return (
     <div className="space-y-12">
@@ -213,17 +289,51 @@ export default function ManagementPanelContent() {
             <h4 className="text-xl font-semibold text-primary/90 mb-3 flex items-center gap-2">
               <FolderKanban className="h-5 w-5" /> Mis Proyectos
             </h4>
-            <div className="p-4 border rounded-lg bg-background text-center">
-              <p className="text-muted-foreground mb-4">
-                Aquí se listarán los proyectos donde figuras como autor o
-                colaborador.
-              </p>
-              <Button asChild>
-                <Link href="/proyectos/nuevo">
-                  <GanttChartSquare className="mr-2 h-4 w-4" /> Crear Nuevo
-                  Proyecto
-                </Link>
-              </Button>
+            <div className="p-4 border rounded-lg bg-background">
+              {projectsLoading ? (
+                <p className="text-center text-muted-foreground">
+                  Cargando proyectos…
+                </p>
+              ) : myProjects.length > 0 ? (
+                <ul className="space-y-2">
+                  {myProjects.map((proj) => (
+                    <li
+                      key={proj.id}
+                      className="flex items-center justify-between"
+                    >
+                      <Link
+                        href={`/proyectos/${proj.id}`}
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <GanttChartSquare className="h-5 w-5" />
+                        {proj.titulo}
+                      </Link>
+                      <span className="text-sm text-muted-foreground">
+                        Año: {proj.anoProyecto}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <p className="mb-4">
+                    No aparece ningún proyecto.{" "}
+                    <Link
+                      href="/proyectos/nuevo"
+                      className="text-primary hover:underline"
+                    >
+                      Crea tu primer proyecto
+                    </Link>
+                    .
+                  </p>
+                  <Button asChild>
+                    <Link href="/proyectos/nuevo">
+                      <PlusCircle className="mr-2 h-4 w-4" /> Crear Nuevo
+                      Proyecto
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -242,5 +352,3 @@ export default function ManagementPanelContent() {
     </div>
   );
 }
-
-    

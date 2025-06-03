@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,12 +15,11 @@ import { CalendarIcon, PlusCircle, Trash2, X, Loader2, Search as SearchIcon, Use
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
-import type { Persona, FormAuthor, FormOrganizacion, CapacidadPlataforma, Organizacion, Tema, CategoriaPrincipalPersona, RolInstitucional, TipoOrganizacion } from '@/lib/types';
+import type { Persona, FormAuthor, FormOrganizacion, CapacidadPlataforma, Organizacion, Tema, CategoriaPrincipalPersona, TipoOrganizacion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import React, { useEffect, useState, useCallback } from 'react';
-import { searchPersonas, getPersonasByIds, createPersonaPlaceholder } from '@/lib/firebase/personasService';
-import { searchOrganizacionesByName, getOrganizacionesByIds, addOrganizacion } from '@/lib/firebase/organizacionesService';
-import { getAllTemasActivos as getAllTemasActivosService, getTemasByIds as getTemasByIdsService } from '@/lib/firebase/temasService';
+import { searchPersonas, getPersonasByIds, createPersonaPlaceholder } from '@/lib/supabase/personasService';
+import { searchOrganizacionesByName, getOrganizacionesByIds, addOrganizacion } from '@/lib/supabase/organizacionesService';
+import { getAllTemasActivos as getAllTemasActivosService, getTemasByIds as getTemasByIdsService } from '@/lib/supabase/temasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +33,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import UnsavedChangesModal from '@/components/modals/UnsavedChangesModal';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { categoriasPrincipalesPersonaLabels } from '@/lib/schemas/personaSchema';
-
 
 const opcionesCategoriaAutor: Array<{ value: CategoriaPrincipalPersona; label: string; }> = [
   { value: 'estudiante_cet', label: categoriasPrincipalesPersonaLabels['estudiante_cet'] },
@@ -94,7 +91,7 @@ const ItemSelector: React.FC<ItemSelectorProps<any>> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const { toast: personSelectorToast } = useToast();
+  const { toast } = useToast(); // Corregido: removido personSelectorToast
 
   const handleSearch = useCallback(async (term: string) => {
     if (term.length < 2) {
@@ -242,67 +239,94 @@ interface ProjectFormProps {
   volverAPath: string;
 }
 
-export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isSubmitting: parentIsSubmitting, volverAPath }: ProjectFormProps) {
+
+export default function ProjectForm({
+  onSubmit: parentOnSubmit,
+  initialData,
+  isSubmitting: parentIsSubmitting,
+  volverAPath,
+}: ProjectFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  
+
   const formDefaultValues: ProjectFormData = {
-      titulo: '',
-      descripcionGeneral: '',
-      resumenEjecutivo: null,
-      idsTemas: [],
-      palabrasClave: [],
-      idsOrganizacionesTutoria: [],
-      anoProyecto: new Date().getFullYear(),
-      estadoActual: 'idea',
-      fechaInicio: null,
-      fechaFinalizacionEstimada: null,
-      fechaFinalizacionReal: null,
-      fechaPresentacion: null,
-      idsAutores: [],
-      idsTutoresPersonas: [],
-      idsColaboradores: [],
-      archivoPrincipalURL: null,
-      nombreArchivoPrincipal: null,
-      archivosAdjuntos: [],
-      estaEliminado: false,
+    titulo: "",
+    descripcionGeneral: "",
+    resumenEjecutivo: null,
+    idsTemas: [],
+    palabrasClave: [],
+    idsOrganizacionesTutoria: [],
+    anoProyecto: new Date().getFullYear(),
+    estadoActual: "idea",
+    fechaInicio: null,
+    fechaFinalizacionEstimada: null,
+    fechaFinalizacionReal: null,
+    fechaPresentacion: null,
+    idsAutores: [],
+    idsTutoresPersonas: [],
+    idsColaboradores: [],
+    archivoPrincipalURL: null,
+    nombreArchivoPrincipal: null,
+    archivosAdjuntos: [],
+    estaEliminado: false,
   };
 
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
-    defaultValues: initialData || formDefaultValues,
+    defaultValues: formDefaultValues,
   });
 
-  const { control, handleSubmit: formHandleSubmit, formState: { errors, isDirty: formHookIsDirty }, watch, setValue, getValues, reset, trigger } = form;
+  const {
+    control,
+    handleSubmit: formHandleSubmit,
+    formState: { errors, isDirty: formHookIsDirty },
+    watch,
+    setValue,
+    getValues,
+    reset,
+    trigger,
+  } = form;
 
   // State for Temas
   const [allActiveTemas, setAllActiveTemas] = useState<Tema[]>([]);
   const [selectedTemaObjects, setSelectedTemaObjects] = useState<Tema[]>([]);
   const [loadingTemas, setLoadingTemas] = useState(true);
-  const [isAddTemaModalOpen, setIsAddTemaModalOpen] = useState(false);
+  const [isAddTemaModalOpen, setIsAddTemaModalOpen] = useState(false); // ✅ Corregido
 
   // States for Person/Organization Selectors and Modals
-  const [selectedProjectAuthors, setSelectedProjectAuthors] = useState<FormAuthor[]>([]);
-  const [isAddAuthorModalOpen, setIsAddAuthorModalOpen] = useState(false);
-  
-  const [selectedProjectTutors, setSelectedProjectTutors] = useState<FormAuthor[]>([]);
-  const [isAddTutorModalOpen, setIsAddTutorModalOpen] = useState(false);
+  const [selectedProjectAuthors, setSelectedProjectAuthors] = useState<
+    FormAuthor[]
+  >([]);
+  const [isAddAuthorModalOpen, setIsAddAuthorModalOpen] = useState(false); // ✅ Corregido
 
-  const [selectedProjectCollaborators, setSelectedProjectCollaborators] = useState<FormAuthor[]>([]);
-  const [isAddCollaboratorModalOpen, setIsAddCollaboratorModalOpen] = useState(false);
-  
-  const [selectedOrganizaciones, setSelectedOrganizaciones] = useState<FormOrganizacion[]>([]);
-  const [isAddOrganizacionModalOpen, setIsAddOrganizacionModalOpen] = useState(false);
-  
+  const [selectedProjectTutors, setSelectedProjectTutors] = useState<
+    FormAuthor[]
+  >([]);
+  const [isAddTutorModalOpen, setIsAddTutorModalOpen] = useState(false); // ✅ Corregido
+
+  const [selectedProjectCollaborators, setSelectedProjectCollaborators] =
+    useState<FormAuthor[]>([]);
+  const [isAddCollaboratorModalOpen, setIsAddCollaboratorModalOpen] =
+    useState(false); // ✅ Corregido
+
+  const [selectedOrganizaciones, setSelectedOrganizaciones] = useState<
+    FormOrganizacion[]
+  >([]);
+  const [isAddOrganizacionModalOpen, setIsAddOrganizacionModalOpen] =
+    useState(false); // ✅ Corregido
+
   // For tracking changes in lists for isDirty state
   const [authorListChanged, setAuthorListChanged] = useState(false);
   const [tutorListChanged, setTutorListChanged] = useState(false);
   const [collaboratorListChanged, setCollaboratorListChanged] = useState(false);
   const [organizacionListChanged, setOrganizacionListChanged] = useState(false);
 
-
-  const { fields: attachedFileFields, append: appendAttachedFile, remove: removeAttachedFile } = useFieldArray({
+  const {
+    fields: attachedFileFields,
+    append: appendAttachedFile,
+    remove: removeAttachedFile,
+  } = useFieldArray({
     control,
     name: "archivosAdjuntos",
   });
@@ -313,10 +337,18 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
     appendAttachedFile({ nombre: "", url: "", tipo: "", descripcion: "" });
   };
 
-  const [isUnsavedChangesModalOpen, setIsUnsavedChangesModalOpen] = useState(false);
-  const [navigationAction, setNavigationAction] = useState<(() => void) | null>(null);
+  const [isUnsavedChangesModalOpen, setIsUnsavedChangesModalOpen] =
+    useState(false); // ✅ Corregido
+  const [navigationAction, setNavigationAction] = useState<(() => void) | null>(
+    null
+  );
 
-  const isFormEffectivelyDirty = formHookIsDirty || authorListChanged || tutorListChanged || collaboratorListChanged || organizacionListChanged;
+  const isFormEffectivelyDirty =
+    formHookIsDirty ||
+    authorListChanged ||
+    tutorListChanged ||
+    collaboratorListChanged ||
+    organizacionListChanged;
 
   useEffect(() => {
     const fetchTemasForSelector = async () => {
@@ -325,7 +357,11 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
         const temas = await getAllTemasActivosService();
         setAllActiveTemas(temas);
       } catch (error) {
-        toast({ title: "Error", description: "No se pudieron cargar los temas.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los temas.",
+          variant: "destructive",
+        });
       } finally {
         setLoadingTemas(false);
       }
@@ -335,7 +371,7 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData); // Reset form with initial data (already converted by EditProjectContent)
+      reset(initialData);
 
       const populatePersonSelection = async (
         ids: string[] | undefined | null,
@@ -345,51 +381,107 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
         if (ids && ids.length > 0) {
           try {
             const personas = await getPersonasByIds(ids);
-            setter(personas.map(p => ({ id: p.id!, nombre: p.nombre, apellido: p.apellido, email: p.email || undefined, fotoURL: p.fotoURL || undefined, isNewPlaceholder:false })));
+            setter(
+              personas.map((p) => ({
+                id: p.id!,
+                nombre: p.nombre,
+                apellido: p.apellido,
+                email: p.email || undefined,
+                fotoURL: p.fotoURL || undefined,
+                isNewPlaceholder: false,
+              }))
+            );
             setValue(rhfFieldName, ids, { shouldDirty: false });
-          } catch (err) { console.error(`Error fetching initial ${rhfFieldName}:`, err); setter([]); setValue(rhfFieldName, [], { shouldDirty: false }); }
-        } else { setter([]); setValue(rhfFieldName, [], { shouldDirty: false });}
+          } catch (err) {
+            console.error(`Error fetching initial ${rhfFieldName}:`, err);
+            setter([]);
+            setValue(rhfFieldName, [], { shouldDirty: false });
+          }
+        } else {
+          setter([]);
+          setValue(rhfFieldName, [], { shouldDirty: false });
+        }
       };
-      
-      populatePersonSelection(initialData.idsAutores, setSelectedProjectAuthors, 'idsAutores');
-      populatePersonSelection(initialData.idsTutoresPersonas, setSelectedProjectTutors, 'idsTutoresPersonas');
-      populatePersonSelection(initialData.idsColaboradores, setSelectedProjectCollaborators, 'idsColaboradores');
+
+      populatePersonSelection(
+        initialData.idsAutores,
+        setSelectedProjectAuthors,
+        "idsAutores"
+      );
+      populatePersonSelection(
+        initialData.idsTutoresPersonas,
+        setSelectedProjectTutors,
+        "idsTutoresPersonas"
+      );
+      populatePersonSelection(
+        initialData.idsColaboradores,
+        setSelectedProjectCollaborators,
+        "idsColaboradores"
+      );
 
       const populateOrgSelection = async () => {
-        if (initialData.idsOrganizacionesTutoria && initialData.idsOrganizacionesTutoria.length > 0) {
+        if (
+          initialData.idsOrganizacionesTutoria &&
+          initialData.idsOrganizacionesTutoria.length > 0
+        ) {
           try {
-            const orgs = await getOrganizacionesByIds(initialData.idsOrganizacionesTutoria);
-            setSelectedOrganizaciones(orgs.map(o => ({ id: o.id!, nombreOficial: o.nombreOficial, tipo: o.tipo, isNewPlaceholder: false })));
-            setValue('idsOrganizacionesTutoria', initialData.idsOrganizacionesTutoria, { shouldDirty: false });
-          } catch (err) { console.error(`Error fetching initial organizaciones:`, err); setSelectedOrganizaciones([]); setValue('idsOrganizacionesTutoria', [], { shouldDirty: false });}
-        } else { setSelectedOrganizaciones([]); setValue('idsOrganizacionesTutoria', [], { shouldDirty: false });}
+            const orgs = await getOrganizacionesByIds(
+              initialData.idsOrganizacionesTutoria
+            );
+            setSelectedOrganizaciones(
+              orgs.map((o) => ({
+                id: o.id!,
+                nombreOficial: o.nombreOficial,
+                tipo: o.tipo,
+                isNewPlaceholder: false,
+              }))
+            );
+            setValue(
+              "idsOrganizacionesTutoria",
+              initialData.idsOrganizacionesTutoria,
+              { shouldDirty: false }
+            );
+          } catch (err) {
+            console.error(`Error fetching initial organizaciones:`, err);
+            setSelectedOrganizaciones([]);
+            setValue("idsOrganizacionesTutoria", [], { shouldDirty: false });
+          }
+        } else {
+          setSelectedOrganizaciones([]);
+          setValue("idsOrganizacionesTutoria", [], { shouldDirty: false });
+        }
       };
       populateOrgSelection();
 
-      if (initialData.idsTemas && initialData.idsTemas.length > 0 && allActiveTemas.length > 0) {
-         const initialTemaObjects = allActiveTemas.filter(t => initialData.idsTemas!.includes(t.id!));
-         setSelectedTemaObjects(initialTemaObjects);
-         setValue('idsTemas', initialData.idsTemas, { shouldDirty: false });
+      if (
+        initialData.idsTemas &&
+        initialData.idsTemas.length > 0 &&
+        allActiveTemas.length > 0
+      ) {
+        const initialTemaObjects = allActiveTemas.filter((t) =>
+          initialData.idsTemas!.includes(t.id!)
+        );
+        setSelectedTemaObjects(initialTemaObjects);
+        setValue("idsTemas", initialData.idsTemas, { shouldDirty: false });
       } else if (initialData.idsTemas) {
-        // If allActiveTemas is not yet loaded, we still need to set the IDs in RHF
-        setValue('idsTemas', initialData.idsTemas, { shouldDirty: false });
-        // And try to fetch them to display names
+        setValue("idsTemas", initialData.idsTemas, { shouldDirty: false });
         if (initialData.idsTemas.length > 0) {
-            getTemasByIdsService(initialData.idsTemas).then(setSelectedTemaObjects);
+          getTemasByIdsService(initialData.idsTemas).then(
+            setSelectedTemaObjects
+          );
         } else {
-            setSelectedTemaObjects([]);
+          setSelectedTemaObjects([]);
         }
       } else {
         setSelectedTemaObjects([]);
-        setValue('idsTemas', [], { shouldDirty: false });
+        setValue("idsTemas", [], { shouldDirty: false });
       }
-      
+
       setAuthorListChanged(false);
       setTutorListChanged(false);
       setCollaboratorListChanged(false);
       setOrganizacionListChanged(false);
-
-    } else { 
+    } else {
       reset(formDefaultValues);
       setSelectedProjectAuthors([]);
       setSelectedProjectTutors([]);
@@ -401,67 +493,97 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
       setCollaboratorListChanged(false);
       setOrganizacionListChanged(false);
     }
-  }, [initialData, reset, setValue, allActiveTemas]); // allActiveTemas is a dependency for setting tema objects
+  }, [initialData, reset, setValue, allActiveTemas]);
 
-  const addPersonToList = (
-    person: FormAuthor,
-    currentList: FormAuthor[],
-    setter: React.Dispatch<React.SetStateAction<FormAuthor[]>>,
-    listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>,
-    formFieldName: "idsAutores" | "idsTutoresPersonas" | "idsColaboradores"
-  ) => {
-    if (!currentList.find(p => p.id === person.id)) {
-      const newList = [...currentList, person];
+  const addPersonToList = useCallback(
+    (
+      person: FormAuthor,
+      currentList: FormAuthor[],
+      setter: React.Dispatch<React.SetStateAction<FormAuthor[]>>,
+      listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>,
+      formFieldName: "idsAutores" | "idsTutoresPersonas" | "idsColaboradores"
+    ) => {
+      if (!currentList.find((p) => p.id === person.id)) {
+        const newList = [...currentList, person];
+        setter(newList);
+        const newIdList = newList.map((p) => p.id);
+        const initialIdList = initialData?.[formFieldName] || [];
+        setValue(formFieldName, newIdList, {
+          shouldDirty:
+            JSON.stringify(newIdList.sort()) !==
+            JSON.stringify(initialIdList.sort()),
+        });
+        listChangedSetter(true);
+      }
+    },
+    [setValue, initialData]
+  );
+
+  const removePersonFromList = useCallback(
+    (
+      personId: string,
+      currentList: FormAuthor[],
+      setter: React.Dispatch<React.SetStateAction<FormAuthor[]>>,
+      listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>,
+      formFieldName: "idsAutores" | "idsTutoresPersonas" | "idsColaboradores"
+    ) => {
+      const newList = currentList.filter((p) => p.id !== personId);
       setter(newList);
-      const newIdList = newList.map(p => p.id);
+      const newIdList = newList.map((p) => p.id);
       const initialIdList = initialData?.[formFieldName] || [];
-      setValue(formFieldName, newIdList, { 
-        shouldDirty: JSON.stringify(newIdList.sort()) !== JSON.stringify(initialIdList.sort())
+      setValue(formFieldName, newIdList, {
+        shouldDirty:
+          JSON.stringify(newIdList.sort()) !==
+          JSON.stringify(initialIdList.sort()),
       });
       listChangedSetter(true);
-    }
-  }, [setValue, initialData, toast]);
-
-  const removePersonFromList = useCallback((
-    personId: string,
-    currentList: FormAuthor[],
-    setter: React.Dispatch<React.SetStateAction<FormAuthor[]>>,
-    listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>,
-    formFieldName: "idsAutores" | "idsTutoresPersonas" | "idsColaboradores"
-  ) => {
-    const newList = currentList.filter(p => p.id !== personId);
-    setter(newList);
-    const newIdList = newList.map(p => p.id);
-    const initialIdList = initialData?.[formFieldName] || [];
-    setValue(formFieldName, newIdList, { 
-      shouldDirty: JSON.stringify(newIdList.sort()) !== JSON.stringify(initialIdList.sort())
-    });
-    listChangedSetter(true);
-  };
+    },
+    [setValue, initialData]
+  );
 
   const onAuthorCreatedFromModal = (newAuthor: FormAuthor) => {
-    addPersonToList(newAuthor, selectedProjectAuthors, setSelectedProjectAuthors, setAuthorListChanged, "idsAutores");
+    addPersonToList(
+      newAuthor,
+      selectedProjectAuthors,
+      setSelectedProjectAuthors,
+      setAuthorListChanged,
+      "idsAutores"
+    );
   };
   const onTutorCreatedFromModal = (newTutor: FormAuthor) => {
-    addPersonToList(newTutor, selectedProjectTutors, setSelectedProjectTutors, setTutorListChanged, "idsTutoresPersonas");
+    addPersonToList(
+      newTutor,
+      selectedProjectTutors,
+      setSelectedProjectTutors,
+      setTutorListChanged,
+      "idsTutoresPersonas"
+    );
   };
   const onCollaboratorCreatedFromModal = (newCollab: FormAuthor) => {
-    addPersonToList(newCollab, selectedProjectCollaborators, setSelectedProjectCollaborators, setCollaboratorListChanged, "idsColaboradores");
+    addPersonToList(
+      newCollab,
+      selectedProjectCollaborators,
+      setSelectedProjectCollaborators,
+      setCollaboratorListChanged,
+      "idsColaboradores"
+    );
   };
-  
+
   const addOrganizacionToListInternal = (
     org: FormOrganizacion,
     currentList: FormOrganizacion[],
     setter: React.Dispatch<React.SetStateAction<FormOrganizacion[]>>,
     listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
-    if (!currentList.find(o => o.id === org.id)) {
+    if (!currentList.find((o) => o.id === org.id)) {
       const newList = [...currentList, org];
       setter(newList);
-      const newIdList = newList.map(o => o.id);
+      const newIdList = newList.map((o) => o.id);
       const initialIdList = initialData?.idsOrganizacionesTutoria || [];
-      setValue("idsOrganizacionesTutoria", newIdList, { 
-        shouldDirty: JSON.stringify(newIdList.sort()) !== JSON.stringify(initialIdList.sort())
+      setValue("idsOrganizacionesTutoria", newIdList, {
+        shouldDirty:
+          JSON.stringify(newIdList.sort()) !==
+          JSON.stringify(initialIdList.sort()),
       });
       listChangedSetter(true);
     }
@@ -473,53 +595,80 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
     setter: React.Dispatch<React.SetStateAction<FormOrganizacion[]>>,
     listChangedSetter: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
-    const newList = currentList.filter(o => o.id !== orgId);
+    const newList = currentList.filter((o) => o.id !== orgId);
     setter(newList);
-    const newIdList = newList.map(o => o.id);
+    const newIdList = newList.map((o) => o.id);
     const initialIdList = initialData?.idsOrganizacionesTutoria || [];
-    setValue("idsOrganizacionesTutoria", newIdList, { 
-      shouldDirty: JSON.stringify(newIdList.sort()) !== JSON.stringify(initialIdList.sort())
+    setValue("idsOrganizacionesTutoria", newIdList, {
+      shouldDirty:
+        JSON.stringify(newIdList.sort()) !==
+        JSON.stringify(initialIdList.sort()),
     });
     listChangedSetter(true);
   };
-  
+
   const onOrganizacionCreatedFromModal = (newOrg: FormOrganizacion) => {
-    addOrganizacionToListInternal(newOrg, selectedOrganizaciones, setSelectedOrganizaciones, setOrganizacionListChanged);
+    addOrganizacionToListInternal(
+      newOrg,
+      selectedOrganizaciones,
+      setSelectedOrganizaciones,
+      setOrganizacionListChanged
+    );
   };
 
   const handleTemaCreatedFromModal = (newTema: Tema) => {
-    setAllActiveTemas(prev => [...prev, newTema].sort((a,b) => a.nombre.localeCompare(b.nombre)));
-    
-    const currentSelectedIds = getValues('idsTemas') || [];
+    setAllActiveTemas((prev) =>
+      [...prev, newTema].sort((a, b) => a.nombre.localeCompare(b.nombre))
+    );
+
+    const currentSelectedIds = getValues("idsTemas") || [];
     if (!currentSelectedIds.includes(newTema.id!)) {
       const newIds = [...currentSelectedIds, newTema.id!];
-      setValue('idsTemas', newIds, { 
-          shouldDirty: JSON.stringify(newIds.sort()) !== JSON.stringify((initialData?.idsTemas || []).sort())
+      setValue("idsTemas", newIds, {
+        shouldDirty:
+          JSON.stringify(newIds.sort()) !==
+          JSON.stringify((initialData?.idsTemas || []).sort()),
       });
-      setSelectedTemaObjects(prev => [...prev, newTema].sort((a,b) => a.nombre.localeCompare(b.nombre)));
+      setSelectedTemaObjects((prev) =>
+        [...prev, newTema].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      );
     }
-    trigger('idsTemas');
+    trigger("idsTemas");
   };
 
   const handleMainSubmit = async (dataFromHookForm: ProjectFormData) => {
     if (!user) {
-      toast({ title: "Error", description: "Debes estar autenticado.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Debes estar autenticado.",
+        variant: "destructive",
+      });
       return false;
     }
-    
-    // Ensure RHF form values are up-to-date with the latest selected items
-    setValue('idsAutores', selectedProjectAuthors.map(p => p.id));
-    setValue('idsTutoresPersonas', selectedProjectTutors.map(p => p.id));
-    setValue('idsColaboradores', selectedProjectCollaborators.map(p => p.id));
-    setValue('idsOrganizacionesTutoria', selectedOrganizaciones.map(o => o.id));
-    // idsTemas is already updated by its Controller
-    
-    const finalDataToSubmit = getValues(); 
-    
+
+    setValue(
+      "idsAutores",
+      selectedProjectAuthors.map((p) => p.id)
+    );
+    setValue(
+      "idsTutoresPersonas",
+      selectedProjectTutors.map((p) => p.id)
+    );
+    setValue(
+      "idsColaboradores",
+      selectedProjectCollaborators.map((p) => p.id)
+    );
+    setValue(
+      "idsOrganizacionesTutoria",
+      selectedOrganizaciones.map((o) => o.id)
+    );
+
+    const finalDataToSubmit = getValues();
+
     const success = await parentOnSubmit(finalDataToSubmit);
 
     if (success) {
-      if (!initialData) { // Create mode
+      if (!initialData) {
         reset(formDefaultValues);
         setSelectedProjectAuthors([]);
         setSelectedProjectTutors([]);
@@ -530,8 +679,8 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
         setTutorListChanged(false);
         setCollaboratorListChanged(false);
         setOrganizacionListChanged(false);
-      } else { 
-        reset(finalDataToSubmit); 
+      } else {
+        reset(finalDataToSubmit);
         setAuthorListChanged(false);
         setTutorListChanged(false);
         setCollaboratorListChanged(false);
@@ -544,10 +693,10 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
   const handleCancelClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const targetPath = volverAPath || '/proyectos';
+    const targetPath = volverAPath || "/proyectos";
     if (isFormEffectivelyDirty) {
       setNavigationAction(() => () => router.push(targetPath));
-      setIsUnsavedChangesModalOpen(true);
+      setIsUnsavedChangesModalOpen(true); // ✅ Corregido
     } else {
       router.push(targetPath);
     }
@@ -555,41 +704,51 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
 
   const triggerSubmitAndNavigate = async () => {
     const isValid = await trigger();
-    if (isValid) {
-      const success = await formHandleSubmit(handleMainSubmit)();
-      if (success && navigationAction) {
-        navigationAction();
-      }
-    } else {
-      toast({ title: "Error de Validación", description: "Por favor, corrige los errores en el formulario.", variant: "destructive" });
+    if (!isValid) {
+      toast({
+        title: "Error de Validación",
+        description: "Por favor, corrige los errores en el formulario.",
+        variant: "destructive",
+      });
+      setIsUnsavedChangesModalOpen(false);
+      return;
     }
-    setIsUnsavedChangesModalOpen(false);
+
+    try {
+      const success = await formHandleSubmit(handleMainSubmit)();
+      if (success) {
+        navigationAction?.();
+      }
+    } finally {
+      setIsUnsavedChangesModalOpen(false);
+    }
   };
 
   const discardChangesAndExit = () => {
     reset(initialData || formDefaultValues);
     if (initialData) {
-        // Resetting selected items states based on initialData
-        const initialAuthorIds = initialData.idsAutores || [];
-        getPersonasByIds(initialAuthorIds).then(setSelectedProjectAuthors);
-        
-        const initialTutorIds = initialData.idsTutoresPersonas || [];
-        getPersonasByIds(initialTutorIds).then(setSelectedProjectTutors);
+      const initialAuthorIds = initialData.idsAutores || [];
+      getPersonasByIds(initialAuthorIds).then(setSelectedProjectAuthors);
 
-        const initialCollabIds = initialData.idsColaboradores || [];
-        getPersonasByIds(initialCollabIds).then(setSelectedProjectCollaborators);
-        
-        const initialOrgIds = initialData.idsOrganizacionesTutoria || [];
-        getOrganizacionesByIds(initialOrgIds).then(setSelectedOrganizaciones);
+      const initialTutorIds = initialData.idsTutoresPersonas || [];
+      getPersonasByIds(initialTutorIds).then(setSelectedProjectTutors);
 
-        const initialTemaIds = initialData.idsTemas || [];
-        if (initialTemaIds.length > 0 && allActiveTemas.length > 0) {
-             setSelectedTemaObjects(allActiveTemas.filter(t => initialTemaIds.includes(t.id!)));
-        } else if (initialTemaIds.length > 0) {
-            getTemasByIdsService(initialTemaIds).then(setSelectedTemaObjects);
-        } else {
-            setSelectedTemaObjects([]);
-        }
+      const initialCollabIds = initialData.idsColaboradores || [];
+      getPersonasByIds(initialCollabIds).then(setSelectedProjectCollaborators);
+
+      const initialOrgIds = initialData.idsOrganizacionesTutoria || [];
+      getOrganizacionesByIds(initialOrgIds).then(setSelectedOrganizaciones);
+
+      const initialTemaIds = initialData.idsTemas || [];
+      if (initialTemaIds.length > 0 && allActiveTemas.length > 0) {
+        setSelectedTemaObjects(
+          allActiveTemas.filter((t) => initialTemaIds.includes(t.id!))
+        );
+      } else if (initialTemaIds.length > 0) {
+        getTemasByIdsService(initialTemaIds).then(setSelectedTemaObjects);
+      } else {
+        setSelectedTemaObjects([]);
+      }
     } else {
       setSelectedProjectAuthors([]);
       setSelectedProjectTutors([]);
@@ -604,31 +763,79 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
     if (navigationAction) {
       navigationAction();
     }
-    setIsUnsavedChangesModalOpen(false);
+    setIsUnsavedChangesModalOpen(false); // ✅ Corregido
   };
 
   return (
     <Form {...form}>
       <form onSubmit={formHandleSubmit(handleMainSubmit)} className="space-y-8">
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><ProjectTagsIcon className="h-5 w-5 text-primary"/>Información Principal</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ProjectTagsIcon className="h-5 w-5 text-primary" />
+              Información Principal
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
-            <FormField control={control} name="titulo" render={({ field }) => ( <FormItem> <FormLabel>Título del Proyecto *</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
-            <FormField control={control} name="descripcionGeneral" render={({ field }) => ( <FormItem> <FormLabel>Descripción General *</FormLabel> <FormControl><Textarea {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )}/>
-            <FormField control={control} name="resumenEjecutivo" render={({ field }) => ( <FormItem> <FormLabel>Resumen Ejecutivo (Opcional)</FormLabel> <FormControl><Textarea {...field} value={field.value || ''} rows={3} /></FormControl> <FormMessage /> </FormItem> )}/>
-            
+            <FormField
+              control={control}
+              name="titulo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Título del Proyecto *</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="descripcionGeneral"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción General *</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={5} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="resumenEjecutivo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Resumen Ejecutivo (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} value={field.value || ""} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={control}
               name="idsTemas"
-              render={({ field }) => ( 
+              render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center mb-1">
-                    <FormLabel className="flex items-center gap-1"><ProjectTagsIcon className="h-4 w-4" />Temas del Proyecto *</FormLabel>
+                    <FormLabel className="flex items-center gap-1">
+                      <ProjectTagsIcon className="h-4 w-4" />
+                      Temas del Proyecto *
+                    </FormLabel>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsAddTemaModalOpen(true); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsAddTemaModalOpen(true);
+                      }}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Tema
                     </Button>
@@ -639,11 +846,19 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                         <Button
                           variant="outline"
                           role="combobox"
-                          className={cn("w-full justify-between h-auto min-h-10 py-2", !selectedTemaObjects.length && "text-muted-foreground")}
+                          className={cn(
+                            "w-full justify-between h-auto min-h-10 py-2",
+                            !selectedTemaObjects.length &&
+                              "text-muted-foreground"
+                          )}
                         >
                           <span className="flex flex-wrap gap-1">
                             {selectedTemaObjects.length > 0
-                              ? selectedTemaObjects.map(t => <Badge key={t.id} variant="secondary">{t.nombre}</Badge>)
+                              ? selectedTemaObjects.map((t) => (
+                                  <Badge key={t.id} variant="secondary">
+                                    {t.nombre}
+                                  </Badge>
+                                ))
                               : "Seleccionar temas..."}
                           </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -652,10 +867,19 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                       <Command>
-                        <CommandInput placeholder="Buscar tema..." disabled={loadingTemas} />
+                        <CommandInput
+                          placeholder="Buscar tema..."
+                          disabled={loadingTemas}
+                        />
                         <CommandList>
-                          {loadingTemas && <CommandEmpty>Cargando temas...</CommandEmpty>}
-                          {!loadingTemas && allActiveTemas.length === 0 && <CommandEmpty>No hay temas disponibles.</CommandEmpty>}
+                          {loadingTemas && (
+                            <CommandEmpty>Cargando temas...</CommandEmpty>
+                          )}
+                          {!loadingTemas && allActiveTemas.length === 0 && (
+                            <CommandEmpty>
+                              No hay temas disponibles.
+                            </CommandEmpty>
+                          )}
                           <CommandGroup>
                             <ScrollArea className="max-h-48">
                               {allActiveTemas.map((tema) => (
@@ -663,37 +887,67 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                                   value={tema.nombre}
                                   key={tema.id}
                                   onSelect={() => {
-                                    const currentSelectedIds = field.value || [];
-                                    const isSelected = currentSelectedIds.includes(tema.id!);
+                                    const currentSelectedIds =
+                                      field.value || [];
+                                    const isSelected =
+                                      currentSelectedIds.includes(tema.id!);
                                     let newSelectedIds: string[];
                                     if (isSelected) {
-                                      newSelectedIds = currentSelectedIds.filter((id) => id !== tema.id);
+                                      newSelectedIds =
+                                        currentSelectedIds.filter(
+                                          (id) => id !== tema.id
+                                        );
                                     } else {
-                                      newSelectedIds = [...currentSelectedIds, tema.id!];
+                                      newSelectedIds = [
+                                        ...currentSelectedIds,
+                                        tema.id!,
+                                      ];
                                     }
-                                    field.onChange(newSelectedIds); 
-                                    setSelectedTemaObjects(allActiveTemas.filter(t => newSelectedIds.includes(t.id!)));
-                                    trigger('idsTemas'); // Manually trigger validation for idsTemas
+                                    field.onChange(newSelectedIds);
+                                    setSelectedTemaObjects(
+                                      allActiveTemas.filter((t) =>
+                                        newSelectedIds.includes(t.id!)
+                                      )
+                                    );
+                                    trigger("idsTemas");
                                   }}
                                 >
                                   <Checkbox
                                     className="mr-2"
-                                    checked={(field.value || []).includes(tema.id!)}
-                                    onCheckedChange={(checked) => { 
-                                      const currentSelectedIds = field.value || [];
+                                    checked={(field.value || []).includes(
+                                      tema.id!
+                                    )}
+                                    onCheckedChange={(checked) => {
+                                      const currentSelectedIds =
+                                        field.value || [];
                                       let newSelectedIds: string[];
                                       if (checked) {
-                                        newSelectedIds = [...currentSelectedIds, tema.id!];
+                                        newSelectedIds = [
+                                          ...currentSelectedIds,
+                                          tema.id!,
+                                        ];
                                       } else {
-                                        newSelectedIds = currentSelectedIds.filter((id) => id !== tema.id);
+                                        newSelectedIds =
+                                          currentSelectedIds.filter(
+                                            (id) => id !== tema.id
+                                          );
                                       }
                                       field.onChange(newSelectedIds);
-                                      setSelectedTemaObjects(allActiveTemas.filter(t => newSelectedIds.includes(t.id!)));
-                                      trigger('idsTemas');
+                                      setSelectedTemaObjects(
+                                        allActiveTemas.filter((t) =>
+                                          newSelectedIds.includes(t.id!)
+                                        )
+                                      );
+                                      trigger("idsTemas");
                                     }}
                                     id={`tema-${tema.id}`}
                                   />
-                                  <label htmlFor={`tema-${tema.id}`} className="cursor-pointer flex-1">{tema.nombre}</label>
+                                  <label
+                                    htmlFor={`tema-${tema.id}`}
+                                    className="cursor-pointer flex-1"
+                                  >
+                                    {tema.nombre}
+                                  </label>
                                 </CommandItem>
                               ))}
                             </ScrollArea>
@@ -702,11 +956,15 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <FormDescription>Selecciona uno o más temas relevantes para el proyecto.</FormDescription>
+                  <FormDescription>
+                    Selecciona uno o más temas relevantes para el proyecto.
+                  </FormDescription>
                   <FormMessage />
                   {selectedTemaObjects.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      <Label className="text-xs text-muted-foreground">Temas Seleccionados:</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        Temas Seleccionados:
+                      </Label>
                       <div className="flex flex-wrap gap-1">
                         {selectedTemaObjects.map((tema) => (
                           <Badge
@@ -721,10 +979,16 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                const newSelectedIds = (field.value || []).filter(id => id !== tema.id);
+                                const newSelectedIds = (
+                                  field.value || []
+                                ).filter((id) => id !== tema.id);
                                 field.onChange(newSelectedIds);
-                                setSelectedTemaObjects(allActiveTemas.filter(t => newSelectedIds.includes(t.id!)));
-                                trigger('idsTemas');
+                                setSelectedTemaObjects(
+                                  allActiveTemas.filter((t) =>
+                                    newSelectedIds.includes(t.id!)
+                                  )
+                                );
+                                trigger("idsTemas");
                               }}
                               className="ml-1 rounded-full hover:bg-destructive/20 p-0.5"
                             >
@@ -746,10 +1010,30 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
           itemIdentifier="autores"
           selectedItems={selectedProjectAuthors}
           searchFunction={searchPersonas}
-          onItemSelect={(author: FormAuthor) => addPersonToList(author, selectedProjectAuthors, setSelectedProjectAuthors, setAuthorListChanged, "idsAutores")}
-          onItemRemove={(id) => removePersonFromList(id, selectedProjectAuthors, setSelectedProjectAuthors, setAuthorListChanged, "idsAutores")}
+          onItemSelect={(author: FormAuthor) =>
+            addPersonToList(
+              author,
+              selectedProjectAuthors,
+              setSelectedProjectAuthors,
+              setAuthorListChanged,
+              "idsAutores"
+            )
+          }
+          onItemRemove={(id) =>
+            removePersonFromList(
+              id,
+              selectedProjectAuthors,
+              setSelectedProjectAuthors,
+              setAuthorListChanged,
+              "idsAutores"
+            )
+          }
           onAddNewItemClick={() => setIsAddAuthorModalOpen(true)}
-          renderItemLabel={(item: FormAuthor) => `${item.nombre} ${item.apellido} ${item.email ? `(${item.email})` : ''} ${item.isNewPlaceholder ? "(Nuevo)" : ""}`}
+          renderItemLabel={(item: FormAuthor) =>
+            `${item.nombre} ${item.apellido} ${
+              item.email ? `(${item.email})` : ""
+            } ${item.isNewPlaceholder ? "(Nuevo)" : ""}`
+          }
           placeholderText="Buscar por nombre, apellido o email..."
           isLoading={parentIsSubmitting}
           formErrors={errors}
@@ -763,10 +1047,30 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
           itemIdentifier="tutores"
           selectedItems={selectedProjectTutors}
           searchFunction={searchPersonas}
-          onItemSelect={(tutor: FormAuthor) => addPersonToList(tutor, selectedProjectTutors, setSelectedProjectTutors, setTutorListChanged, "idsTutoresPersonas")}
-          onItemRemove={(id) => removePersonFromList(id, selectedProjectTutors, setSelectedProjectTutors, setTutorListChanged, "idsTutoresPersonas")}
+          onItemSelect={(tutor: FormAuthor) =>
+            addPersonToList(
+              tutor,
+              selectedProjectTutors,
+              setSelectedProjectTutors,
+              setTutorListChanged,
+              "idsTutoresPersonas"
+            )
+          }
+          onItemRemove={(id) =>
+            removePersonFromList(
+              id,
+              selectedProjectTutors,
+              setSelectedProjectTutors,
+              setTutorListChanged,
+              "idsTutoresPersonas"
+            )
+          }
           onAddNewItemClick={() => setIsAddTutorModalOpen(true)}
-          renderItemLabel={(item: FormAuthor) => `${item.nombre} ${item.apellido} ${item.email ? `(${item.email})` : ''} ${item.isNewPlaceholder ? "(Nuevo)" : ""}`}
+          renderItemLabel={(item: FormAuthor) =>
+            `${item.nombre} ${item.apellido} ${
+              item.email ? `(${item.email})` : ""
+            } ${item.isNewPlaceholder ? "(Nuevo)" : ""}`
+          }
           placeholderText="Buscar por nombre, apellido o email..."
           isLoading={parentIsSubmitting}
           formErrors={errors}
@@ -774,16 +1078,36 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
           addNewButtonLabel="Añadir Nuevo Tutor"
           icon={<Briefcase className="h-5 w-5 text-primary" />}
         />
-        
+
         <ItemSelector
           title="Colaboradores (Personas)"
           itemIdentifier="colaboradores"
           selectedItems={selectedProjectCollaborators}
           searchFunction={searchPersonas}
-          onItemSelect={(collab: FormAuthor) => addPersonToList(collab, selectedProjectCollaborators, setSelectedProjectCollaborators, setCollaboratorListChanged, "idsColaboradores")}
-          onItemRemove={(id) => removePersonFromList(id, selectedProjectCollaborators, setSelectedProjectCollaborators, setCollaboratorListChanged, "idsColaboradores")}
+          onItemSelect={(collab: FormAuthor) =>
+            addPersonToList(
+              collab,
+              selectedProjectCollaborators,
+              setSelectedProjectCollaborators,
+              setCollaboratorListChanged,
+              "idsColaboradores"
+            )
+          }
+          onItemRemove={(id) =>
+            removePersonFromList(
+              id,
+              selectedProjectCollaborators,
+              setSelectedProjectCollaborators,
+              setCollaboratorListChanged,
+              "idsColaboradores"
+            )
+          }
           onAddNewItemClick={() => setIsAddCollaboratorModalOpen(true)}
-          renderItemLabel={(item: FormAuthor) => `${item.nombre} ${item.apellido} ${item.email ? `(${item.email})` : ''} ${item.isNewPlaceholder ? "(Nuevo)" : ""}`}
+          renderItemLabel={(item: FormAuthor) =>
+            `${item.nombre} ${item.apellido} ${
+              item.email ? `(${item.email})` : ""
+            } ${item.isNewPlaceholder ? "(Nuevo)" : ""}`
+          }
           placeholderText="Buscar por nombre, apellido o email..."
           isLoading={parentIsSubmitting}
           formErrors={errors}
@@ -797,10 +1121,26 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
           itemIdentifier="organizaciones"
           selectedItems={selectedOrganizaciones}
           searchFunction={searchOrganizacionesByName}
-          onItemSelect={(org: FormOrganizacion) => addOrganizacionToListInternal(org, selectedOrganizaciones, setSelectedOrganizaciones, setOrganizacionListChanged)}
-          onItemRemove={(id) => removeOrganizacionFromListInternal(id, selectedOrganizaciones, setSelectedOrganizaciones, setOrganizacionListChanged)}
+          onItemSelect={(org: FormOrganizacion) =>
+            addOrganizacionToListInternal(
+              org,
+              selectedOrganizaciones,
+              setSelectedOrganizaciones,
+              setOrganizacionListChanged
+            )
+          }
+          onItemRemove={(id) =>
+            removeOrganizacionFromListInternal(
+              id,
+              selectedOrganizaciones,
+              setSelectedOrganizaciones,
+              setOrganizacionListChanged
+            )
+          }
           onAddNewItemClick={() => setIsAddOrganizacionModalOpen(true)}
-          renderItemLabel={(item: FormOrganizacion) => `${item.nombreOficial} ${item.isNewPlaceholder ? "(Nueva)" : ""}`}
+          renderItemLabel={(item: FormOrganizacion) =>
+            `${item.nombreOficial} ${item.isNewPlaceholder ? "(Nueva)" : ""}`
+          }
           placeholderText="Buscar por nombre de organización..."
           isLoading={parentIsSubmitting}
           formErrors={errors}
@@ -810,7 +1150,12 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
         />
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><SingleTagIcon className="h-5 w-5 text-primary"/>Clasificación y Fechas</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SingleTagIcon className="h-5 w-5 text-primary" />
+              Clasificación y Fechas
+            </CardTitle>
+          </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <FormField
@@ -822,8 +1167,14 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                     <FormControl>
                       <Input
                         {...field}
-                        onChange={e => field.onChange(stringToArray(e.target.value))}
-                        value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                        onChange={(e) =>
+                          field.onChange(stringToArray(e.target.value))
+                        }
+                        value={
+                          Array.isArray(field.value)
+                            ? field.value.join(", ")
+                            : field.value || ""
+                        }
                         placeholder="Ej: Riego, IoT, Sustentable"
                       />
                     </FormControl>
@@ -831,148 +1182,360 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
                   </FormItem>
                 )}
               />
-              <FormField control={control} name="anoProyecto" render={({ field }) => ( <FormItem> <FormLabel>Año del Proyecto *</FormLabel> <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl> <FormMessage /> </FormItem> )}/>
-              <FormField control={control} name="estadoActual" render={({ field }) => ( <FormItem> <FormLabel>Estado Actual *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
-                  <SelectContent> {estadoOptions.map(option => ( <SelectItem key={option} value={option}>{estadoLabels[option]}</SelectItem> ))} </SelectContent>
-                </Select> <FormMessage />
-              </FormItem> )}/>
+              <FormField
+                control={control}
+                name="anoProyecto"
+                render={({ field }) => (
+                  <FormItem>
+                    {" "}
+                    <FormLabel>Año del Proyecto *</FormLabel>{" "}
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value))
+                        }
+                      />
+                    </FormControl>{" "}
+                    <FormMessage />{" "}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="estadoActual"
+                render={({ field }) => (
+                  <FormItem>
+                    {" "}
+                    <FormLabel>Estado Actual *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione un estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {" "}
+                        {estadoOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {estadoLabels[option]}
+                          </SelectItem>
+                        ))}{" "}
+                      </SelectContent>
+                    </Select>{" "}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <div className="space-y-4">
-              {[ { name: "fechaInicio", label: "Fecha de Inicio" }, { name: "fechaFinalizacionEstimada", label: "Fecha Estimada de Finalización" }, { name: "fechaFinalizacionReal", label: "Fecha Real de Finalización" }, { name: "fechaPresentacion", label: "Fecha de Presentación" }, ].map(dateFieldInfo => (
-                <FormField key={dateFieldInfo.name} control={control} name={dateFieldInfo.name as keyof Pick<ProjectFormData, "fechaInicio" | "fechaFinalizacionEstimada" | "fechaFinalizacionReal" | "fechaPresentacion">} render={({ field }) => (
-                  <FormItem className="flex flex-col"> <FormLabel>{dateFieldInfo.label} (Opcional)</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}> {field.value ? format(new Date(field.value as string | number | Date), "PPP", { locale: es }) : <span>Seleccione una fecha</span>} <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0" align="start"> <Calendar mode="single" selected={field.value ? new Date(field.value as string | number | Date) : undefined} onSelect={(date) => field.onChange(date)} initialFocus locale={es}/> </PopoverContent> </Popover> <FormMessage /> </FormItem>
-                )} />
+              {[
+                { name: "fechaInicio", label: "Fecha de Inicio" },
+                {
+                  name: "fechaFinalizacionEstimada",
+                  label: "Fecha Estimada de Finalización",
+                },
+                {
+                  name: "fechaFinalizacionReal",
+                  label: "Fecha Real de Finalización",
+                },
+                { name: "fechaPresentacion", label: "Fecha de Presentación" },
+              ].map((dateFieldInfo) => (
+                <FormField
+                  key={dateFieldInfo.name}
+                  control={control}
+                  name={
+                    dateFieldInfo.name as keyof Pick<
+                      ProjectFormData,
+                      | "fechaInicio"
+                      | "fechaFinalizacionEstimada"
+                      | "fechaFinalizacionReal"
+                      | "fechaPresentacion"
+                    >
+                  }
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      {" "}
+                      <FormLabel>
+                        {dateFieldInfo.label} (Opcional)
+                      </FormLabel>{" "}
+                      <Popover>
+                        {" "}
+                        <PopoverTrigger asChild>
+                          {" "}
+                          <FormControl>
+                            {" "}
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {" "}
+                              {field.value ? (
+                                format(
+                                  new Date(
+                                    field.value as string | number | Date
+                                  ),
+                                  "PPP",
+                                  { locale: es }
+                                )
+                              ) : (
+                                <span>Seleccione una fecha</span>
+                              )}{" "}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />{" "}
+                            </Button>{" "}
+                          </FormControl>{" "}
+                        </PopoverTrigger>{" "}
+                        <PopoverContent className="w-auto p-0" align="start">
+                          {" "}
+                          <Calendar
+                            mode="single"
+                            selected={
+                              field.value
+                                ? new Date(
+                                    field.value as string | number | Date
+                                  )
+                                : undefined
+                            }
+                            onSelect={(date) => field.onChange(date)}
+                            initialFocus
+                            locale={es}
+                          />{" "}
+                        </PopoverContent>{" "}
+                      </Popover>{" "}
+                      <FormMessage />{" "}
+                    </FormItem>
+                  )}
+                />
               ))}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><LinkIconLucide className="h-5 w-5 text-primary" /> Archivos del Proyecto</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LinkIconLucide className="h-5 w-5 text-primary" /> Archivos del
+              Proyecto
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
-            <FormField control={control} name="archivoPrincipalURL" render={({ field }) => ( <FormItem> <FormLabel>URL del Archivo Principal</FormLabel> <FormControl><Input type="url" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )}/>
-            <FormField control={control} name="nombreArchivoPrincipal" render={({ field }) => ( <FormItem> <FormLabel>Nombre del Archivo Principal</FormLabel> <FormControl><Input {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )}/>
+            <FormField
+              control={control}
+              name="archivoPrincipalURL"
+              render={({ field }) => (
+                <FormItem>
+                  {" "}
+                  <FormLabel>URL del Archivo Principal</FormLabel>{" "}
+                  <FormControl>
+                    <Input type="url" {...field} value={field.value || ""} />
+                  </FormControl>{" "}
+                  <FormMessage />{" "}
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="nombreArchivoPrincipal"
+              render={({ field }) => (
+                <FormItem>
+                  {" "}
+                  <FormLabel>Nombre del Archivo Principal</FormLabel>{" "}
+                  <FormControl>
+                    <Input {...field} value={field.value || ""} />
+                  </FormControl>{" "}
+                  <FormMessage />{" "}
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <div><CardTitle>Archivos Adjuntos (Opcional)</CardTitle><CardDescription>Agregue enlaces a otros archivos relevantes.</CardDescription></div>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddAttachedFile}><PlusCircle className="mr-2 h-4 w-4" /> Agregar Adjunto</Button>
+            <div>
+              <CardTitle>Archivos Adjuntos (Opcional)</CardTitle>
+              <CardDescription>
+                Agregue enlaces a otros archivos relevantes.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddAttachedFile}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Adjunto
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-          {attachedFileFields.map((item, index) => {
-            const fieldNameBase = `archivosAdjuntos.${index}` as const;
-            return (
-              <Card key={item.id} className="p-4 bg-muted/50">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                  {/* Nombre del Adjunto */}
-                  <div className="space-y-1">
-                    <Label htmlFor={`${fieldNameBase}.nombre`}>Nombre del Adjunto *</Label>
-                    <Controller
-                      name={`${fieldNameBase}.nombre`}
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <>
-                          <Input
-                            id={`${fieldNameBase}.nombre`}
-                            {...field}
-                            value={String(field.value ?? '')}
-                            className="w-full"
-                          />
-                          {fieldState.error && <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>}
-                        </>
-                      )}
-                    />
-                  </div>
+            {attachedFileFields.map((item, index) => {
+              const fieldNameBase = `archivosAdjuntos.${index}` as const;
+              return (
+                <Card key={item.id} className="p-4 bg-muted/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                    {/* Nombre del Adjunto */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`${fieldNameBase}.nombre`}>
+                        Nombre del Adjunto *
+                      </Label>
+                      <Controller
+                        name={`${fieldNameBase}.nombre`}
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Input
+                              id={`${fieldNameBase}.nombre`}
+                              {...field}
+                              value={String(field.value ?? "")}
+                              className="w-full"
+                            />
+                            {fieldState.error && (
+                              <p className="text-sm text-destructive mt-1">
+                                {fieldState.error.message}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      />
+                    </div>
 
-                  {/* URL del Adjunto */}
-                  <div className="space-y-1">
-                    <Label htmlFor={`${fieldNameBase}.url`}>URL del Adjunto *</Label>
-                    <Controller
-                      name={`${fieldNameBase}.url`}
-                      control={control}
-                      render={({ field, fieldState }) => (
-                         <>
-                          <Input
-                            id={`${fieldNameBase}.url`}
-                            type="url"
-                            {...field}
-                            value={String(field.value ?? '')}
-                            className="w-full"
-                          />
-                          {fieldState.error && <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>}
-                        </>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Tipo del Adjunto */}
-                  <div className="space-y-1">
-                    <Label htmlFor={`${fieldNameBase}.tipo`}>Tipo (Ej: Presentación, Código)</Label>
-                    <Controller
-                      name={`${fieldNameBase}.tipo`}
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <>
-                          <Input
-                            id={`${fieldNameBase}.tipo`}
-                            {...field}
-                            value={String(field.value ?? '')}
-                            className="w-full"
-                          />
-                          {fieldState.error && <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>}
-                        </>
-                      )}
-                    />
-                  </div>
+                    {/* URL del Adjunto */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`${fieldNameBase}.url`}>
+                        URL del Adjunto *
+                      </Label>
+                      <Controller
+                        name={`${fieldNameBase}.url`}
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Input
+                              id={`${fieldNameBase}.url`}
+                              type="url"
+                              {...field}
+                              value={String(field.value ?? "")}
+                              className="w-full"
+                            />
+                            {fieldState.error && (
+                              <p className="text-sm text-destructive mt-1">
+                                {fieldState.error.message}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      />
+                    </div>
 
-                  {/* Descripción Corta del Adjunto */}
-                  <div className="space-y-1">
-                    <Label htmlFor={`${fieldNameBase}.descripcion`}>Descripción Corta</Label>
-                    <Controller
-                      name={`${fieldNameBase}.descripcion`}
-                      control={control}
-                      render={({ field, fieldState }) => (
-                         <>
-                          <Input
-                            id={`${fieldNameBase}.descripcion`}
-                            {...field}
-                            value={String(field.value ?? '')}
-                            className="w-full"
-                          />
-                          {fieldState.error && <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>}
-                        </>
-                      )}
-                    />
+                    {/* Tipo del Adjunto */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`${fieldNameBase}.tipo`}>
+                        Tipo (Ej: Presentación, Código)
+                      </Label>
+                      <Controller
+                        name={`${fieldNameBase}.tipo`}
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Input
+                              id={`${fieldNameBase}.tipo`}
+                              {...field}
+                              value={String(field.value ?? "")}
+                              className="w-full"
+                            />
+                            {fieldState.error && (
+                              <p className="text-sm text-destructive mt-1">
+                                {fieldState.error.message}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      />
+                    </div>
+
+                    {/* Descripción Corta del Adjunto */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`${fieldNameBase}.descripcion`}>
+                        Descripción Corta
+                      </Label>
+                      <Controller
+                        name={`${fieldNameBase}.descripcion`}
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Input
+                              id={`${fieldNameBase}.descripcion`}
+                              {...field}
+                              value={String(field.value ?? "")}
+                              className="w-full"
+                            />
+                            {fieldState.error && (
+                              <p className="text-sm text-destructive mt-1">
+                                {fieldState.error.message}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      />
+                    </div>
                   </div>
-                </div>
-                <Button type="button" variant="destructive" size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeAttachedFile(index);}} disabled={parentIsSubmitting}><Trash2 className="mr-2 h-4 w-4" /> Eliminar Adjunto</Button>
-              </Card>
-            );
-          })}
-            {errors.archivosAdjuntos && typeof errors.archivosAdjuntos === 'object' && 'message' in errors.archivosAdjuntos && !Array.isArray(errors.archivosAdjuntos) && (
-                <p className="text-sm text-destructive mt-1">{errors.archivosAdjuntos.message as string}</p>
-            )}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeAttachedFile(index);
+                    }}
+                    disabled={parentIsSubmitting}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Adjunto
+                  </Button>
+                </Card>
+              );
+            })}
+            {errors.archivosAdjuntos &&
+              typeof errors.archivosAdjuntos === "object" &&
+              "message" in errors.archivosAdjuntos &&
+              !Array.isArray(errors.archivosAdjuntos) && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.archivosAdjuntos.message as string}
+                </p>
+              )}
           </CardContent>
         </Card>
 
         <div className="flex flex-col sm:flex-row gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={handleCancelClick} disabled={parentIsSubmitting}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={(!!initialData && !isFormEffectivelyDirty) || parentIsSubmitting}
-              className="w-full md:w-auto text-lg py-3 px-6 min-w-[150px]"
-            >
-              {parentIsSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {parentIsSubmitting
-                ? (initialData ? 'Actualizando...' : 'Creando...')
-                : (initialData ? 'Actualizar Proyecto' : 'Crear Proyecto')}
-            </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancelClick}
+            disabled={parentIsSubmitting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={
+              (!!initialData && !isFormEffectivelyDirty) || parentIsSubmitting
+            }
+            className="w-full md:w-auto text-lg py-3 px-6 min-w-[150px]"
+          >
+            {parentIsSubmitting && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {parentIsSubmitting
+              ? initialData
+                ? "Actualizando..."
+                : "Creando..."
+              : initialData
+              ? "Actualizar Proyecto"
+              : "Crear Proyecto"}
+          </Button>
         </div>
       </form>
       <UnsavedChangesModal
@@ -981,33 +1544,39 @@ export default function ProjectForm({ onSubmit: parentOnSubmit, initialData, isS
         onConfirmSaveAndExit={triggerSubmitAndNavigate}
         onConfirmDiscardAndExit={discardChangesAndExit}
       />
-      <AddPersonaModal 
-        open={isAddAuthorModalOpen} 
-        onOpenChange={setIsAddAuthorModalOpen} 
-        onPersonaCreated={onAuthorCreatedFromModal} 
+      <AddPersonaModal
+        open={isAddAuthorModalOpen}
+        onOpenChange={setIsAddAuthorModalOpen}
+        onPersonaCreated={onAuthorCreatedFromModal}
         roleToAssign="es_autor_invitado"
         opcionesCategoriaPrincipal={opcionesCategoriaAutor}
       />
-      <AddPersonaModal 
-        open={isAddTutorModalOpen} 
-        onOpenChange={setIsAddTutorModalOpen} 
-        onPersonaCreated={onTutorCreatedFromModal} 
+      <AddPersonaModal
+        open={isAddTutorModalOpen}
+        onOpenChange={setIsAddTutorModalOpen}
+        onPersonaCreated={onTutorCreatedFromModal}
         roleToAssign="es_tutor_invitado"
         opcionesCategoriaPrincipal={opcionesCategoriaTutor}
       />
-       <AddPersonaModal 
-        open={isAddCollaboratorModalOpen} 
-        onOpenChange={setIsAddCollaboratorModalOpen} 
-        onPersonaCreated={onCollaboratorCreatedFromModal} 
+      <AddPersonaModal
+        open={isAddCollaboratorModalOpen}
+        onOpenChange={setIsAddCollaboratorModalOpen}
+        onPersonaCreated={onCollaboratorCreatedFromModal}
         roleToAssign="es_colaborador_invitado"
         opcionesCategoriaPrincipal={opcionesCategoriaColaborador}
       />
-      <AddOrganizacionModal 
-        open={isAddOrganizacionModalOpen} 
-        onOpenChange={setIsAddOrganizacionModalOpen} 
-        onOrganizacionCreated={onOrganizacionCreatedFromModal} 
+      <AddOrganizacionModal
+        open={isAddOrganizacionModalOpen}
+        onOpenChange={setIsAddOrganizacionModalOpen}
+        onOrganizacionCreated={onOrganizacionCreatedFromModal}
       />
-      {isAddTemaModalOpen && <AddTemaModal open={isAddTemaModalOpen} onOpenChange={setIsAddTemaModalOpen} onTemaCreated={handleTemaCreatedFromModal} />}
+      {isAddTemaModalOpen && (
+        <AddTemaModal
+          open={isAddTemaModalOpen}
+          onOpenChange={setIsAddTemaModalOpen}
+          onTemaCreated={handleTemaCreatedFromModal}
+        />
+      )}
     </Form>
   );
 }

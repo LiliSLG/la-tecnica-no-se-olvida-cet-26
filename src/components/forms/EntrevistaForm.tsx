@@ -641,7 +641,7 @@ export default function EntrevistaForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      URL del Video Propio* (Ej: enlace de Firebase Storage,
+                      URL del Video Propio* (Ej: enlace de supabase Storage,
                       YouTube propio)
                     </FormLabel>
                     <FormControl>

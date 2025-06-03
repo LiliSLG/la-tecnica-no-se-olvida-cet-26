@@ -22,7 +22,7 @@ export const tipoContenidoEntrevistaOptions = [
  * Opciones para plataforma de video propio.
  */
 export const plataformaVideoPropioOptions = [
-  "firebase_storage",
+  "supabase_storage",
   "youtube_propio",
 ] as const;
 
@@ -40,7 +40,6 @@ export const plataformaVideoExternoOptions = [
  * Esquema Zod para validar los datos del formulario de entrevista.
  *
  * - Se reemplaza `idsTemasSaber: string[]` por `temas: Tema[]`.
- * - Se quita cualquier referencia a Firebase Timestamp.
  */
 export const entrevistaSchema = z
   .object({

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Persona, TemaCategoria } from '@/lib/types';
-import { getPublicEgresadosYEstudiantes } from '@/lib/firebase/personasService';
+import { getPublicEgresadosYEstudiantes } from '@/lib/supabase/personasService';
 import { useToast } from '@/hooks/use-toast';
 import PersonaCard from '@/components/cards/PersonaCard';
 import { Users2, Loader2, Info, Search, Filter, XIcon } from 'lucide-react';

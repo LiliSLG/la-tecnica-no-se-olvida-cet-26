@@ -35,88 +35,96 @@ export const temaCategoriaLabels: Record<TemaCategoria, string> = {
   otro: "Otro",
 };
 
-// --- Zod-schema para el formulario de Tema ---
+// Valor especial para “ninguna categoría”
+const NINGUNA_CATEGORIA_VALUE = "_ninguna_categoria_";
+
+// ————————————————————————————————————————————————————————————————
+// Schema Zod para editar/crear un Tema completo
 export const temaSchema = z.object({
   nombre: z
     .string()
-    .min(
-      2,
-      "El nombre del tema es requerido y debe tener al menos 2 caracteres."
-    ),
+    .min(2, "El nombre del tema es requerido y debe tener al menos 2 caracteres."),
   descripcion: z.string().optional().nullable(),
-  categoriaTema: z.enum(temaCategorias).optional().nullable(),
+  categoriaTema: z
+    .enum(
+      temaCategorias as unknown as [TemaCategoria, ...TemaCategoria[]],
+      {
+        invalid_type_error: "Categoría inválida.",
+      }
+    )
+    .optional()
+    .nullable(),
 });
 export type TemaFormData = z.infer<typeof temaSchema>;
 
-// -----------------------------------------------------------------------------
-// Convierte un row de Supabase (Tema) a TemaFormData.
-// Aquí recibimos el objeto completo que vino de la tabla “temas”.
-// -----------------------------------------------------------------------------
-export function convertSupabaseDataToFormTema(temaData: Tema): TemaFormData {
-  // 1) Normalizar strings que puedan venir null a ''
-  const nombre = temaData.nombre;
-  const descripcion = temaData.descripcion ?? "";
-  const categoriaTema = temaData.categoriaTema ?? "";
+// ————————————————————————————————————————————————————————————————
+// Schema Zod para el modal de “Agregar Tema”
+// Permite usar el valor especial "_ninguna_categoria_" para “sin categoría”
+export const addTemaModalSchema = z.object({
+  nombre: z
+    .string()
+    .min(2, "El nombre del tema es requerido y debe tener al menos 2 caracteres."),
+  descripcion: z.string().optional().nullable(),
+  categoriaTema: z
+    .enum(
+      temaCategorias as unknown as [TemaCategoria, ...TemaCategoria[]],
+      {
+        invalid_type_error: "Categoría inválida.",
+      }
+    )
+    .or(z.literal(NINGUNA_CATEGORIA_VALUE))
+    .optional()
+    .nullable(),
+});
+export type AddTemaModalFormData = z.infer<typeof addTemaModalSchema>;
 
-  try {
-    // 2) Parsear con el esquema para validar
-    const parsed = temaSchema.parse({
-      nombre,
-      descripcion,
-      categoriaTema: categoriaTema || undefined,
-    });
+// ————————————————————————————————————————————————————————————————
+// Funciones opcionales para convertir entre formulario y Supabase/Postgres
+// (ajústalas a tu lógica de guardado si es necesario)
 
-    // 3) Devolver, asegurando que categoría sea null si quedó cadena vacía
-    return {
-      nombre: parsed.nombre,
-      descripcion: parsed.descripcion ?? null,
-      categoriaTema: parsed.categoriaTema ?? null,
-    } as TemaFormData;
-  } catch (e) {
-    console.error("Error al parsear temaData en FormTema:", e, temaData);
-    // En caso de falla, devolvemos valores mínimos
-    return {
-      nombre: temaData.nombre,
-      descripcion: temaData.descripcion ?? null,
-      categoriaTema: temaData.categoriaTema ?? null,
-    } as TemaFormData;
+export function convertFormDataToSupabaseTema(
+  data: TemaFormData | AddTemaModalFormData,
+  userId: string,
+  existingTema?: { id: string }
+): Record<string, any> {
+  const supaData: Record<string, any> = { ...data };
+
+  // Convertir cadenas vacías o el valor especial a null
+  Object.keys(supaData).forEach((key) => {
+    const val = supaData[key as keyof typeof supaData];
+    if (val === "" || val === NINGUNA_CATEGORIA_VALUE) {
+      supaData[key] = null;
+    }
+  });
+
+  if (!existingTema?.id) {
+    supaData.ingresadoPorUid = userId;
+    // En Supabase/Postgres definimos `DEFAULT NOW()` para creadoEn, por eso no lo ponemos aquí
+    supaData.estaEliminada = false;
   }
+  supaData.modificadoPorUid = userId;
+  // Para `actualizadoEn` también usamos DEFAULT NOW() en la tabla, así que no asignamos nada aquí
+
+  return supaData;
 }
 
-// -----------------------------------------------------------------------------
-// Convierte TemaFormData (lo que sale del form) a Partial<Tema> para insertar/actualizar.
-// Recibe userId para llenar ingresadoPorUid y modificadoPorUid.
-// Si existingTema.id existe, se trata de un update; de lo contrario, es un insert.
-// -----------------------------------------------------------------------------
-export function convertFormDataToSupabaseTema(
-  data: TemaFormData,
-  userId: string,
-  existingTema?: Tema
-): Partial<Tema> {
-  // 1) Empezamos clonando campos de form y mapeando '' a null
-  const nombre = data.nombre.trim();
-  const descripcion =
-    data.descripcion && data.descripcion.trim() !== ""
-      ? data.descripcion.trim()
-      : null;
-  const categoriaTema =
-    data.categoriaTema && data.categoriaTema.trim() !== ""
-      ? (data.categoriaTema as TemaCategoria)
-      : null;
+export function convertSupabaseDataToFormTema(
+  temaData: Record<string, any>
+): TemaFormData {
+  const formData: Record<string, any> = { ...temaData };
 
-  const temaPayload: Partial<Tema> = {
-    nombre,
-    descripcion,
-    categoriaTema,
-    modificadoPorUid: userId,
-  };
-
-  // 2) Si no existe existingTema.id, es insert: agregar ingresadoPorUid y estaEliminada=false
-  if (!existingTema?.id) {
-    temaPayload.ingresadoPorUid = userId;
-    temaPayload.estaEliminada = false;
-    // Los timestamps (creadoEn/actualizadoEn) los maneja la tabla con DEFAULT NOW()
+  // Si viene null, convertir a "" para el formulario
+  if (formData.nombre === null) formData.nombre = "";
+  if (formData.descripcion === null) formData.descripcion = "";
+  // Si la categoría no está en el array original, o es null, dejarla como null
+  if (!temaCategorias.includes(formData.categoriaTema)) {
+    formData.categoriaTema = null;
   }
 
-  return temaPayload;
+  // Zod validará y completará defaults
+  return temaSchema.parse({
+    nombre: formData.nombre || "",
+    descripcion: formData.descripcion || null,
+    categoriaTema: formData.categoriaTema || null,
+  });
 }
