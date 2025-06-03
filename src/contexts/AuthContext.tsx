@@ -23,6 +23,7 @@ interface AuthContextType {
   ) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -137,15 +138,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      console.error("Error signing in with Google:", error.message);
+      toast.error("Error al iniciar sesión con Google: " + error.message);
+      setLoading(false);
+      return false;
+    }
+
+    setLoading(false);
+    return true;
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
         signInWithEmailPswd,
-        signUpWithEmailPswdAndName, // Mismo nombre que usabas antes 🚀
+        signUpWithEmailPswdAndName,
         sendPasswordReset,
         signOut,
+        signInWithGoogle,
       }}
     >
       {children}

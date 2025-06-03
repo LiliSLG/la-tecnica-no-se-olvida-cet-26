@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -15,7 +14,6 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 
-
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Por favor, ingresa un correo electrónico válido." }),
 });
@@ -25,7 +23,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordForm() {
   const { sendPasswordReset, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast(); // For direct feedback if needed, though AuthContext handles some
+  const { toast } = useToast();
 
   const form = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -36,12 +34,30 @@ export default function ForgotPasswordForm() {
 
   const onSubmit: SubmitHandler<ForgotPasswordFormData> = async (data) => {
     setIsSubmitting(true);
-    const success = await sendPasswordReset(data.email);
-    if (success) {
-      form.reset(); // Clear form on success
-      // Toast is handled in AuthContext
+    try {
+      const success = await sendPasswordReset(data.email);
+      if (!success) {
+        toast({
+          title: "Error al enviar el correo",
+          description: "No se pudo enviar el correo de recuperación. Por favor, intenta nuevamente.",
+          variant: "destructive",
+        });
+      } else {
+        form.reset(); // Clear form on success
+        toast({
+          title: "Correo enviado",
+          description: "Se ha enviado un correo con instrucciones para restablecer tu contraseña.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error al enviar el correo",
+        description: "Ocurrió un error inesperado. Por favor, intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
   
   return (

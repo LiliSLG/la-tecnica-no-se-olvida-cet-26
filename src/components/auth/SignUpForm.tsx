@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -9,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
-import { Mail, Lock, User, UserPlus } from 'lucide-react'; // Added User icon
+import { Mail, Lock, User, UserPlus } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
 
 const signUpSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -22,7 +22,7 @@ const signUpSchema = z.object({
   confirmPassword: z.string().min(6, { message: "La confirmación de contraseña debe tener al menos 6 caracteres." }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Las contraseñas no coinciden.",
-  path: ["confirmPassword"], // Point error to confirmPassword field
+  path: ["confirmPassword"],
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
@@ -32,6 +32,7 @@ export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -52,11 +53,24 @@ export default function SignUpForm() {
 
   const onSubmit: SubmitHandler<SignUpFormData> = async (data) => {
     setIsSubmitting(true);
-    const success = await signUpWithEmailPswdAndName(data.name, data.email, data.password);
-    if (success) {
-      // Redirect is handled by useEffect after user state updates
+    try {
+      const success = await signUpWithEmailPswdAndName(data.name, data.email, data.password);
+      if (!success) {
+        toast({
+          title: "Error al registrarse",
+          description: "No se pudo crear la cuenta. Por favor, intenta nuevamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error al registrarse",
+        description: "Ocurrió un error inesperado. Por favor, intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   if (loading && !user) {
@@ -164,9 +178,12 @@ export default function SignUpForm() {
             </p>
           </div>
         </CardContent>
-         <CardFooter className="text-center flex-col items-center space-y-2 pt-4">
+        <CardFooter className="text-center flex-col items-center space-y-2 pt-4">
           <p className="text-xs text-muted-foreground">
-            Al registrarte, aceptas nuestros Términos de Servicio y Política de Privacidad (simulados).
+            Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad (simulados).
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Este es un proyecto educativo.
           </p>
         </CardFooter>
       </Card>

@@ -1,4 +1,3 @@
-
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -37,15 +36,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**', // Allows images from any path on firebasestorage.googleapis.com
-      },
-      {
-        protocol: 'https',
         hostname: 'lh3.googleusercontent.com', // Added for Google user profile pictures
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('https://', '') || '',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
       }
     ],
   },

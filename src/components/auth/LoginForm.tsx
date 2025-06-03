@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -8,13 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Label import might be unused now with react-hook-form
 import { Mail, Lock, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, ingresa un correo electrónico válido." }),
@@ -34,13 +33,13 @@ const GoogleIcon = () => (
   </svg>
 );
 
-
 export default function LoginForm() {
   const { user, loading, signInWithEmailPswd, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -59,16 +58,46 @@ export default function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
     setIsSubmitting(true);
-    const success = await signInWithEmailPswd(data.email, data.password);
-    // useEffect will handle redirect if success
-    setIsSubmitting(false);
+    try {
+      const success = await signInWithEmailPswd(data.email, data.password);
+      if (!success) {
+        toast({
+          title: "Error al iniciar sesión",
+          description: "Credenciales inválidas. Por favor, intenta nuevamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error al iniciar sesión",
+        description: "Ocurrió un error inesperado. Por favor, intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
     setIsSubmittingGoogle(true);
-    await signInWithGoogle();
-    // useEffect will handle redirect if success
-    setIsSubmittingGoogle(false);
+    try {
+      const success = await signInWithGoogle();
+      if (!success) {
+        toast({
+          title: "Error al iniciar sesión con Google",
+          description: "No se pudo iniciar sesión con Google. Por favor, intenta nuevamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error al iniciar sesión con Google",
+        description: "Ocurrió un error inesperado. Por favor, intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingGoogle(false);
+    }
   };
 
   if (loading && !user) { 

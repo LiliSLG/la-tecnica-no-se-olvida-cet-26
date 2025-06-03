@@ -191,3 +191,414 @@
 3. Restore Firebase configuration
 4. Verify all functionality
 5. Document rollback reason and process
+
+## Storage Migration Progress
+
+### 2024-03-XX - Storage Configuration Updates
+- Enhanced Supabase Storage configuration in `next.config.ts`:
+  - Added Supabase Storage domain to `remotePatterns`
+  - Removed Firebase Storage domain
+  - Configured proper image optimization settings
+- Improved `supabaseStorage.ts`:
+  - Added structured storage configuration with bucket settings
+  - Implemented file type validation
+  - Added file size limits (5MB max)
+  - Enhanced error handling and logging
+  - Added type safety for folder names and file types
+  - Organized storage into logical folders (profile pictures, organization logos, project files, interviews)
+
+### 2024-03-XX - Storage Migration Utility Implementation
+- Created `storageMigration.ts` utility with the following features:
+  - Single and batch file migration functions
+  - Progress tracking and reporting
+  - File type validation and error handling
+  - Path mapping between Firebase and Supabase
+  - Migration verification
+  - Rollback support for failed migrations
+- Implemented folder structure mapping:
+  - Profile pictures → profile-pictures
+  - Organization logos → organization-logos
+  - Project files → project-files
+  - Interviews → interviews
+- Added comprehensive error handling and logging
+- Included TypeScript types for better type safety
+
+### 2024-03-XX - Storage Migration Test Implementation
+- Created comprehensive test suite for storage migration utility:
+  - Unit tests for all migration functions
+  - Mock implementations for Firebase and Supabase
+  - Test cases for success and failure scenarios
+  - Progress tracking validation
+  - Verification and rollback testing
+- Added Jest testing infrastructure:
+  - Installed Jest and related dependencies
+  - Configured test environment
+  - Set up mock implementations
+
+## Authentication Migration Progress
+
+### 2024-03-XX - Auth Service Implementation
+- Created `src/lib/supabase/authService.ts` with core authentication functions
+- Implemented sign in, sign up, and sign out functionality
+- Added OAuth integration (Google)
+- Implemented user profile management
+- Added password management features
+- Implemented session handling
+- Added error handling and user feedback
+- Installed required dependency: `@supabase/auth-helpers-nextjs`
+
+### 2024-03-XX - User Data Migration Implementation
+- Created migration scripts for user data:
+  - `src/lib/supabase/scripts/migrateUsers.ts`: Handles user data migration
+  - `src/lib/supabase/scripts/extractFirebaseUsers.ts`: Extracts user data from Firebase
+- Implemented data mapping and transformation
+- Added progress tracking and verification
+- Enhanced error handling and logging
+- Installed required dependency: `firebase-admin`
+
+### 2024-03-XX - UI Updates Implementation
+- Updated authentication components:
+  - Modified `LoginForm.tsx` to use Supabase auth
+  - Updated `SignUpForm.tsx` with Supabase integration
+  - Enhanced `ForgotPasswordForm.tsx` for password reset
+  - Created new `ProfileForm.tsx` for user profile management
+- Added loading states and error handling:
+  - Implemented loading indicators for auth operations
+  - Added toast notifications for success/error feedback
+  - Enhanced form validation with Zod schemas
+- Implemented profile management features:
+  - Added avatar upload functionality
+  - Created password change form
+  - Enhanced user metadata management
+- Improved UI/UX:
+  - Added responsive layouts
+  - Implemented consistent styling
+  - Enhanced accessibility
+  - Added loading and error states
+  - Improved form validation feedback
+
+### Database Services Migration (2.3)
+
+#### Core Database Setup (2.3.1) - Completed
+- Created initial database schema with tables for:
+  - `personas`: User profiles with admin capabilities
+  - `organizaciones`: Organization information
+  - `temas`: Topic categorization
+  - `proyectos`: Project management
+  - `entrevistas`: Interview scheduling and content
+  - `noticias`: News articles and external links
+- Implemented junction tables for many-to-many relationships:
+  - `persona_tema`, `proyecto_tema`, `entrevista_tema`, `noticia_tema`
+  - `proyecto_persona_rol`, `proyecto_organizacion_rol`
+- Set up Row Level Security (RLS) policies for all tables:
+  - View policies for public access
+  - Insert/Update/Delete policies for authenticated users and admins
+  - Soft delete functionality with audit fields
+- Created database indexes for performance optimization:
+  - Single-column indexes for frequently queried fields
+  - Composite indexes for common query patterns
+  - Full-text search indexes using GIN for Spanish text search
+- Added automatic timestamp management:
+  - `created_at` and `updated_at` fields
+  - Trigger function for automatic `updated_at` updates
+
+#### Service Layer Implementation (2.3.2) - In Progress
+
+##### Base Service Setup - Completed
+- Created base service infrastructure:
+  - `src/lib/supabase/types/service.ts`: Common service types and interfaces
+  - `src/lib/supabase/types/database.types.ts`: Supabase database schema types
+  - `src/lib/supabase/services/baseService.ts`: Abstract base service class
+- Implemented core functionality in base service:
+  - CRUD operations with type safety
+  - Error handling and result wrapping
+  - Query building with filters and pagination
+  - Soft delete management
+  - Full-text search support
+  - Automatic timestamp handling
+- Added comprehensive type definitions:
+  - Service result types
+  - Query options
+  - Entity interfaces
+  - Database schema types
+- Implemented error handling:
+  - Custom error types
+  - Error wrapping
+  - Result type safety
+- Added utility functions:
+  - Query building
+  - Result creation
+  - Error handling
+  - Type guards
+
+##### Entity Services Implementation - In Progress
+- Created `PersonasService`:
+  - Email-based lookup
+  - Admin filtering
+  - Category and capacity filtering
+  - Topic management
+  - Enhanced search with biography
+- Created `OrganizacionesService`:
+  - Topic management
+  - Enhanced search with description
+  - Organization-topic relationships
+- Created `TemasService`:
+  - Related entities lookup (personas, organizaciones, proyectos, entrevistas, noticias)
+  - Enhanced search with description
+  - Topic relationship management
+- Created `ProyectosService`:
+  - Status-based filtering
+  - Topic management
+  - Person and organization role management
+  - Enhanced search with description
+  - Project relationship management
+- Created `EntrevistasService`:
+  - Status-based filtering
+  - Date-based filtering
+  - Topic management
+  - Enhanced search with description
+- Created `NoticiasService`:
+  - Type-based filtering (article/link)
+  - Topic management
+  - Enhanced search with content
+
+##### Relationship Services Implementation - In Progress
+- Created base `RelationshipService` class:
+  - Generic relationship management
+  - Type-safe relationship operations
+  - Error handling and result wrapping
+  - Common relationship operations:
+    - Add/remove relationships
+    - Get relationship lists
+    - Check relationship existence
+    - Count relationships
+- Created `PersonaTemaService`:
+  - Persona-tema relationship management
+  - Get temas with full details
+  - Get personas by tema
+  - Add/remove tema from persona
+  - Check tema existence
+  - Count persona temas
+- Created `OrganizacionTemaService`:
+  - Organizacion-tema relationship management
+  - Get temas with full details
+  - Get organizaciones by tema
+  - Add/remove tema from organizacion
+  - Check tema existence
+  - Count organizacion temas
+- Created `ProyectoTemaService`:
+  - Proyecto-tema relationship management
+  - Get temas with full details
+  - Get proyectos by tema
+  - Add/remove tema from proyecto
+  - Check tema existence
+  - Count proyecto temas
+- Created `EntrevistaTemaService`:
+  - Entrevista-tema relationship management
+  - Get temas with full details
+  - Get entrevistas by tema
+  - Add/remove tema from entrevista
+  - Check tema existence
+  - Count entrevista temas
+- Created `NoticiaTemaService`:
+  - Noticia-tema relationship management
+  - Get temas with full details
+  - Get noticias by tema
+  - Add/remove tema from noticia
+  - Check tema existence
+  - Count noticia temas
+- Created `ProyectoPersonaRolService`:
+  - Proyecto-persona relationship management
+  - Get roles with full details
+  - Get personas by proyecto
+  - Add/remove role from persona
+  - Check role existence
+  - Count persona roles
+- Created `ProyectoOrganizacionRolService`:
+  - Proyecto-organizacion relationship management
+  - Get roles with full details
+  - Get organizaciones by proyecto
+  - Add/remove role from organizacion
+  - Check role existence
+  - Count organizacion roles
+- Created `EntrevistaPersonaRolService`:
+  - Entrevista-persona relationship management
+  - Get personas with roles for an entrevista
+  - Get entrevistas by persona with roles
+  - Add/remove persona from entrevista with role
+  - Update persona role in entrevista
+  - Check persona existence
+  - Count personas in entrevista
+- Created `EntrevistaOrganizacionRolService`:
+  - Entrevista-organizacion relationship management
+  - Get organizaciones with roles for an entrevista
+  - Get entrevistas by organizacion with roles
+  - Add/remove organizacion from entrevista with role
+  - Update organizacion role in entrevista
+  - Check organizacion existence
+  - Count organizaciones in entrevista
+
+## [Unreleased]
+
+### Added
+- Initial project setup with Next.js 14, TypeScript, and Tailwind CSS
+- Basic project structure and configuration
+- Documentation setup with README and changelog
+- Database schema design and implementation
+- Supabase client configuration and types
+- Base service implementation for common database operations
+- Entity Services Implementation:
+  - PersonasService with CRUD operations and search functionality
+  - OrganizacionesService with CRUD operations and search functionality
+  - TemasService with CRUD operations and search functionality
+  - ProyectosService with status-based filtering, tema management, and persona/organizacion relationships
+  - EntrevistasService with status-based filtering, fecha-based filtering, and tema management
+  - NoticiasService with type-based filtering, tema management, and enhanced search
+- Relationship Services Implementation:
+  - Base RelationshipService for common relationship operations
+  - PersonaTemaService for managing persona-tema relationships
+  - OrganizacionTemaService for managing organizacion-tema relationships
+  - ProyectoTemaService for managing proyecto-tema relationships
+  - EntrevistaTemaService for managing entrevista-tema relationships
+  - NoticiaTemaService for managing noticia-tema relationships
+  - ProyectoPersonaRolService for managing proyecto-persona relationships with roles
+  - ProyectoOrganizacionRolService for managing proyecto-organizacion relationships with roles
+  - EntrevistaPersonaRolService for managing entrevista-persona relationships with roles
+  - EntrevistaOrganizacionRolService for managing entrevista-organizacion relationships with roles
+- Data Migration Scripts Implementation:
+  - Base migration structure with:
+    - Progress tracking
+    - Batch processing
+    - Error handling
+    - Dry run support
+    - Logging functionality
+  - Firebase data extraction utilities:
+    - Collection data extraction with query support
+    - Document data extraction
+    - Relationship data extraction
+    - Retry mechanism with configurable attempts
+    - Progress tracking and error logging
+    - Batch processing for large datasets
+  - Data transformation utilities:
+    - Field mapping and renaming
+    - Type conversion and validation
+    - Timestamp handling (Firestore to ISO)
+    - Relationship transformation
+    - Required field validation
+    - Default value application
+    - Progress tracking and error logging
+  - Entity-specific transformation configurations:
+    - Persona transformation with:
+      - Basic field mappings (nombre, apellido, email, etc.)
+      - Admin field mappings (esAdmin, esAdminSistema)
+      - Category field mappings (categoriaPrincipal, capacidadesPlataforma)
+      - Timestamp handling
+      - Relationship field handling
+      - Required field validation
+      - Default values for optional fields
+    - Organizacion transformation with:
+      - Basic field mappings (nombre, descripcion, tipo)
+      - Contact field mappings (email, telefono, direccion, etc.)
+      - Media field mappings (logoURL, sitioWeb, redesSociales)
+      - Timestamp handling
+      - Relationship field handling
+      - Required field validation
+      - Default values for optional fields
+    - Tema transformation with:
+      - Basic field mappings (nombre, descripcion, slug)
+      - Category field mappings (categoria, subcategoria, tags)
+      - Timestamp handling
+      - Relationship field handling (personas, organizaciones, proyectos, etc.)
+      - Required field validation
+      - Default values for optional fields
+    - Proyecto transformation with:
+      - Basic field mappings (nombre, descripcion, objetivos, resultados)
+      - Status field mappings (estado, fechaInicio, fechaFin, fechaPublicacion)
+      - Media field mappings (imagenURL, archivoPrincipalURL, archivosAdicionales)
+      - Timestamp handling
+      - Relationship field handling (temas, personas, organizaciones)
+      - Required field validation
+      - Default values for optional fields
+    - Entrevista transformation with:
+      - Basic field mappings (titulo, descripcion, resumen, notas)
+      - Status field mappings (estado, fechaEntrevista, fechaPublicacion, duracion)
+      - Media field mappings (videoURL, transcripcionURL, imagenURL, archivosAdicionales)
+      - Timestamp handling
+      - Relationship field handling (temas, personas, organizaciones)
+      - Required field validation
+      - Default values for optional fields
+    - Noticia transformation with:
+      - Basic field mappings (titulo, descripcion, contenido, resumen)
+      - Type field mappings (tipo, fuente, autor, fechaPublicacion, fechaNoticia)
+      - Media field mappings (imagenURL, archivoURL, archivosAdicionales)
+      - Timestamp handling
+      - Relationship field handling (temas)
+      - Required field validation
+      - Default values for optional fields
+  - Main data migration script with:
+    - Orchestration of the entire migration process
+    - Sequential entity migration (personas, organizaciones, temas, proyectos, entrevistas, noticias)
+    - Relationship migration for all entity pairs
+    - Progress tracking and reporting
+    - Error handling and logging
+    - Dry run support for testing
+    - Configurable batch size and retry settings
+    - Rollback support for failed migrations
+
+### Changed
+- Updated project structure to follow Next.js 14 conventions
+- Enhanced database schema with proper relationships and constraints
+- Improved type safety across all services
+- Refined search functionality in entity services
+
+### Fixed
+- Type safety issues in relationship services
+- Search functionality in entity services
+- Error handling in all services
+
+### Security
+- Implemented proper error handling and type safety
+- Added input validation in all services
+- Secured database operations with proper constraints
+
+## [0.1.0] - 2024-02-20
+
+### Added
+- Initial project setup
+- Basic project structure
+- Documentation setup
+- Database schema design
+- Supabase client configuration
+- Base service implementation
+- Entity Services Implementation:
+  - PersonasService
+  - OrganizacionesService
+  - TemasService
+  - ProyectosService
+  - EntrevistasService
+  - NoticiasService
+- Relationship Services Implementation:
+  - Base RelationshipService
+  - PersonaTemaService
+  - OrganizacionTemaService
+  - ProyectoTemaService
+  - EntrevistaTemaService
+  - NoticiaTemaService
+  - ProyectoPersonaRolService
+  - ProyectoOrganizacionRolService
+
+### Changed
+- Updated project structure
+- Enhanced database schema
+- Improved type safety
+- Refined search functionality
+
+### Fixed
+- Type safety issues
+- Search functionality
+- Error handling
+
+### Security
+- Implemented error handling
+- Added input validation
+- Secured database operations
