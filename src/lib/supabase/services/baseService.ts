@@ -1,154 +1,53 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import {
-  BaseServiceConfig,
-  IBaseService,
-  ServiceResult,
-  ServiceError,
-  QueryOptions,
-  CreateOptions,
-  UpdateOptions,
-  DeleteOptions,
-  BaseEntity
-} from '../types/service';
+import { ServiceResult } from '../types/service';
+import { ValidationError } from '../errors/types';
+import { mapValidationError } from '../errors/utils';
 
-export abstract class BaseService<T extends BaseEntity, CreateInput, UpdateInput>
-  implements IBaseService<T, CreateInput, UpdateInput>
-{
-  protected readonly tableName: string;
-  protected readonly supabase: SupabaseClient<Database>;
+export interface WithTimestamps {
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BaseEntity extends WithTimestamps {
+  id: string;
+}
+
+export interface BaseServiceConfig {
+  tableName: string;
+  supabase: SupabaseClient<Database>;
+}
+
+export abstract class BaseService<
+  T extends BaseEntity | Record<string, any>,
+  CreateInput extends Partial<T>,
+  UpdateInput extends Partial<T>
+> {
+  protected tableName: string;
+  protected supabase: SupabaseClient<Database>;
 
   constructor(config: BaseServiceConfig) {
     this.tableName = config.tableName;
     this.supabase = config.supabase;
   }
 
-  protected handleError(error: unknown): ServiceError {
-    if (error instanceof Error) {
-      return {
-        code: 'SERVICE_ERROR',
-        message: error.message,
-        details: error
-      };
-    }
-    return {
-      code: 'UNKNOWN_ERROR',
-      message: 'An unknown error occurred',
-      details: error
-    };
-  }
+  protected abstract validateCreateInput(data: CreateInput): ValidationError | null;
 
   protected createSuccessResult<T>(data: T): ServiceResult<T> {
     return { data, error: null };
   }
 
-  protected createErrorResult<T>(error: ServiceError): ServiceResult<T> {
+  protected createErrorResult(error: ValidationError): ServiceResult<null> {
     return { data: null, error };
   }
 
-  async create(data: CreateInput, options?: CreateOptions): Promise<ServiceResult<T>> {
-    try {
-      const { data: result, error } = await this.supabase
-        .from(this.tableName)
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return this.createSuccessResult(result as T);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error));
-    }
-  }
-
-  async getById(id: string): Promise<ServiceResult<T>> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select()
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return this.createSuccessResult(data as T);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error));
-    }
-  }
-
-  async getAll(options?: QueryOptions): Promise<ServiceResult<T[]>> {
-    try {
-      let query = this.supabase
-        .from(this.tableName)
-        .select();
-
-      if (!options?.includeDeleted) {
-        query = query.eq('esta_eliminada', false);
-      }
-
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          query = query.eq(key, value);
-        });
-      }
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending ?? true
-        });
-      }
-
-      if (options?.limit) {
-        query = query.limit(options.limit);
-      }
-
-      if (options?.offset) {
-        query = query.range(options.offset, options.offset + (options.limit ?? 10) - 1);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return this.createSuccessResult(data as T[]);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error));
-    }
-  }
-
-  async update(id: string, data: UpdateInput, options?: UpdateOptions): Promise<ServiceResult<T>> {
-    try {
-      const { data: result, error } = await this.supabase
-        .from(this.tableName)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return this.createSuccessResult(result as T);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error));
-    }
-  }
-
-  async delete(id: string, options?: DeleteOptions): Promise<ServiceResult<T>> {
-    try {
-      if (options?.hardDelete) {
-        const { data, error } = await this.supabase
-          .from(this.tableName)
-          .delete()
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return this.createSuccessResult(data as T);
-      } else {
-        return this.softDelete(id);
-      }
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error));
-    }
+  protected handleError(error: any, context?: any): ValidationError {
+    console.error('Service error:', error, context);
+    return mapValidationError(
+      error.message || 'An unexpected error occurred',
+      'service',
+      error
+    );
   }
 
   async exists(id: string): Promise<boolean> {
@@ -162,99 +61,86 @@ export abstract class BaseService<T extends BaseEntity, CreateInput, UpdateInput
       if (error) throw error;
       return !!data;
     } catch (error) {
+      console.error('Error checking existence:', error);
       return false;
     }
   }
 
-  async count(options?: QueryOptions): Promise<number> {
+  async create(data: CreateInput): Promise<ServiceResult<T | null>> {
     try {
-      let query = this.supabase
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: result, error } = await this.supabase
         .from(this.tableName)
-        .select('id', { count: 'exact' });
-
-      if (!options?.includeDeleted) {
-        query = query.eq('esta_eliminada', false);
-      }
-
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          query = query.eq(key, value);
-        });
-      }
-
-      const { count, error } = await query;
+        .insert(data)
+        .select()
+        .single();
 
       if (error) throw error;
-      return count ?? 0;
+      return this.createSuccessResult(result as T);
     } catch (error) {
-      return 0;
+      return this.createErrorResult(this.handleError(error, { operation: 'create', data }));
     }
   }
 
-  async softDelete(id: string): Promise<ServiceResult<T>> {
+  async update(id: string, data: UpdateInput): Promise<ServiceResult<T | null>> {
     try {
-      const { data, error } = await this.supabase
+      const { data: result, error } = await this.supabase
         .from(this.tableName)
-        .update({
-          esta_eliminada: true,
-          eliminado_por_uid: this.supabase.auth.getUser().then(({ data }) => data.user?.id),
-          eliminado_en: new Date().toISOString()
-        })
+        .update(data)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return this.createSuccessResult(data as T);
+      return this.createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error));
+      return this.createErrorResult(this.handleError(error, { operation: 'update', id, data }));
     }
   }
 
-  async restore(id: string): Promise<ServiceResult<T>> {
+  async delete(id: string): Promise<ServiceResult<void>> {
+    try {
+      const { error } = await this.supabase
+        .from(this.tableName)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return this.createSuccessResult(undefined);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'delete', id }));
+    }
+  }
+
+  async getById(id: string): Promise<ServiceResult<T | null>> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .update({
-          esta_eliminada: false,
-          eliminado_por_uid: null,
-          eliminado_en: null
-        })
-        .eq('id', id)
         .select()
+        .eq('id', id)
         .single();
 
       if (error) throw error;
       return this.createSuccessResult(data as T);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error));
+      return this.createErrorResult(this.handleError(error, { operation: 'getById', id }));
     }
   }
 
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<T[]>> {
+  async getAll(): Promise<ServiceResult<T[] | null>> {
     try {
-      let searchQuery = this.supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .textSearch('nombre', query, {
-          type: 'websearch',
-          config: 'spanish'
-        });
-
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminada', false);
-      }
-
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
-      }
-
-      const { data, error } = await searchQuery;
+        .select();
 
       if (error) throw error;
       return this.createSuccessResult(data as T[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error));
+      return this.createErrorResult(this.handleError(error, { operation: 'getAll' }));
     }
   }
 } 

@@ -1,11 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
+import { AppError, ErrorCode } from '../errors/types';
 
-export type ServiceError = {
-  code: string;
-  message: string;
-  details?: unknown;
-};
+export type ServiceError = AppError;
 
 export type ServiceResult<T> = {
   data: T | null;

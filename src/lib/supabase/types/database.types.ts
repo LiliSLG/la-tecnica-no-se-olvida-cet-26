@@ -246,6 +246,164 @@ export interface Database {
           eliminado_en?: string | null
         }
       }
+      persona_tema: {
+        Row: {
+          persona_id: string
+          tema_id: string
+        }
+        Insert: {
+          persona_id: string
+          tema_id: string
+        }
+        Update: {
+          persona_id?: string
+          tema_id?: string
+        }
+      }
+      proyecto_tema: {
+        Row: {
+          proyecto_id: string
+          tema_id: string
+        }
+        Insert: {
+          proyecto_id: string
+          tema_id: string
+        }
+        Update: {
+          proyecto_id?: string
+          tema_id?: string
+        }
+      }
+      entrevista_tema: {
+        Row: {
+          entrevista_id: string
+          tema_id: string
+        }
+        Insert: {
+          entrevista_id: string
+          tema_id: string
+        }
+        Update: {
+          entrevista_id?: string
+          tema_id?: string
+        }
+      }
+      noticia_tema: {
+        Row: {
+          noticia_id: string
+          tema_id: string
+        }
+        Insert: {
+          noticia_id: string
+          tema_id: string
+        }
+        Update: {
+          noticia_id?: string
+          tema_id?: string
+        }
+      }
+      proyecto_persona_rol: {
+        Row: {
+          proyecto_id: string
+          persona_id: string
+          rol: 'director' | 'investigador' | 'colaborador' | 'estudiante'
+        }
+        Insert: {
+          proyecto_id: string
+          persona_id: string
+          rol: 'director' | 'investigador' | 'colaborador' | 'estudiante'
+        }
+        Update: {
+          proyecto_id?: string
+          persona_id?: string
+          rol?: 'director' | 'investigador' | 'colaborador' | 'estudiante'
+        }
+      }
+      proyecto_organizacion_rol: {
+        Row: {
+          proyecto_id: string
+          organizacion_id: string
+          rol: 'patrocinador' | 'colaborador' | 'investigador' | 'institucion'
+        }
+        Insert: {
+          proyecto_id: string
+          organizacion_id: string
+          rol: 'patrocinador' | 'colaborador' | 'investigador' | 'institucion'
+        }
+        Update: {
+          proyecto_id?: string
+          organizacion_id?: string
+          rol?: 'patrocinador' | 'colaborador' | 'investigador' | 'institucion'
+        }
+      }
+      noticia_organizacion_rol: {
+        Row: {
+          noticia_id: string
+          organizacion_id: string
+          rol: 'editor' | 'publicador' | 'colaborador'
+        }
+        Insert: {
+          noticia_id: string
+          organizacion_id: string
+          rol: 'editor' | 'publicador' | 'colaborador'
+        }
+        Update: {
+          noticia_id?: string
+          organizacion_id?: string
+          rol?: 'editor' | 'publicador' | 'colaborador'
+        }
+      }
+      entrevista_persona_rol: {
+        Row: {
+          entrevista_id: string
+          persona_id: string
+          rol: 'entrevistador' | 'entrevistado' | 'moderador'
+        }
+        Insert: {
+          entrevista_id: string
+          persona_id: string
+          rol: 'entrevistador' | 'entrevistado' | 'moderador'
+        }
+        Update: {
+          entrevista_id?: string
+          persona_id?: string
+          rol?: 'entrevistador' | 'entrevistado' | 'moderador'
+        }
+      }
+      entrevista_organizacion_rol: {
+        Row: {
+          entrevista_id: string
+          organizacion_id: string
+          rol: 'patrocinador' | 'organizador' | 'colaborador'
+        }
+        Insert: {
+          entrevista_id: string
+          organizacion_id: string
+          rol: 'patrocinador' | 'organizador' | 'colaborador'
+        }
+        Update: {
+          entrevista_id?: string
+          organizacion_id?: string
+          rol?: 'patrocinador' | 'organizador' | 'colaborador'
+        }
+      }
+      noticia_persona_rol: {
+        Row: {
+          noticia_id: string
+          persona_id: string
+          rol: 'autor' | 'editor' | 'colaborador'
+        }
+        Insert: {
+          noticia_id: string
+          persona_id: string
+          rol: 'autor' | 'editor' | 'colaborador'
+        }
+        Update: {
+          noticia_id?: string
+          persona_id?: string
+          rol?: 'autor' | 'editor' | 'colaborador'
+        }
+      }
     }
     Views: {
       [_ in never]: never
