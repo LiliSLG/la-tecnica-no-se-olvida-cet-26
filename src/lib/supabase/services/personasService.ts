@@ -2,37 +2,26 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
 import { ServiceResult, QueryOptions } from '../types/service';
-import { ValidationError, ErrorCode } from '../errors/types';
+import { createSuccessResult, createErrorResult } from '../types/serviceResult';
+import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
 type Persona = Database['public']['Tables']['personas']['Row'];
 type CreatePersona = Database['public']['Tables']['personas']['Insert'];
 type UpdatePersona = Database['public']['Tables']['personas']['Update'];
 
-export class PersonasService extends BaseService<Persona, CreatePersona, UpdatePersona> {
+export class PersonasService extends BaseService<Persona, 'personas'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'personas', supabase });
+    super(supabase, 'personas', {
+      entityType: 'persona',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
-  protected validateCreateInput(data: CreatePersona): ValidationError | null {
+  protected validateCreateInput(data: Partial<Persona>): ValidationError | null {
     if (!data.nombre) {
       return mapValidationError('Name is required', 'nombre', data.nombre);
-    }
-
-    if (data.email && !this.isValidEmail(data.email)) {
-      return mapValidationError('Invalid email format', 'email', data.email);
-    }
-
-    if (data.capacidades_plataforma && !Array.isArray(data.capacidades_plataforma)) {
-      return mapValidationError('Capacidades must be an array', 'capacidades_plataforma', data.capacidades_plataforma);
-    }
-
-    return null;
-  }
-
-  protected validateUpdateInput(data: UpdatePersona): ValidationError | null {
-    if (data.nombre === '') {
-      return mapValidationError('Name cannot be empty', 'nombre', data.nombre);
     }
 
     if (data.email && !this.isValidEmail(data.email)) {
@@ -51,105 +40,187 @@ export class PersonasService extends BaseService<Persona, CreatePersona, UpdateP
     return emailRegex.test(email);
   }
 
-  // Persona-specific methods
-  async getByEmail(email: string): Promise<ServiceResult<Persona>> {
+  public async getByEmail(email: string): Promise<ServiceResult<Persona | null>> {
     try {
       if (!this.isValidEmail(email)) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Invalid email format', 'email', email)
         );
       }
 
-      const { data, error } = await this.supabase
+      const { data: result, error } = await this.supabase
         .from(this.tableName)
         .select()
         .eq('email', email)
         .single();
 
       if (error) throw error;
-      if (!data) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found with this email', 'email', email)
+      if (!result) return createSuccessResult(null);
+
+      // Cache the result
+      await this.setInCache(result.id, result);
+
+      return createSuccessResult(result);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async getAdmins(): Promise<ServiceResult<Persona[] | null>> {
+    try {
+      const { data: results, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .eq('es_admin', true);
+
+      if (error) throw error;
+      if (!results) return createSuccessResult(null);
+
+      // Cache individual results
+      for (const result of results) {
+        await this.setInCache(result.id, result);
+      }
+
+      return createSuccessResult(results);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async getAll(options?: QueryOptions): Promise<ServiceResult<Persona[] | null>> {
+    try {
+      return this.getAllWithPagination(options);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async getByCategoria(
+    categoria: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Persona[] | null>> {
+    try {
+      if (!categoria) {
+        return createErrorResult(
+          mapValidationError('Category is required', 'categoria_principal', categoria)
         );
       }
-      return this.createSuccessResult(data as Persona);
+
+      return this.getAllWithPagination({
+        ...options,
+        filters: {
+          ...options?.filters,
+          categoria_principal: categoria
+        }
+      });
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByEmail', email }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async getAdmins(): Promise<ServiceResult<Persona[]>> {
-    return this.getAll({
-      filters: { es_admin: true }
-    });
-  }
-
-  async getByCategoria(categoria: string): Promise<ServiceResult<Persona[]>> {
-    if (!categoria) {
-      return this.createErrorResult(
-        mapValidationError('Category is required', 'categoria_principal', categoria)
-      );
-    }
-    return this.getAll({
-      filters: { categoria_principal: categoria }
-    });
-  }
-
-  async getByCapacidad(capacidad: string): Promise<ServiceResult<Persona[]>> {
+  public async getByCapacidad(
+    capacidad: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!capacidad) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Capacity is required', 'capacidad', capacidad)
         );
       }
 
-      const { data, error } = await this.supabase
+      const { data: results, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .contains('capacidades_plataforma', [capacidad]);
+        .select('*')
+        .contains('capacidades_plataforma', [capacidad])
+        .eq('esta_eliminada', false);
 
       if (error) throw error;
-      return this.createSuccessResult(data as Persona[]);
+      if (!results) return createSuccessResult(null);
+
+      // Apply pagination and sorting
+      let filteredResults = results;
+      if (options?.sortBy) {
+        filteredResults = filteredResults.sort((a, b) => {
+          const aValue = a[options.sortBy as keyof Persona];
+          const bValue = b[options.sortBy as keyof Persona];
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return options.sortOrder === 'desc' 
+              ? bValue.localeCompare(aValue)
+              : aValue.localeCompare(bValue);
+          }
+          return 0;
+        });
+      }
+
+      if (options?.page && options?.pageSize) {
+        const start = (options.page - 1) * options.pageSize;
+        const end = start + options.pageSize;
+        filteredResults = filteredResults.slice(start, end);
+      }
+
+      // Cache individual results
+      for (const result of filteredResults) {
+        await this.setInCache(result.id, result);
+      }
+
+      return createSuccessResult(filteredResults);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByCapacidad', capacidad }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async getByTema(temaId: string): Promise<ServiceResult<Persona[] | null>> {
+  public async getByTema(
+    temaId: string, 
+    options?: QueryOptions
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          persona_tema!inner(tema_id)
-        `)
-        .eq('persona_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Persona[]);
+      return this.getRelatedEntities<Persona>(
+        temaId,
+        'temas',
+        'personas',
+        'persona_tema',
+        options
+      );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByTema', temaId }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async addTema(personaId: string, temaId: string): Promise<ServiceResult<void>> {
+  public async getTemas(
+    id: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
     try {
-      if (!personaId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
+      if (!id) {
+        return createErrorResult(
+          mapValidationError('Persona ID is required', 'id', id)
         );
       }
 
-      const personaExists = await this.exists(personaId);
-      if (!personaExists) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found', 'personaId', personaId)
+      return this.getRelatedEntities<Database['public']['Tables']['temas']['Row']>(
+        id,
+        'personas',
+        'temas',
+        'persona_tema',
+        options
+      );
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async addTema(personaId: string, temaId: string): Promise<ServiceResult<boolean>> {
+    try {
+      if (!personaId || !temaId) {
+        return createErrorResult(
+          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
         );
       }
 
@@ -161,24 +232,21 @@ export class PersonasService extends BaseService<Persona, CreatePersona, UpdateP
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+
+      // Invalidate related caches
+      await this.invalidateRelatedCaches(personaId, ['byId', 'list']);
+
+      return createSuccessResult(true);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTema', personaId, temaId }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async removeTema(personaId: string, temaId: string): Promise<ServiceResult<void>> {
+  public async removeTema(personaId: string, temaId: string): Promise<ServiceResult<boolean>> {
     try {
       if (!personaId || !temaId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
-        );
-      }
-
-      const personaExists = await this.exists(personaId);
-      if (!personaExists) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found', 'personaId', personaId)
         );
       }
 
@@ -189,70 +257,65 @@ export class PersonasService extends BaseService<Persona, CreatePersona, UpdateP
         .eq('tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+
+      // Invalidate related caches
+      await this.invalidateRelatedCaches(personaId, ['byId', 'list']);
+
+      return createSuccessResult(true);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTema', personaId, temaId }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async getTemas(personaId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][]>> {
-    try {
-      if (!personaId) {
-        return this.createErrorResult(
-          mapValidationError('Persona ID is required', 'personaId', personaId)
-        );
-      }
-
-      const personaExists = await this.exists(personaId);
-      if (!personaExists) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found', 'personaId', personaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('temas')
-        .select(`
-          *,
-          persona_tema!inner(persona_id)
-        `)
-        .eq('persona_tema.persona_id', personaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getTemas', personaId }));
-    }
-  }
-
-  // Override search to include biografia in search
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Persona[]>> {
+  public async search(
+    query: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!query) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Search query is required', 'query', query)
         );
       }
 
-      let searchQuery = this.supabase
+      const { data: results, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .or(`nombre.ilike.%${query}%,biografia.ilike.%${query}%`);
-
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminada', false);
-      }
-
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
-      }
-
-      const { data, error } = await searchQuery;
+        .select('*')
+        .or(`nombre.ilike.%${query}%,biografia.ilike.%${query}%`)
+        .eq('esta_eliminada', false);
 
       if (error) throw error;
-      return this.createSuccessResult(data as Persona[]);
+      if (!results) return createSuccessResult(null);
+
+      // Apply pagination and sorting
+      let filteredResults = results;
+      if (options?.sortBy) {
+        filteredResults = filteredResults.sort((a, b) => {
+          const aValue = a[options.sortBy as keyof Persona];
+          const bValue = b[options.sortBy as keyof Persona];
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return options.sortOrder === 'desc' 
+              ? bValue.localeCompare(aValue)
+              : aValue.localeCompare(bValue);
+          }
+          return 0;
+        });
+      }
+
+      if (options?.page && options?.pageSize) {
+        const start = (options.page - 1) * options.pageSize;
+        const end = start + options.pageSize;
+        filteredResults = filteredResults.slice(start, end);
+      }
+
+      // Cache individual results
+      for (const result of filteredResults) {
+        await this.setInCache(result.id, result);
+      }
+
+      return createSuccessResult(filteredResults);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query, options }));
+      return createErrorResult(error as Error);
     }
   }
-} 
+}

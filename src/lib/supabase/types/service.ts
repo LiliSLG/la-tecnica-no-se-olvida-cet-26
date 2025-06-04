@@ -1,24 +1,24 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
-import { AppError, ErrorCode } from '../errors/types';
-
-export type ServiceError = AppError;
+import { ServiceError } from '../errors/types';
 
 export type ServiceResult<T> = {
   data: T | null;
   error: ServiceError | null;
+  success: boolean;
 };
 
-export type QueryOptions = {
+export interface QueryOptions {
   limit?: number;
   offset?: number;
-  orderBy?: {
-    column: string;
-    ascending?: boolean;
-  };
-  filters?: Record<string, unknown>;
+  orderBy?: string;
+  filters?: Record<string, any>;
   includeDeleted?: boolean;
-};
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 export type CreateOptions = {
   returning?: boolean;

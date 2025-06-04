@@ -1,7 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
-import { ServiceResult, QueryOptions } from '../types/service';
+import { ServiceResult, createSuccessResult, createErrorResult } from '../types/serviceResult';
+import { QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
@@ -9,9 +10,13 @@ type Noticia = Database['public']['Tables']['noticias']['Row'];
 type CreateNoticia = Database['public']['Tables']['noticias']['Insert'];
 type UpdateNoticia = Database['public']['Tables']['noticias']['Update'];
 
-export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateNoticia> {
+export class NoticiasService extends BaseService<Noticia, 'noticias'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'noticias', supabase });
+    super(supabase, 'noticias', {
+      entityType: 'noticia',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateNoticia): ValidationError | null {
@@ -87,7 +92,7 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
   async getByTipo(tipo: Database['public']['Enums']['news_type']): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!this.isValidTipo(tipo)) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Invalid type value', 'tipo', tipo)
         );
       }
@@ -98,76 +103,80 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         .eq('tipo', tipo);
 
       if (error) throw error;
-      return this.createSuccessResult(data as Noticia[]);
+      if (!data) return createSuccessResult(null);
+
+      // Cache individual results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
+      }
+
+      return createSuccessResult(data as Noticia[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByTipo', tipo }));
+      return createErrorResult(this.handleError(error, { operation: 'getByTipo', tipo }));
     }
   }
 
-  async getByTema(temaId: string): Promise<ServiceResult<Noticia[] | null>> {
+  async getByTema(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
-
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          noticia_tema!inner(tema_id)
-        `)
-        .eq('noticia_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Noticia[]);
+      return this.getRelatedEntities<Noticia>(
+        temaId,
+        'temas',
+        'noticias',
+        'noticia_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByTema', temaId }));
     }
   }
 
-  async getByPersona(personaId: string): Promise<ServiceResult<Noticia[] | null>> {
+  async getByPersona(
+    personaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!personaId) {
         return this.createErrorResult(
           mapValidationError('Persona ID is required', 'personaId', personaId)
         );
       }
-
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          noticia_persona_rol!inner(persona_id)
-        `)
-        .eq('noticia_persona_rol.persona_id', personaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Noticia[]);
+      return this.getRelatedEntities<Noticia>(
+        personaId,
+        'personas',
+        'noticias',
+        'noticia_persona_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByPersona', personaId }));
     }
   }
 
-  async getByOrganizacion(organizacionId: string): Promise<ServiceResult<Noticia[] | null>> {
+  async getByOrganizacion(
+    organizacionId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!organizacionId) {
         return this.createErrorResult(
           mapValidationError('Organizacion ID is required', 'organizacionId', organizacionId)
         );
       }
-
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          noticia_organizacion_rol!inner(organizacion_id)
-        `)
-        .eq('noticia_organizacion_rol.organizacion_id', organizacionId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Noticia[]);
+      return this.getRelatedEntities<Noticia>(
+        organizacionId,
+        'organizaciones',
+        'noticias',
+        'noticia_organizacion_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByOrganizacion', organizacionId }));
     }
@@ -176,14 +185,14 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
   async addTema(noticiaId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !temaId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Both noticiaId and temaId are required', 'relationship', { noticiaId, temaId })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -196,23 +205,23 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTema', noticiaId, temaId }));
+      return createErrorResult(this.handleError(error, { operation: 'addTema', noticiaId, temaId }));
     }
   }
 
   async removeTema(noticiaId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !temaId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Both noticiaId and temaId are required', 'relationship', { noticiaId, temaId })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -224,37 +233,29 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         .eq('tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTema', noticiaId, temaId }));
+      return createErrorResult(this.handleError(error, { operation: 'removeTema', noticiaId, temaId }));
     }
   }
 
-  async getTemas(noticiaId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
+  async getTemas(
+    noticiaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
     try {
       if (!noticiaId) {
         return this.createErrorResult(
           mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
         );
       }
-
-      const noticiaExists = await this.exists(noticiaId);
-      if (!noticiaExists) {
-        return this.createErrorResult(
-          mapValidationError('Noticia not found', 'noticiaId', noticiaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('temas')
-        .select(`
-          *,
-          noticia_tema!inner(noticia_id)
-        `)
-        .eq('noticia_tema.noticia_id', noticiaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['temas']['Row']>(
+        noticiaId,
+        'noticias',
+        'temas',
+        'noticia_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getTemas', noticiaId }));
     }
@@ -263,14 +264,14 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
   async addPersona(noticiaId: string, personaId: string, rol: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !personaId || !rol) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('All fields are required', 'relationship', { noticiaId, personaId, rol })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -284,23 +285,23 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addPersona', noticiaId, personaId, rol }));
+      return createErrorResult(this.handleError(error, { operation: 'addPersona', noticiaId, personaId, rol }));
     }
   }
 
   async removePersona(noticiaId: string, personaId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !personaId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Both noticiaId and personaId are required', 'relationship', { noticiaId, personaId })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -312,37 +313,29 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         .eq('persona_id', personaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removePersona', noticiaId, personaId }));
+      return createErrorResult(this.handleError(error, { operation: 'removePersona', noticiaId, personaId }));
     }
   }
 
-  async getPersonas(noticiaId: string): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
+  async getPersonas(
+    noticiaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
     try {
       if (!noticiaId) {
         return this.createErrorResult(
           mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
         );
       }
-
-      const noticiaExists = await this.exists(noticiaId);
-      if (!noticiaExists) {
-        return this.createErrorResult(
-          mapValidationError('Noticia not found', 'noticiaId', noticiaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('personas')
-        .select(`
-          *,
-          noticia_persona_rol!inner(noticia_id)
-        `)
-        .eq('noticia_persona_rol.noticia_id', noticiaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
+        noticiaId,
+        'noticias',
+        'personas',
+        'noticia_persona_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getPersonas', noticiaId }));
     }
@@ -351,14 +344,14 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
   async addOrganizacion(noticiaId: string, organizacionId: string, rol: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !organizacionId || !rol) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('All fields are required', 'relationship', { noticiaId, organizacionId, rol })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -372,23 +365,23 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addOrganizacion', noticiaId, organizacionId, rol }));
+      return createErrorResult(this.handleError(error, { operation: 'addOrganizacion', noticiaId, organizacionId, rol }));
     }
   }
 
   async removeOrganizacion(noticiaId: string, organizacionId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !organizacionId) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Both noticiaId and organizacionId are required', 'relationship', { noticiaId, organizacionId })
         );
       }
 
       const noticiaExists = await this.exists(noticiaId);
       if (!noticiaExists) {
-        return this.createErrorResult(
+        return createErrorResult(
           mapValidationError('Noticia not found', 'noticiaId', noticiaId)
         );
       }
@@ -400,44 +393,42 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
         .eq('organizacion_id', organizacionId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccessResult(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeOrganizacion', noticiaId, organizacionId }));
+      return createErrorResult(this.handleError(error, { operation: 'removeOrganizacion', noticiaId, organizacionId }));
     }
   }
 
-  async getOrganizaciones(noticiaId: string): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
+  async getOrganizaciones(
+    noticiaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
     try {
       if (!noticiaId) {
         return this.createErrorResult(
           mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
         );
       }
-
-      const noticiaExists = await this.exists(noticiaId);
-      if (!noticiaExists) {
-        return this.createErrorResult(
-          mapValidationError('Noticia not found', 'noticiaId', noticiaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('organizaciones')
-        .select(`
-          *,
-          noticia_organizacion_rol!inner(noticia_id)
-        `)
-        .eq('noticia_organizacion_rol.noticia_id', noticiaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['organizaciones']['Row']>(
+        noticiaId,
+        'noticias',
+        'organizaciones',
+        'noticia_organizacion_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getOrganizaciones', noticiaId }));
     }
   }
 
-  // Override search to include contenido in search
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Noticia[] | null>> {
+  async getAll(options?: QueryOptions): Promise<ServiceResult<Noticia[] | null>> {
+    return this.getAllWithPagination(options);
+  }
+
+  async search(
+    query: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!query) {
         return this.createErrorResult(
@@ -447,23 +438,39 @@ export class NoticiasService extends BaseService<Noticia, CreateNoticia, UpdateN
 
       let searchQuery = this.supabase
         .from(this.tableName)
-        .select()
-        .or(`titulo.ilike.%${query}%,contenido.ilike.%${query}%`);
+        .select(this.getDefaultFields(this.tableName as string))
+        .textSearch('search_vector', query);
 
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminada', false);
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          searchQuery = searchQuery.eq(key, value);
+        });
       }
 
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        searchQuery = searchQuery.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        searchQuery = searchQuery.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
       }
 
       const { data, error } = await searchQuery;
 
       if (error) throw error;
-      return this.createSuccessResult(data as Noticia[]);
+      if (!data) return this.createSuccessResult(null);
+
+      // Cast the data to Noticia[] since we know the structure matches
+      return this.createSuccessResult(data as unknown as Noticia[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query, options }));
+      return this.createErrorResult(this.handleError(error, { operation: 'search', query }));
     }
   }
 } 

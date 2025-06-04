@@ -1,24 +1,49 @@
+# Changelog
+
 ## [Unreleased]
-### Fixed
-- Updated BaseService to return `ServiceResult<T | null>` and `ServiceResult<T[] | null>` for create, update, getById, and getAll methods, to properly handle null results and error cases in both entity and relationship services.
-- Updated all service usages to expect nullable data in these results.
-- Added `exists` method to BaseService to properly check entity existence.
-- Removed unused `ErrorCode` import from services.
-- Fixed type signatures across all services to properly handle null cases.
 
 ### Added
-- Created NoticiaPersonaRolService to handle noticia-persona relationships with roles
-- Added CRUD operations for managing noticia-persona relationships
-- Implemented proper validation and error handling for relationship operations
-- Added type-safe role validation with ValidRole type
-- Created NoticiaOrganizacionRolService to handle noticia-organizacion relationships with roles
-- Added CRUD operations for managing noticia-organizacion relationships
-- Added new migration (002) to create noticia_organizacion_rol table with proper indexes and RLS policies
+- Redis integration for caching
+- Cache service implementation
+- Cache key management system
+- Service integration with caching for:
+  - PersonasService
+  - ProyectosService
+  - NoticiasService
 
-### Improved
-- Enhanced type safety in NoticiaPersonaRolService by properly typing database query results
-- Added explicit type definitions for Persona and Noticia entities
-- Fixed return type signatures to match database query results exactly
-- Enhanced type safety in NoticiaOrganizacionRolService by properly typing database query results
-- Added explicit type definitions for Organizacion entity
-- Added proper RLS policies for noticia_organizacion_rol table 
+### Changed
+- Updated BaseService to support caching
+- Improved error handling in services
+- Enhanced cache invalidation strategies
+- Optimized database indexes for better query performance:
+  - Added timestamp indexes for sorting operations
+  - Added soft delete indexes for efficient filtering
+  - Added junction table indexes for relationship queries
+  - Added role-based relationship table indexes
+  - Added composite indexes for common query patterns
+  - Added partial indexes for active records
+  - Optimized full-text search indexes with additional fields
+- Optimized query patterns in services:
+  - Added efficient existence checks using count queries
+  - Implemented pagination and sorting in BaseService
+  - Added field selection optimization
+  - Consolidated relationship queries
+  - Added support for filtering and sorting options
+- Optimized PersonasService:
+  - Replaced relationship queries with optimized getRelatedEntities
+  - Added pagination and sorting support to getAll
+  - Improved search with field selection and query options
+  - Enhanced error handling and validation
+
+### Fixed
+- Cache invalidation issues in relationship updates
+- Missing indexes for common query patterns
+- Inefficient full-text search indexes
+- N+1 query problems in relationship services
+- Redundant queries in relationship services
+- Updated BaseService to return `ServiceResult<T | null>`
+
+### Optimized Service Methods
+- **PersonasService**: Replaced `getAll` with `getAllWithPagination` for pagination and sorting. Updated `search` to use field selection and query options.
+- **ProyectosService**: Replaced `getAll` with `getAllWithPagination` for pagination and sorting. Updated `getByStatus`, `getByTema`, `getByPersona`, `getByOrganizacion`, `getTemas`, `getPersonas`, and `getOrganizaciones` to use `getRelatedEntities` for relationship queries and support `QueryOptions`.
+- **NoticiasService**: Replaced `getAll` with `getAllWithPagination` for pagination and sorting. Updated `getByTema`, `getByPersona`, `getByOrganizacion`, `getTemas`, `getPersonas`, and `getOrganizaciones` to use `getRelatedEntities` for relationship queries and support `QueryOptions`.

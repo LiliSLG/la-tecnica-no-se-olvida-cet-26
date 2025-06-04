@@ -1,20 +1,20 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
-import { ServiceResult, QueryOptions } from '../types/service';
-import { ValidationError, ErrorCode } from '../errors/types';
+import { ServiceResult } from '../types/serviceResult';
+import { QueryOptions } from '../types/service';
 import { mapValidationError } from '../errors/utils';
+import { ValidationError } from '../errors/types';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { CacheableServiceConfig } from './cacheableService';
 
 type Tema = Database['public']['Tables']['temas']['Row'];
-type CreateTema = Database['public']['Tables']['temas']['Insert'];
-type UpdateTema = Database['public']['Tables']['temas']['Update'];
 
-export class TemasService extends BaseService<Tema, CreateTema, UpdateTema> {
-  constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'temas', supabase });
+export class TemasService extends BaseService<Tema, 'temas'> {
+  constructor(supabase: SupabaseClient<Database>, cacheConfig: CacheableServiceConfig) {
+    super(supabase, 'temas', cacheConfig);
   }
 
-  protected validateCreateInput(data: CreateTema): ValidationError | null {
+  protected validateCreateInput(data: Database['public']['Tables']['temas']['Insert']): ValidationError | null {
     if (!data.nombre) {
       return mapValidationError('Name is required', 'nombre', data.nombre);
     }
@@ -26,7 +26,7 @@ export class TemasService extends BaseService<Tema, CreateTema, UpdateTema> {
     return null;
   }
 
-  protected validateUpdateInput(data: UpdateTema): ValidationError | null {
+  protected validateUpdateInput(data: Database['public']['Tables']['temas']['Update']): ValidationError | null {
     if (data.nombre === '') {
       return mapValidationError('Name cannot be empty', 'nombre', data.nombre);
     }
@@ -38,185 +38,183 @@ export class TemasService extends BaseService<Tema, CreateTema, UpdateTema> {
     return null;
   }
 
-  // Tema-specific methods
-  async getPersonas(temaId: string): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][]>> {
+  async getAll(options?: QueryOptions): Promise<ServiceResult<Tema[] | null>> {
+    return this.getAllWithPagination(options);
+  }
+
+  async getByPersona(
+    personaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Tema[] | null>> {
+    try {
+      if (!personaId) {
+        return this.createErrorResult(
+          mapValidationError('Persona ID is required', 'personaId', personaId)
+        );
+      }
+      return this.getRelatedEntities<Tema>(
+        personaId,
+        'personas',
+        'temas',
+        'persona_tema',
+        options
+      );
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByPersona', personaId }));
+    }
+  }
+
+  async getByProyecto(
+    proyectoId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Tema[] | null>> {
+    try {
+      if (!proyectoId) {
+        return this.createErrorResult(
+          mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
+        );
+      }
+      return this.getRelatedEntities<Tema>(
+        proyectoId,
+        'proyectos',
+        'temas',
+        'proyecto_tema',
+        options
+      );
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByProyecto', proyectoId }));
+    }
+  }
+
+  async getByEntrevista(
+    entrevistaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Tema[] | null>> {
+    try {
+      if (!entrevistaId) {
+        return this.createErrorResult(
+          mapValidationError('Entrevista ID is required', 'entrevistaId', entrevistaId)
+        );
+      }
+      return this.getRelatedEntities<Tema>(
+        entrevistaId,
+        'entrevistas',
+        'temas',
+        'entrevista_tema',
+        options
+      );
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByEntrevista', entrevistaId }));
+    }
+  }
+
+  async getByNoticia(
+    noticiaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Tema[] | null>> {
+    try {
+      if (!noticiaId) {
+        return this.createErrorResult(
+          mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
+        );
+      }
+      return this.getRelatedEntities<Tema>(
+        noticiaId,
+        'noticias',
+        'temas',
+        'noticia_tema',
+        options
+      );
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByNoticia', noticiaId }));
+    }
+  }
+
+  async getPersonas(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
-
-      const temaExists = await this.exists(temaId);
-      if (!temaExists) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('personas')
-        .select(`
-          *,
-          persona_tema!inner(tema_id)
-        `)
-        .eq('persona_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
+        temaId,
+        'temas',
+        'personas',
+        'persona_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getPersonas', temaId }));
     }
   }
 
-  async getOrganizaciones(temaId: string): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][]>> {
+  async getProyectos(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['proyectos']['Row'][] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
-
-      const temaExists = await this.exists(temaId);
-      if (!temaExists) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('organizaciones')
-        .select(`
-          *,
-          organizacion_tema!inner(tema_id)
-        `)
-        .eq('organizacion_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getOrganizaciones', temaId }));
-    }
-  }
-
-  async getProyectos(temaId: string): Promise<ServiceResult<Database['public']['Tables']['proyectos']['Row'][]>> {
-    try {
-      if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
-      }
-
-      const temaExists = await this.exists(temaId);
-      if (!temaExists) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('proyectos')
-        .select(`
-          *,
-          proyecto_tema!inner(tema_id)
-        `)
-        .eq('proyecto_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['proyectos']['Row']>(
+        temaId,
+        'temas',
+        'proyectos',
+        'proyecto_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getProyectos', temaId }));
     }
   }
 
-  async getEntrevistas(temaId: string): Promise<ServiceResult<Database['public']['Tables']['entrevistas']['Row'][]>> {
+  async getEntrevistas(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['entrevistas']['Row'][] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
-
-      const temaExists = await this.exists(temaId);
-      if (!temaExists) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('entrevistas')
-        .select(`
-          *,
-          entrevista_tema!inner(tema_id)
-        `)
-        .eq('entrevista_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['entrevistas']['Row']>(
+        temaId,
+        'temas',
+        'entrevistas',
+        'entrevista_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getEntrevistas', temaId }));
     }
   }
 
-  async getNoticias(temaId: string): Promise<ServiceResult<Database['public']['Tables']['noticias']['Row'][]>> {
+  async getNoticias(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['noticias']['Row'][] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
-
-      const temaExists = await this.exists(temaId);
-      if (!temaExists) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('noticias')
-        .select(`
-          *,
-          noticia_tema!inner(tema_id)
-        `)
-        .eq('noticia_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['noticias']['Row']>(
+        temaId,
+        'temas',
+        'noticias',
+        'noticia_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getNoticias', temaId }));
-    }
-  }
-
-  // Override search to include descripcion in search
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Tema[]>> {
-    try {
-      if (!query) {
-        return this.createErrorResult(
-          mapValidationError('Search query is required', 'query', query)
-        );
-      }
-
-      let searchQuery = this.supabase
-        .from(this.tableName)
-        .select()
-        .or(`nombre.ilike.%${query}%,descripcion.ilike.%${query}%`);
-
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminado', false);
-      }
-
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
-      }
-
-      const { data, error } = await searchQuery;
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Tema[]);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query, options }));
     }
   }
 } 

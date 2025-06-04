@@ -1,8 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { ServiceResult } from '../types/service';
+import { ServiceResult, createSuccessResult, createErrorResult } from '../types/serviceResult';
+import { QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { CacheableService, CacheableServiceConfig } from './cacheableService';
 
 export interface WithTimestamps {
   created_at: string;
@@ -18,28 +20,32 @@ export interface BaseServiceConfig {
   supabase: SupabaseClient<Database>;
 }
 
+export interface CacheConfig {
+  entityType: string;
+  ttl: number;
+  enableCache: boolean;
+}
+
 export abstract class BaseService<
-  T extends BaseEntity | Record<string, any>,
-  CreateInput extends Partial<T>,
-  UpdateInput extends Partial<T>
-> {
-  protected tableName: string;
-  protected supabase: SupabaseClient<Database>;
+  T extends { id: string },
+  TableName extends keyof Database['public']['Tables']
+> extends CacheableService<T> {
+  protected readonly tableName: TableName;
+  protected readonly supabase: SupabaseClient<Database>;
+  protected readonly cacheConfig: CacheConfig;
 
-  constructor(config: BaseServiceConfig) {
-    this.tableName = config.tableName;
-    this.supabase = config.supabase;
+  constructor(
+    supabase: SupabaseClient<Database>,
+    tableName: TableName,
+    cacheConfig: CacheableServiceConfig
+  ) {
+    super(cacheConfig);
+    this.tableName = tableName;
+    this.supabase = supabase;
+    this.cacheConfig = cacheConfig as CacheConfig;
   }
 
-  protected abstract validateCreateInput(data: CreateInput): ValidationError | null;
-
-  protected createSuccessResult<T>(data: T): ServiceResult<T> {
-    return { data, error: null };
-  }
-
-  protected createErrorResult(error: ValidationError): ServiceResult<null> {
-    return { data: null, error };
-  }
+  protected abstract validateCreateInput(data: Partial<T>): ValidationError | null;
 
   protected handleError(error: any, context?: any): ValidationError {
     console.error('Service error:', error, context);
@@ -50,29 +56,24 @@ export abstract class BaseService<
     );
   }
 
-  async exists(id: string): Promise<boolean> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('id')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return !!data;
-    } catch (error) {
-      console.error('Error checking existence:', error);
-      return false;
-    }
+  protected createSuccessResult<T>(data: T): ServiceResult<T> {
+    return {
+      data,
+      error: null,
+      success: true
+    };
   }
 
-  async create(data: CreateInput): Promise<ServiceResult<T | null>> {
-    try {
-      const validationError = this.validateCreateInput(data);
-      if (validationError) {
-        return this.createErrorResult(validationError);
-      }
+  protected createErrorResult<T>(error: Error): ServiceResult<T> {
+    return {
+      data: null,
+      error,
+      success: false
+    };
+  }
 
+  public async create(data: Omit<T, 'id'>): Promise<ServiceResult<T | null>> {
+    try {
       const { data: result, error } = await this.supabase
         .from(this.tableName)
         .insert(data)
@@ -80,13 +81,20 @@ export abstract class BaseService<
         .single();
 
       if (error) throw error;
-      return this.createSuccessResult(result as T);
+      if (!result) return createSuccessResult(null);
+
+      // Cache the new entity
+      await this.setInCache(result.id, result);
+      // Invalidate list cache
+      await this.invalidateCache(result.id);
+
+      return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'create', data }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async update(id: string, data: UpdateInput): Promise<ServiceResult<T | null>> {
+  public async update(id: string, data: Partial<T>): Promise<ServiceResult<T | null>> {
     try {
       const { data: result, error } = await this.supabase
         .from(this.tableName)
@@ -96,13 +104,20 @@ export abstract class BaseService<
         .single();
 
       if (error) throw error;
-      return this.createSuccessResult(result as T);
+      if (!result) return createSuccessResult(null);
+
+      // Update cache
+      await this.setInCache(id, result as T);
+      // Invalidate related caches
+      await this.invalidateCache(id);
+
+      return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'update', id, data }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async delete(id: string): Promise<ServiceResult<void>> {
+  public async delete(id: string): Promise<ServiceResult<boolean>> {
     try {
       const { error } = await this.supabase
         .from(this.tableName)
@@ -110,37 +125,201 @@ export abstract class BaseService<
         .eq('id', id);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+
+      // Invalidate caches
+      await this.invalidateCache(id);
+
+      return createSuccessResult(true);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'delete', id }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async getById(id: string): Promise<ServiceResult<T | null>> {
+  public async getById(id: string): Promise<ServiceResult<T | null>> {
     try {
-      const { data, error } = await this.supabase
+      // Try to get from cache first
+      const cached = await this.getFromCache(id);
+      if (cached) return createSuccessResult(cached);
+
+      const { data: result, error } = await this.supabase
         .from(this.tableName)
         .select()
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return this.createSuccessResult(data as T);
+      if (!result) return createSuccessResult(null);
+
+      // Cache the result
+      await this.setInCache(id, result as T);
+
+      return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById', id }));
+      return createErrorResult(error as Error);
     }
   }
 
-  async getAll(): Promise<ServiceResult<T[] | null>> {
+  public async getAll(): Promise<ServiceResult<T[] | null>> {
     try {
-      const { data, error } = await this.supabase
+      // Try to get from cache first
+      const cached = await this.getListFromCache();
+      if (cached) return createSuccessResult(cached);
+
+      const { data: results, error } = await this.supabase
         .from(this.tableName)
         .select();
 
       if (error) throw error;
-      return this.createSuccessResult(data as T[]);
+      if (!results) return createSuccessResult(null);
+
+      // Cache the results
+      await this.setListInCache(results as T[]);
+
+      return createSuccessResult(results as T[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getAll' }));
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async exists(id: string): Promise<ServiceResult<boolean>> {
+    try {
+      // Try to get from cache first
+      const cached = await this.getFromCache(id);
+      if (cached) return createSuccessResult(true);
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('id')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return createSuccessResult(!!data);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  public async query(query: string): Promise<ServiceResult<T[] | null>> {
+    try {
+      // Try to get from cache first
+      const cached = await this.getQueryFromCache(query);
+      if (cached) return createSuccessResult(cached);
+
+      const { data: results, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .textSearch('search_vector', query);
+
+      if (error) throw error;
+      if (!results) return createSuccessResult(null);
+
+      // Cache the results
+      await this.setQueryInCache(query, results as T[]);
+
+      return createSuccessResult(results as T[]);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  protected async getRelatedEntities<R>(
+    sourceId: string,
+    sourceTable: string,
+    targetTable: string,
+    junctionTable: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<R[] | null>> {
+    try {
+      if (!sourceId) {
+        return createErrorResult(
+          mapValidationError('Source ID is required', 'sourceId', sourceId)
+        );
+      }
+
+      let query = this.supabase
+        .from(targetTable)
+        .select(`
+          id,
+          ${this.getDefaultFields(targetTable)},
+          ${junctionTable}!inner(${sourceTable}_id)
+        `)
+        .eq(`${junctionTable}.${sourceTable}_id`, sourceId);
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      if (!data) return createSuccessResult(null);
+
+      // Cast the data to R[] since we know the structure matches
+      return createSuccessResult(data as unknown as R[]);
+    } catch (error) {
+      return createErrorResult(error as Error);
+    }
+  }
+
+  protected getDefaultFields(table: string): string {
+    const fieldMap: Record<string, string> = {
+      personas: 'nombre, email, foto_url, biografia, categoria_principal',
+      proyectos: 'titulo, descripcion, status, archivo_principal_url',
+      noticias: 'titulo, contenido, tipo, imagen_url',
+      temas: 'nombre, descripcion',
+      organizaciones: 'nombre, descripcion, logo_url',
+      entrevistas: 'titulo, descripcion, status, video_url'
+    };
+
+    return fieldMap[table] || '*';
+  }
+
+  protected async getAllWithPagination(options?: QueryOptions): Promise<ServiceResult<T[] | null>> {
+    try {
+      let query = this.supabase
+        .from(this.tableName)
+        .select(this.getDefaultFields(this.tableName as string));
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      if (!data) return createSuccessResult(null);
+
+      return createSuccessResult(data as T[]);
+    } catch (error) {
+      return createErrorResult(error as Error);
     }
   }
 } 

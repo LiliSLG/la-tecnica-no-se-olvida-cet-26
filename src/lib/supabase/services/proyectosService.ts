@@ -9,9 +9,13 @@ type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 type CreateProyecto = Database['public']['Tables']['proyectos']['Insert'];
 type UpdateProyecto = Database['public']['Tables']['proyectos']['Update'];
 
-export class ProyectosService extends BaseService<Proyecto, CreateProyecto, UpdateProyecto> {
+export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'proyectos', supabase });
+    super(supabase, 'proyectos', {
+      entityType: 'proyecto',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateProyecto): ValidationError | null {
@@ -68,7 +72,10 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
   }
 
   // Proyecto-specific methods
-  async getByStatus(status: Database['public']['Enums']['project_status']): Promise<ServiceResult<Proyecto[] | null>> {
+  async getByStatus(
+    status: Database['public']['Enums']['project_status'],
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!this.isValidStatus(status)) {
         return this.createErrorResult(
@@ -76,19 +83,22 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         );
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select()
-        .eq('status', status);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Proyecto[]);
+      return this.getAllWithPagination({
+        ...options,
+        filters: {
+          ...options?.filters,
+          status
+        }
+      });
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByStatus', status }));
     }
   }
 
-  async getByTema(temaId: string): Promise<ServiceResult<Proyecto[] | null>> {
+  async getByTema(
+    temaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!temaId) {
         return this.createErrorResult(
@@ -96,22 +106,22 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         );
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          proyecto_tema!inner(tema_id)
-        `)
-        .eq('proyecto_tema.tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Proyecto[]);
+      return this.getRelatedEntities<Proyecto>(
+        temaId,
+        'temas',
+        'proyectos',
+        'proyecto_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByTema', temaId }));
     }
   }
 
-  async getByPersona(personaId: string): Promise<ServiceResult<Proyecto[] | null>> {
+  async getByPersona(
+    personaId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!personaId) {
         return this.createErrorResult(
@@ -119,22 +129,22 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         );
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          proyecto_persona_rol!inner(persona_id)
-        `)
-        .eq('proyecto_persona_rol.persona_id', personaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Proyecto[]);
+      return this.getRelatedEntities<Proyecto>(
+        personaId,
+        'personas',
+        'proyectos',
+        'proyecto_persona_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByPersona', personaId }));
     }
   }
 
-  async getByOrganizacion(organizacionId: string): Promise<ServiceResult<Proyecto[] | null>> {
+  async getByOrganizacion(
+    organizacionId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!organizacionId) {
         return this.createErrorResult(
@@ -142,16 +152,13 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         );
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          proyecto_organizacion_rol!inner(organizacion_id)
-        `)
-        .eq('proyecto_organizacion_rol.organizacion_id', organizacionId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data as Proyecto[]);
+      return this.getRelatedEntities<Proyecto>(
+        organizacionId,
+        'organizaciones',
+        'proyectos',
+        'proyecto_organizacion_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getByOrganizacion', organizacionId }));
     }
@@ -214,7 +221,10 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
     }
   }
 
-  async getTemas(proyectoId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
+  async getTemas(
+    proyectoId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
     try {
       if (!proyectoId) {
         return this.createErrorResult(
@@ -222,23 +232,13 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         );
       }
 
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('temas')
-        .select(`
-          *,
-          proyecto_tema!inner(proyecto_id)
-        `)
-        .eq('proyecto_tema.proyecto_id', proyectoId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['temas']['Row']>(
+        proyectoId,
+        'proyectos',
+        'temas',
+        'proyecto_tema',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getTemas', proyectoId }));
     }
@@ -302,31 +302,23 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
     }
   }
 
-  async getPersonas(proyectoId: string): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
+  async getPersonas(
+    proyectoId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
     try {
       if (!proyectoId) {
         return this.createErrorResult(
           mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
         );
       }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('personas')
-        .select(`
-          *,
-          proyecto_persona_rol!inner(proyecto_id)
-        `)
-        .eq('proyecto_persona_rol.proyecto_id', proyectoId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
+        proyectoId,
+        'proyectos',
+        'personas',
+        'proyecto_persona_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getPersonas', proyectoId }));
     }
@@ -356,6 +348,10 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         });
 
       if (error) throw error;
+
+      // Invalidate related caches
+      await this.invalidateRelatedCaches(proyectoId, ['byId', 'list']);
+
       return this.createSuccessResult(undefined);
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'addOrganizacion', proyectoId, organizacionId, rol }));
@@ -384,44 +380,43 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
         .eq('organizacion_id', organizacionId);
 
       if (error) throw error;
+
+      // Invalidate related caches
+      await this.invalidateRelatedCaches(proyectoId, ['byId', 'list']);
+
       return this.createSuccessResult(undefined);
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'removeOrganizacion', proyectoId, organizacionId }));
     }
   }
 
-  async getOrganizaciones(proyectoId: string): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
+  async getOrganizaciones(
+    proyectoId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
     try {
       if (!proyectoId) {
         return this.createErrorResult(
           mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
         );
       }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { data, error } = await this.supabase
-        .from('organizaciones')
-        .select(`
-          *,
-          proyecto_organizacion_rol!inner(proyecto_id)
-        `)
-        .eq('proyecto_organizacion_rol.proyecto_id', proyectoId);
-
-      if (error) throw error;
-      return this.createSuccessResult(data);
+      return this.getRelatedEntities<Database['public']['Tables']['organizaciones']['Row']>(
+        proyectoId,
+        'proyectos',
+        'organizaciones',
+        'proyecto_organizacion_rol',
+        options
+      );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getOrganizaciones', proyectoId }));
     }
   }
 
   // Override search to include descripcion in search
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Proyecto[] | null>> {
+  async search(
+    query: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!query) {
         return this.createErrorResult(
@@ -431,23 +426,43 @@ export class ProyectosService extends BaseService<Proyecto, CreateProyecto, Upda
 
       let searchQuery = this.supabase
         .from(this.tableName)
-        .select()
-        .or(`titulo.ilike.%${query}%,descripcion.ilike.%${query}%`);
+        .select(this.getDefaultFields(this.tableName as string))
+        .textSearch('search_vector', query);
 
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminado', false);
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          searchQuery = searchQuery.eq(key, value);
+        });
       }
 
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        searchQuery = searchQuery.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        searchQuery = searchQuery.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
       }
 
       const { data, error } = await searchQuery;
 
       if (error) throw error;
-      return this.createSuccessResult(data as Proyecto[]);
+      if (!data) return this.createSuccessResult(null);
+
+      // Cast the data to Proyecto[] since we know the structure matches
+      return this.createSuccessResult(data as unknown as Proyecto[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query, options }));
+      return this.createErrorResult(this.handleError(error, { operation: 'search', query }));
     }
+  }
+
+  async getAll(options?: QueryOptions): Promise<ServiceResult<Proyecto[] | null>> {
+    return this.getAllWithPagination(options);
   }
 } 
