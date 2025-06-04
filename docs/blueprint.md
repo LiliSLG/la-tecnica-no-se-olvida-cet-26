@@ -97,3 +97,88 @@
 
 - **Collaboration:**  
   The platform itself is a collaborative effort in terms of content — fostering collaboration within the CET community and its surroundings — while the platform structure and codebase remain under the control of the development team.
+
+  ---
+
+# 📘 Architecture Notes
+
+## /lib/supabase/ Structure and Service Pattern
+
+This section documents the current architecture and conventions for the `/lib/supabase/` folder and service layer.
+
+### ✅ Folder structure
+
+```
+/lib/supabase/
+├── supabaseClient.ts
+├── supabaseStorage.ts
+├── storageMigration.ts
+├── schema.sql
+├── rls_policies.sql
+├── indexes.sql
+├── services/
+│   ├── authService.ts
+│   ├── entrevistasService.ts
+│   ├── noticiasService.ts
+│   ├── organizacionesService.ts
+│   ├── temasService.ts
+│   ├── personasService.ts
+│   ├── proyectosService.ts
+│   ├── relationshipService.ts
+│   └── (any other BaseService-based service)
+├── errors/
+│   ├── types.ts
+│   ├── utils.ts
+├── types/
+│   ├── database.types.ts
+│   ├── service.ts
+│   ├── serviceResult.ts
+│   └── (any other shared type)
+├── scripts/
+│   ├── migrations/
+│   │   ├── baseMigration.ts
+│   │   ├── dataTransformer.ts
+│   │   ├── firebaseExtractor.ts
+│   │   ├── migrateData.ts
+│   │   └── (etc.)
+│   ├── extractFirebaseUsers.ts
+│   ├── migrateUsers.ts
+└── __tests__/
+    ├── (unit tests for services)
+```
+
+### ✅ Service usage pattern
+
+#### Singleton pattern
+
+Each service exports a singleton instance:
+
+```typescript
+import PersonasService from './personasService';
+export const personasService = new PersonasService();
+export default personasService;
+```
+
+#### Usage in components
+
+```typescript
+import personasService from '@/lib/supabase/services/personasService';
+
+const personas = await personasService.getAll();
+const persona = await personasService.getById(id);
+await personasService.create(data);
+await personasService.update(id, data);
+await personasService.delete(id);
+```
+
+### ❌ Prohibited patterns
+
+- No direct `from('table')` calls in components.
+- No usage of legacy function-based API (e.g. `getAllTemas()`).
+- No service files outside `/services/`.
+- No duplicate `types.ts` or `utils.ts` in `/supabase/`.
+
+### 📝 Migration status
+
+- ✅ Architecture cleaned and committed.
+- 🔄 Forms and Sections: In progress (see `/docs/todos.md`).
