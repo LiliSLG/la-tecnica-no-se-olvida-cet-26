@@ -1,12 +1,12 @@
-
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import EntrevistaForm from '@/components/forms/EntrevistaForm';
 import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
-import { getEntrevistaById, updateEntrevista } from '@/lib/supabase/entrevistasService';
-import { convertSupabaseDataToFormEntrevista } from "@/lib/schemas/entrevistaSchema";import { useAuth } from '@/contexts/AuthContext';
+import { getEntrevistaById, updateEntrevista } from '@/lib/supabase/services/entrevistasService';
+import { convertSupabaseDataToFormEntrevista } from "@/lib/schemas/entrevistaSchema";
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';

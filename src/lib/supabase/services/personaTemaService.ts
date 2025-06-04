@@ -5,12 +5,16 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type PersonaTema = Database['public']['Tables']['persona_tema']['Row'];
+type PersonaTema = Database['public']['Tables']['persona_tema']['Row'] & { id: string };
 type CreatePersonaTema = Database['public']['Tables']['persona_tema']['Insert'];
 
-export class PersonaTemaService extends BaseService<PersonaTema, CreatePersonaTema, never> {
+export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'persona_tema', supabase });
+    super(supabase, 'persona_tema', {
+      entityType: 'persona',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreatePersonaTema): ValidationError | null {

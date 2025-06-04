@@ -12,8 +12,12 @@ type CreateOrganizacion = Database['public']['Tables']['organizaciones']['Insert
 type UpdateOrganizacion = Database['public']['Tables']['organizaciones']['Update'];
 
 export class OrganizacionesService extends BaseService<Organizacion, 'organizaciones'> {
-  constructor(supabase: SupabaseClient<Database>, cacheConfig: CacheableServiceConfig) {
-    super(supabase, 'organizaciones', cacheConfig);
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, 'organizaciones', {
+      entityType: 'organizacion',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: Database['public']['Tables']['organizaciones']['Insert']): ValidationError | null {

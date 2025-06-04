@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllNoticiasForAdmin, logicalDeleteNoticia, restoreNoticia } from '@/lib/supabase/noticiasService';
+import { getAllNoticiasForAdmin, logicalDeleteNoticia, restoreNoticia } from '@/lib/supabase/services/noticiasService';
 import type { Noticia } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {

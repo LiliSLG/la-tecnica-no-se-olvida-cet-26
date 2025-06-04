@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import OrganizacionForm from '@/components/forms/OrganizacionForm';
 import type { OrganizacionFormData } from '@/lib/schemas/organizacionSchema';
-import { getOrganizacionById, updateOrganizacion } from '@/lib/supabase/organizacionesService';
+import { getOrganizacionById, updateOrganizacion } from '@/lib/supabase/services/organizacionesService';
 import { convertFormDataToSupabaseOrganizacion } from "@/lib/schemas/organizacionSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

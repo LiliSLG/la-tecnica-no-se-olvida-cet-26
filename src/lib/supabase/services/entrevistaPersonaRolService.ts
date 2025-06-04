@@ -5,14 +5,18 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type EntrevistaPersonaRol = Database['public']['Tables']['entrevista_persona_rol']['Row'];
+type EntrevistaPersonaRol = Database['public']['Tables']['entrevista_persona_rol']['Row'] & { id: string };
 type CreateEntrevistaPersonaRol = Database['public']['Tables']['entrevista_persona_rol']['Insert'];
 
 const VALID_ROLES = ['entrevistador', 'entrevistado', 'moderador'];
 
-export class EntrevistaPersonaRolService extends BaseService<EntrevistaPersonaRol, CreateEntrevistaPersonaRol, never> {
+export class EntrevistaPersonaRolService extends BaseService<EntrevistaPersonaRol, 'entrevista_persona_rol'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'entrevista_persona_rol', supabase });
+    super(supabase, 'entrevista_persona_rol', {
+      entityType: 'entrevista',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateEntrevistaPersonaRol): ValidationError | null {

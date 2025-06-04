@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import OrganizacionForm from "@/components/forms/OrganizacionForm";
 import type { OrganizacionFormData } from "@/lib/schemas/organizacionSchema";
-import { addOrganizacion } from "@/lib/supabase/organizacionesService";
+import { addOrganizacion } from "@/lib/supabase/services/organizacionesService";
 import { convertFormDataToSupabaseOrganizacion } from "@/lib/schemas/organizacionSchema";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";

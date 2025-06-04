@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,7 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addOrganizacion } from '@/lib/supabase/organizacionesService';
+import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
+import { supabase } from '@/lib/supabase/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -27,6 +27,8 @@ interface AddOrganizacionModalProps {
   onOpenChange: (open: boolean) => void;
   onOrganizacionCreated: (newOrganizacion: { id: string; nombreOficial: string; tipo: TipoOrganizacion }) => void;
 }
+
+const organizacionesService = new OrganizacionesService(supabase);
 
 export default function AddOrganizacionModal({ open, onOpenChange, onOrganizacionCreated }: AddOrganizacionModalProps) {
   const { user } = useAuth();
@@ -68,21 +70,36 @@ export default function AddOrganizacionModal({ open, onOpenChange, onOrganizacio
     setIsSubmittingModal(true);
 
     try {
-      // Prepare a minimal dataset suitable for addOrganizacion
-      // The addOrganizacion service should handle setting defaults for other fields
       const dataForService = {
-        nombreOficial: data.nombreOficial,
+        nombre: data.nombreOficial,
         tipo: data.tipo,
         nombreFantasia: data.nombreFantasia || null,
         emailContacto: data.emailContacto || null,
         sitioWeb: data.sitioWeb || null,
-        // Let addOrganizacion handle audit fields, estaEliminada, etc.
+        // The service will handle audit fields, etc.
       };
 
-      const orgId = await addOrganizacion(dataForService as OrganizacionFormData, user.id); // Cast if addOrganizacion expects more fields
-      
+      // Use the new service
+      const result = await organizacionesService.create({
+        nombre: dataForService.nombre,
+        descripcion: null,
+        logo_url: null,
+        sitio_web: dataForService.sitioWeb,
+        esta_eliminada: false,
+        eliminado_por_uid: null,
+        eliminado_en: null
+      });
+
+      if (result.error) {
+        toast({ title: "Error", description: result.error.message, variant: "destructive" });
+        return;
+      }
+      if (!result.data) {
+        toast({ title: "Error", description: "No se pudo crear la organización.", variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: `${data.nombreOficial} añadida como nueva organización.` });
-      onOrganizacionCreated({ id: orgId, nombreOficial: data.nombreOficial, tipo: data.tipo });
+      onOrganizacionCreated({ id: result.data.id, nombreOficial: result.data.nombre, tipo: data.tipo });
       handleCloseModal(true);
     } catch (error) {
       console.error("Modal: Error creating organizacion placeholder:", error);

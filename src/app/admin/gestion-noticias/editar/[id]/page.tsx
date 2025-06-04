@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import NoticiaForm from '@/components/forms/NoticiaForm';
 import type { NoticiaFormData } from '@/lib/schemas/noticiaSchema';
-import { getNoticiaById, updateNoticia } from '@/lib/supabase/noticiasService';
+import { getNoticiaById, updateNoticia } from '@/lib/supabase/services/noticiasService';
 import { convertSupabaseDataToFormNoticia } from "@/lib/schemas/noticiaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

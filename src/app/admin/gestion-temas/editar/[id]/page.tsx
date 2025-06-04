@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TemaForm from '@/components/forms/TemaForm';
 import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { getTemaById, updateTema } from '@/lib/supabase/temasService';
+import { getTemaById, updateTema } from '@/lib/supabase/services/temasService';
 import {
   convertFormDataToSupabaseTema,
   convertSupabaseDataToFormTema,

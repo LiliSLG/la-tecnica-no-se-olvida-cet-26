@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, Tag as TagIcon, TagsIcon, Text } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addTema } from '@/lib/supabase/temasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -50,6 +48,9 @@ export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddT
     }
   }, [open, resetModalForm]);
 
+  // TODO: Migrate AddTemaModal.tsx to use the new Supabase service (TemasService) for CRUD operations
+  // const temasService = new TemasService(supabase);
+
   const onSubmitModal = async (data: AddTemaModalFormData) => {
     console.log('AddTemaModal: onSubmitModal called. Data:', data);
     if (!user) {
@@ -64,10 +65,31 @@ export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddT
         dataForService.categoriaTema = null;
       }
 
-      const newTema = await addTema(dataForService, user.id);
-      
-      toast({ title: "Éxito", description: `Tema "${newTema.nombre}" añadido.` });
-      onTemaCreated(newTema);
+      // TODO: Implement the logic to create a tema using the new Supabase service (TemasService)
+      // const result = await temasService.create({
+      //   nombre: data.nombre,
+      //   descripcion: data.descripcion || null
+      // });
+
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: result.error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!result.data) {
+        toast({
+          title: "Error",
+          description: "No se pudo crear el tema",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      onTemaCreated(result.data);
       handleCloseModal(true);
     } catch (error) {
       console.error("Modal: Error creating tema:", error);

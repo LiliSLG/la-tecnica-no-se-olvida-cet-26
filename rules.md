@@ -11,3 +11,7 @@ When developing components, pages, etc., every time you use MOCK data or use PLA
 Design and Color Scheme rules can be found in the `docs/blueprint.md` file. When you identify UX/UI changes such as color schemes, layout choices, etc., add these to the `docs/blueprint.md` file.
 
 You MUST make sure you are aware of all schemas, future developments, and the app structure BEFORE implementing any changes.
+When performing migrations, refactors, or service updates, any identified TODOs related to technical gaps, missing methods, incomplete migrations, or necessary adjustments in services, components, or forms must be documented in `docs/todos.md` (as a checklist). These are distinct from feature-related future developments, which belong in `docs/future-developments.md`.
+
+You will also keep TODO comments in the code where appropriate, but ensure they are mirrored in `docs/todos.md` for centralized tracking.
+

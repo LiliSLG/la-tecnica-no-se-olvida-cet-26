@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Persona, TemaCategoria } from '@/lib/types';
-import { getPublicEgresadosYEstudiantes } from '@/lib/supabase/personasService';
+import { getPublicEgresadosYEstudiantes } from '@/lib/supabase/services/personasService';
 import { useToast } from '@/hooks/use-toast';
 import PersonaCard from '@/components/cards/PersonaCard';
 import { Users2, Loader2, Info, Search, Filter, XIcon } from 'lucide-react';
@@ -15,6 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { categoriasPrincipalesPersonaLabels } from '@/lib/schemas/personaSchema'; // For labels
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { supabase } from '@/lib/supabase/client';
+import type { Database } from '@/lib/supabase/types/database.types';
+
+type Persona = Database['public']['Tables']['personas']['Row'];
 
 // Define a relevant subset of categories for filtering this specific network
 const relevantCategorias: Array<{ value: Persona['categoriaPrincipal']; label: string }> = [
@@ -26,7 +30,7 @@ const currentSchoolYear = new Date().getFullYear(); // Or get this from a config
 const lastRelevantSchoolYear = 6; // Example: show students from 6th year. Adjust as needed.
 
 export default function EgresadosEstudiantesContent() {
-  const [allPersonas, setAllPersonas] = useState<Persona[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
   const [filteredPersonas, setFilteredPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -38,27 +42,40 @@ export default function EgresadosEstudiantesContent() {
   const [buscandoOportunidadesFilter, setBuscandoOportunidadesFilter] = useState(false);
   // TODO: Add filter for areasDeInteresOExpertise if needed
 
-  const uniqueAnosEgreso = Array.from(new Set(allPersonas.filter(p => p.esExAlumnoCET && p.anoEgresoCET).map(p => p.anoEgresoCET!))).sort((a,b) => b - a);
+  const uniqueAnosEgreso = Array.from(
+    new Set(
+      personas
+        .filter(p => p.es_ex_alumno_cet && p.ano_egreso_cet)
+        .map(p => p.ano_egreso_cet!)
+    )
+  ).sort((a, b) => b - a);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      let fetchedPersonas = await getPublicEgresadosYEstudiantes();
+      const personasService = new PersonasService(supabase);
+      const result = await personasService.getPublicEgresadosYEstudiantes();
+      
+      if (result.error) {
+        throw result.error;
+      }
+
+      const fetchedPersonas = result.data || [];
       // Further client-side filtering for students in the last year if not done in service
-      fetchedPersonas = fetchedPersonas.filter(p => {
-        if (p.categoriaPrincipal === 'estudiante_cet') {
-          return p.anoCursadaActualCET === lastRelevantSchoolYear;
+      const filteredPersonas = fetchedPersonas.filter((p: Persona) => {
+        if (p.categoria_principal === 'estudiante_cet') {
+          return p.ano_cursada_actual_cet === lastRelevantSchoolYear;
         }
         return true; // Include all ex-alumnos fetched by the service
       });
-      setAllPersonas(fetchedPersonas);
-      setFilteredPersonas(fetchedPersonas); // Initialize filtered list
+      setPersonas(filteredPersonas);
+      setFilteredPersonas(filteredPersonas);
     } catch (error) {
-      console.error("Error fetching egresados y estudiantes:", error);
+      console.error('Error fetching personas:', error);
       toast({
-        title: "Error al cargar perfiles",
-        description: "No se pudieron obtener los datos de egresados y estudiantes.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Ha ocurrido un error al cargar los egresados y estudiantes.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -70,7 +87,7 @@ export default function EgresadosEstudiantesContent() {
   }, [fetchData]);
 
   useEffect(() => {
-    let currentFiltered = [...allPersonas];
+    let currentFiltered = [...personas];
 
     if (searchTerm) {
       currentFiltered = currentFiltered.filter(p =>
@@ -95,7 +112,7 @@ export default function EgresadosEstudiantesContent() {
     
     setFilteredPersonas(currentFiltered);
 
-  }, [searchTerm, selectedCategoriaFilter, selectedAnoEgresoFilter, buscandoOportunidadesFilter, allPersonas]);
+  }, [searchTerm, selectedCategoriaFilter, selectedAnoEgresoFilter, buscandoOportunidadesFilter, personas]);
 
   const resetFilters = () => {
     setSearchTerm('');

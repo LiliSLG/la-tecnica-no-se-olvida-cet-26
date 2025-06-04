@@ -1,13 +1,12 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getProjectById } from '@/lib/supabase/proyectosService';
-import { getPersonasByIds } from "@/lib/supabase/personasService";
-import { getOrganizacionesByIds } from "@/lib/supabase/organizacionesService";
-import { getTemasByIds as getTemasByIdsService } from "@/lib/supabase/temasService"; // Renombrado
+import { getProjectById } from '@/lib/supabase/services/proyectosService';
+import { getPersonasByIds } from "@/lib/supabase/services/personasService";
+import { getOrganizacionesByIds } from "@/lib/supabase/services/organizacionesService";
+import { getTemasByIds as getTemasByIdsService } from "@/lib/supabase/services/temasService";
 import type { Proyecto, Persona, Organizacion, Tema } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProjectForm from '@/components/forms/ProjectForm';
 import type { ProjectFormData } from '@/lib/schemas/projectSchema';
-import { getProjectById, updateProject } from '@/lib/supabase/proyectosService';
+import { getProjectById, updateProject } from '@/lib/supabase/services/proyectosService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Proyecto } from '@/lib/types';
@@ -15,6 +14,8 @@ import {
 } from "@/lib/schemas/projectSchema";
 import { Edit, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button'; // Corrected import for Button
+import { ProyectosService } from '@/lib/supabase/services/proyectosService';
+import { supabase } from '@/lib/supabase/client';
 
 interface EditProjectContentProps {
   projectId: string;
@@ -57,49 +58,37 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
     fetchProject();
   }, [projectId, router, toast]);
 
-  const handleSubmitProject = async (
-    data: ProjectFormData
-  ): Promise<boolean> => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Debes estar autenticado para editar un proyecto.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!projectId) {
-      toast({
-        title: "Error",
-        description: "No se pudo identificar el proyecto a editar.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    setIsSubmitting(true);
+  const handleSubmit = async (data: ProjectFormData): Promise<boolean> => {
     try {
-      const dataForSupabase = convertFormDataToSupabaseProject(data);
-      await updateProject(projectId, dataForSupabase, user.id);
+      setIsSubmitting(true);
+      const proyectosService = new ProyectosService(supabase);
+      
+      const partial: Partial<Proyecto> = convertFormDataToSupabaseProject(data);
+      
+      const result = await proyectosService.update(projectId, partial);
+
+      if (result.error) {
+        throw result.error;
+      }
+
       toast({
-        title: "Éxito",
-        description: "Proyecto actualizado correctamente.",
+        title: 'Proyecto actualizado',
+        description: 'El proyecto se ha actualizado correctamente.',
       });
 
       const volverAPath = searchParams.get("volverA");
       if (volverAPath) {
         router.push(volverAPath);
       } else {
-        router.push("/admin/proyectos-gestion");
+        router.push("/admin/gestion-proyectos");
       }
-
       return true;
     } catch (error) {
-      console.error("Error updating project:", error);
+      console.error('Error updating project:', error);
       toast({
-        title: "Error",
-        description: "No se pudo actualizar el proyecto.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Ha ocurrido un error al actualizar el proyecto.',
+        variant: 'destructive',
       });
       return false;
     } finally {
@@ -148,7 +137,7 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
         {initialData.titulo || " proyecto sin título"}".
       </p>
       <ProjectForm
-        onSubmit={handleSubmitProject}
+        onSubmit={handleSubmit}
         initialData={initialData}
         isSubmitting={isSubmitting}
       />

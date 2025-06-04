@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { getPublicadasEntrevistas } from '@/lib/supabase/entrevistasService';
+import { getPublicadasEntrevistas } from '@/lib/supabase/services/entrevistasService';
 import type { Entrevista, Tema } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPersonaById } from '@/lib/supabase/personasService';
+import { getPersonaById } from '@/lib/supabase/services/personasService';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, CalendarDays, Filter, XCircle, RefreshCw, AlertTriangle, PlusCircle, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,30 +14,34 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import EntrevistaCard from '@/components/cards/EntrevistaCard';
-import { getAllTemasActivos } from '@/lib/supabase/temasService';
+import { getAllTemasActivos } from '@/lib/supabase/services/temasService';
 import Link from 'next/link';
+import { EntrevistasService } from '@/lib/supabase/services/entrevistasService';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { TemasService } from '@/lib/supabase/services/temasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import type { Database } from '@/lib/supabase/types/database.types';
+
+type EntrevistaRow = Database['public']['Tables']['entrevistas']['Row'];
+type TemaRow = Database['public']['Tables']['temas']['Row'];
 
 export default function HistoriaOralListContent() {
   const { user } = useAuth();
   const [persona, setPersona] = useState<any>(null); 
   const [canCreateEntrevistas, setCanCreateEntrevistas] = useState(false);
 
-  const [fetchedEntrevistas, setFetchedEntrevistas] = useState<Entrevista[]>([]);
-  const [displayEntrevistas, setDisplayEntrevistas] = useState<Entrevista[]>([]);
+  const [entrevistas, setEntrevistas] = useState<EntrevistaRow[]>([]);
+  const [temas, setTemas] = useState<TemaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [allTemas, setAllTemas] = useState<Tema[]>([]);
-  const [temasMap, setTemasMap] = useState<Map<string, string>>(new Map());
-  const [loadingTemas, setLoadingTemas] = useState(true);
-  
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTemaFilter, setSelectedTemaFilter] = useState<string | 'all'>('all');
-  const [selectedAmbitoFilter, setSelectedAmbitoFilter] = useState<string | 'all'>('all');
-  const [allUniqueAmbitos, setAllUniqueAmbitos] = useState<string[]>([]);
+  const [selectedTema, setSelectedTema] = useState<string>('');
 
-
+  const router = useRouter();
 
   useEffect(() => {
     if (user) {
@@ -64,67 +67,45 @@ export default function HistoriaOralListContent() {
     { label: 'Historia Oral' }
   ];
 
-  const fetchEntrevistasYTemas = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [fetchedEntrevistasData, fetchedTemasData] = await Promise.all([
-        getPublicadasEntrevistas({ temaId: selectedTemaFilter, ambito: selectedAmbitoFilter }),
-        getAllTemasActivos()
-      ]);
-      
-      setFetchedEntrevistas(fetchedEntrevistasData);
-      setAllTemas(fetchedTemasData);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const entrevistasService = new EntrevistasService(supabase);
+        const temasService = new TemasService(supabase);
 
-      const map = new Map<string, string>();
-      fetchedTemasData.forEach(tema => map.set(tema.id!, tema.nombre));
-      setTemasMap(map);
+        const [entrevistasResult, temasResult] = await Promise.all([
+          entrevistasService.getPublicadas(),
+          temasService.getAllActivos()
+        ]);
 
-      const uniqueAmbitos = new Set<string>();
-      fetchedEntrevistasData.forEach(e => { if (e.ambitoSaber) uniqueAmbitos.add(e.ambitoSaber); });
-      
-      if(selectedAmbitoFilter === 'all' && selectedTemaFilter === 'all') { 
-          const allPublic = await getPublicadasEntrevistas();
-          const allAmbitos = new Set<string>();
-          allPublic.forEach(e => { if (e.ambitoSaber) allAmbitos.add(e.ambitoSaber); });
-          setAllUniqueAmbitos(Array.from(allAmbitos).sort());
+        if (entrevistasResult.error) throw entrevistasResult.error;
+        if (temasResult.error) throw temasResult.error;
+
+        setEntrevistas(entrevistasResult.data || []);
+        setTemas(temasResult.data || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: 'Error',
+          description: 'Error al cargar los datos',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
+    };
 
+    fetchData();
+  }, [toast]);
 
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("No se pudieron cargar las entrevistas o temas.");
-      toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-      setLoadingTemas(false);
-    }
-  }, [toast, selectedTemaFilter, selectedAmbitoFilter]);
+  const filteredEntrevistas = entrevistas.filter(entrevista => {
+    const matchesSearch = entrevista.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entrevista.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const matchesTema = !selectedTema || entrevista.status === selectedTema;
+    return matchesSearch && matchesTema;
+  });
 
-  useEffect(() => {
-    fetchEntrevistasYTemas();
-  }, [fetchEntrevistasYTemas]);
-
-  useEffect(() => {
-    let filtered = [...fetchedEntrevistas];
-    if (searchTerm) {
-        filtered = filtered.filter(e => 
-            e.tituloSaber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.descripcionSaber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (e.fuentesInformacion && e.fuentesInformacion.some(f => f.toLowerCase().includes(searchTerm.toLowerCase())))
-        );
-    }
-    setDisplayEntrevistas(filtered);
-  }, [searchTerm, fetchedEntrevistas]);
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedTemaFilter('all');
-    setSelectedAmbitoFilter('all');
-    // Refetching will happen due to selectedTemaFilter/selectedAmbitoFilter changing
-  };
-
-  if (loading || loadingTemas) {
+  if (loading) {
     return ( <div className="text-center py-20"> <RefreshCw className="h-10 w-10 mx-auto animate-spin text-primary mb-4" /> <p className="text-muted-foreground">Cargando archivo de historia oral...</p> </div> );
   }
 
@@ -168,35 +149,25 @@ export default function HistoriaOralListContent() {
           </div>
           <div>
             <Label htmlFor="tema-filter-entrevistas" className="block text-sm font-medium text-muted-foreground mb-1">Tema del Saber</Label>
-            <Select value={selectedTemaFilter} onValueChange={setSelectedTemaFilter}>
+            <Select value={selectedTema} onValueChange={setSelectedTema}>
               <SelectTrigger id="tema-filter-entrevistas" className="shadow-sm"><SelectValue placeholder="Todos los Temas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los Temas</SelectItem>
-                {allTemas.map(tema => <SelectItem key={tema.id} value={tema.id!}>{tema.nombre}</SelectItem>)}
+                <SelectItem value="">Todos los Temas</SelectItem>
+                {temas.map(tema => <SelectItem key={tema.id} value={tema.id}>{tema.nombre}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-           <div>
-            <Label htmlFor="ambito-filter-entrevistas" className="block text-sm font-medium text-muted-foreground mb-1">Ámbito del Saber</Label>
-            <Select value={selectedAmbitoFilter} onValueChange={setSelectedAmbitoFilter}>
-              <SelectTrigger id="ambito-filter-entrevistas" className="shadow-sm"><SelectValue placeholder="Todos los Ámbitos" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los Ámbitos</SelectItem>
-                {allUniqueAmbitos.map(ambito => <SelectItem key={ambito} value={ambito}>{ambito}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={resetFilters} variant="outline" className="w-full lg:w-auto shadow-sm mt-4 md:mt-0">
-            <XCircle className="mr-2 h-4 w-4" /> Limpiar Filtros
+          <Button onClick={() => router.push('/admin/entrevistas/nueva')} variant="outline" className="w-full lg:w-auto shadow-sm mt-4 md:mt-0">
+            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nueva Entrevista
           </Button>
         </CardContent>
       </Card>
 
-      {displayEntrevistas.length === 0 ? (
+      {filteredEntrevistas.length === 0 ? (
         <div className="text-center py-12">
           <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <p className="text-xl text-muted-foreground">
-            {searchTerm || selectedTemaFilter !== 'all' || selectedAmbitoFilter !== 'all'
+            {searchTerm || selectedTema !== ''
               ? "No hay entrevistas que coincidan con los filtros seleccionados."
               : "Aún no hay entrevistas publicadas."}
           </p>
@@ -206,8 +177,25 @@ export default function HistoriaOralListContent() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-          {displayEntrevistas.map((entrevista) => (
-            <EntrevistaCard key={entrevista.id} entrevista={entrevista} temasMap={temasMap} />
+          {filteredEntrevistas.map((entrevista) => (
+            <Card key={entrevista.id}>
+              <CardHeader>
+                <CardTitle>{entrevista.titulo}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500">
+                  {entrevista.descripcion || 'Sin descripción'}
+                </p>
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/admin/entrevistas/${entrevista.id}`)}
+                  >
+                    Ver detalles
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

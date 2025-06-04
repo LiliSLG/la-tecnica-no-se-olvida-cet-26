@@ -5,7 +5,7 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type NoticiaPersonaRol = Database['public']['Tables']['noticia_persona_rol']['Row'];
+type NoticiaPersonaRol = Database['public']['Tables']['noticia_persona_rol']['Row'] & { id: string };
 type CreateNoticiaPersonaRol = Database['public']['Tables']['noticia_persona_rol']['Insert'];
 type UpdateNoticiaPersonaRol = Database['public']['Tables']['noticia_persona_rol']['Update'];
 type Persona = Database['public']['Tables']['personas']['Row'];
@@ -14,9 +14,13 @@ type Noticia = Database['public']['Tables']['noticias']['Row'];
 const VALID_ROLES = ['autor', 'editor', 'colaborador'] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
-export class NoticiaPersonaRolService extends BaseService<NoticiaPersonaRol, CreateNoticiaPersonaRol, UpdateNoticiaPersonaRol> {
+export class NoticiaPersonaRolService extends BaseService<NoticiaPersonaRol, 'noticia_persona_rol'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'noticia_persona_rol', supabase });
+    super(supabase, 'noticia_persona_rol', {
+      entityType: 'noticia',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateNoticiaPersonaRol): ValidationError | null {

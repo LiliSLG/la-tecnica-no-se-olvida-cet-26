@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getPublicProjects } from "@/lib/supabase/proyectosService";
+import { getPublicProjects } from "@/lib/supabase/services/proyectosService";
 import {
   getTemasByIds as getTemasByIdsService,
   getAllTemasActivos,
-} from "@/lib/supabase/temasService";
+} from "@/lib/supabase/services/temasService";
 import type { Proyecto, Tema, TemaCategoria } from "@/lib/types"; // Added TemaCategoria
 import { useToast } from "@/hooks/use-toast";
 import {

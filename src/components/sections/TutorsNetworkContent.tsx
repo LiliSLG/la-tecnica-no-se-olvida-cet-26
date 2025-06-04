@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Persona, Organizacion, CategoriaPrincipalPersona, TipoOrganizacion } from '@/lib/types';
-import { getPublicTutoresYColaboradores } from '@/lib/supabase/personasService';
-import { getPublicOrganizaciones } from '@/lib/supabase/organizacionesService';
+import { getPublicTutoresYColaboradores } from '@/lib/supabase/services/personasService';
+import { getPublicOrganizaciones } from '@/lib/supabase/services/organizacionesService';
 import { useToast } from '@/hooks/use-toast';
 import PersonaCard from '@/components/cards/PersonaCard';
 import OrganizacionCard from '@/components/cards/OrganizacionCard';
@@ -23,6 +22,10 @@ import {
   organizacionTipos, 
   organizacionTipoLabels 
 } from '@/lib/schemas/organizacionSchema';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import type { Database } from '@/lib/supabase/types/database.types';
 
 const tutorNetworkPersonaCategorias: Array<{ value: CategoriaPrincipalPersona; label: string }> = [
   { value: 'docente_cet', label: categoriasPrincipalesPersonaLabels['docente_cet'] },

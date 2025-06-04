@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { ServiceResult, ServiceError } from '../types/service';
+import { ServiceResult } from '../types/service';
+import { ServiceError } from '../errors/types';
 
 export abstract class RelationshipService {
   protected constructor(
@@ -13,18 +14,21 @@ export abstract class RelationshipService {
   protected createSuccessResult<T>(data: T): ServiceResult<T> {
     return {
       data,
-      error: null
+      error: null,
+      success: true
     };
   }
 
   protected createErrorResult(error: unknown): ServiceResult<never> {
     const serviceError: ServiceError = {
       message: error instanceof Error ? error.message : 'An unknown error occurred',
-      code: 'RELATIONSHIP_ERROR'
+      code: 'RELATIONSHIP_ERROR',
+      name: 'ServiceError'
     };
     return {
       data: null,
-      error: serviceError
+      error: serviceError,
+      success: false
     };
   }
 
@@ -67,6 +71,8 @@ export abstract class RelationshipService {
         .eq(this.sourceIdColumn, sourceId);
 
       if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+      
       const targetIds = data.map(row => row[this.targetIdColumn as keyof typeof row] as string);
       return this.createSuccessResult(targetIds);
     } catch (error) {

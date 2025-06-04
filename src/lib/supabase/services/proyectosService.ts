@@ -4,94 +4,80 @@ import { BaseService } from './baseService';
 import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { CacheableServiceConfig } from './cacheableService';
+
+// Import relation services
+import { ProyectoTemaService } from './proyectoTemaService';
+import { ProyectoPersonaRolService } from './proyectoPersonaRolService';
+import { ProyectoOrganizacionRolService } from './proyectoOrganizacionRolService';
 
 type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 type CreateProyecto = Database['public']['Tables']['proyectos']['Insert'];
 type UpdateProyecto = Database['public']['Tables']['proyectos']['Update'];
 
 export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
-  constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'proyectos', {
-      entityType: 'proyecto',
-      ttl: 3600, // 1 hour
-      enableCache: true,
-    });
+  private proyectoTemaService: ProyectoTemaService;
+  private proyectoPersonaRolService: ProyectoPersonaRolService;
+  private proyectoOrganizacionRolService: ProyectoOrganizacionRolService;
+
+  constructor(
+    supabase: SupabaseClient<Database>,
+    tableName: 'proyectos' = 'proyectos',
+    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto' }
+  ) {
+    super(supabase, tableName, cacheConfig);
+    this.proyectoTemaService = new ProyectoTemaService(supabase);
+    this.proyectoPersonaRolService = new ProyectoPersonaRolService(supabase);
+    this.proyectoOrganizacionRolService = new ProyectoOrganizacionRolService(supabase);
   }
 
   protected validateCreateInput(data: CreateProyecto): ValidationError | null {
     if (!data.titulo) {
-      return mapValidationError('Title is required', 'titulo', data.titulo);
+      return {
+        field: 'titulo',
+        message: 'El título es requerido',
+        value: data.titulo,
+        name: 'ValidationError'
+      };
     }
-
-    if (!data.descripcion) {
-      return mapValidationError('Description is required', 'descripcion', data.descripcion);
-    }
-
-    if (data.archivo_principal_url && !this.isValidUrl(data.archivo_principal_url)) {
-      return mapValidationError('Invalid file URL format', 'archivo_principal_url', data.archivo_principal_url);
-    }
-
-    if (data.status && !this.isValidStatus(data.status)) {
-      return mapValidationError('Invalid status value', 'status', data.status);
-    }
-
     return null;
   }
 
   protected validateUpdateInput(data: UpdateProyecto): ValidationError | null {
     if (data.titulo === '') {
-      return mapValidationError('Title cannot be empty', 'titulo', data.titulo);
+      return {
+        field: 'titulo',
+        message: 'El título no puede estar vacío',
+        value: data.titulo,
+        name: 'ValidationError'
+      };
     }
-
-    if (data.descripcion === '') {
-      return mapValidationError('Description cannot be empty', 'descripcion', data.descripcion);
-    }
-
-    if (data.archivo_principal_url && !this.isValidUrl(data.archivo_principal_url)) {
-      return mapValidationError('Invalid file URL format', 'archivo_principal_url', data.archivo_principal_url);
-    }
-
-    if (data.status && !this.isValidStatus(data.status)) {
-      return mapValidationError('Invalid status value', 'status', data.status);
-    }
-
     return null;
   }
 
-  private isValidUrl(url: string): boolean {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private isValidStatus(status: Database['public']['Enums']['project_status']): boolean {
-    return ['draft', 'published', 'archived'].includes(status);
-  }
-
-  // Proyecto-specific methods
   async getByStatus(
-    status: Database['public']['Enums']['project_status'],
+    status: Proyecto['status'],
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!this.isValidStatus(status)) {
-        return this.createErrorResult(
-          mapValidationError('Invalid status value', 'status', status)
-        );
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .eq('status', status)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
       }
 
-      return this.getAllWithPagination({
-        ...options,
-        filters: {
-          ...options?.filters,
-          status
-        }
-      });
+      return this.createSuccessResult(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByStatus', status }));
+      return this.createErrorResult(this.handleError(error, { operation: 'getByStatus' }));
     }
   }
 
@@ -100,21 +86,24 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*, proyecto_tema!inner(*)')
+        .eq('proyecto_tema.tema_id', temaId)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
       }
 
-      return this.getRelatedEntities<Proyecto>(
-        temaId,
-        'temas',
-        'proyectos',
-        'proyecto_tema',
-        options
-      );
+      return this.createSuccessResult(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByTema', temaId }));
+      return this.createErrorResult(this.handleError(error, { operation: 'getByTema' }));
     }
   }
 
@@ -123,21 +112,24 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!personaId) {
-        return this.createErrorResult(
-          mapValidationError('Persona ID is required', 'personaId', personaId)
-        );
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*, proyecto_persona_rol!inner(*)')
+        .eq('proyecto_persona_rol.persona_id', personaId)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
       }
 
-      return this.getRelatedEntities<Proyecto>(
-        personaId,
-        'personas',
-        'proyectos',
-        'proyecto_persona_rol',
-        options
-      );
+      return this.createSuccessResult(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByPersona', personaId }));
+      return this.createErrorResult(this.handleError(error, { operation: 'getByPersona' }));
     }
   }
 
@@ -146,323 +138,205 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!organizacionId) {
-        return this.createErrorResult(
-          mapValidationError('Organizacion ID is required', 'organizacionId', organizacionId)
-        );
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*, proyecto_organizacion_rol!inner(*)')
+        .eq('proyecto_organizacion_rol.organizacion_id', organizacionId)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
       }
 
-      return this.getRelatedEntities<Proyecto>(
-        organizacionId,
-        'organizaciones',
-        'proyectos',
-        'proyecto_organizacion_rol',
-        options
-      );
+      return this.createSuccessResult(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByOrganizacion', organizacionId }));
+      return this.createErrorResult(this.handleError(error, { operation: 'getByOrganizacion' }));
     }
   }
 
-  async addTema(proyectoId: string, temaId: string): Promise<ServiceResult<void>> {
+  async addProject(
+    project: CreateProyecto,
+    temaIds: string[],
+    personaIds: { id: string; rol: 'director' | 'investigador' | 'colaborador' | 'estudiante' }[],
+    organizacionIds: { id: string; rol: 'patrocinador' | 'colaborador' | 'investigador' | 'institucion' }[]
+  ): Promise<ServiceResult<Proyecto | null>> {
     try {
-      if (!proyectoId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both proyectoId and temaId are required', 'relationship', { proyectoId, temaId })
-        );
+      // Validate project data
+      const validationError = this.validateCreateInput(project);
+      if (validationError) {
+        return this.createErrorResult(validationError);
       }
 
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
+      // Create project
+      const { data: newProject, error: projectError } = await this.supabase
+        .from(this.tableName)
+        .insert(project)
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+      if (!newProject) throw new Error('Failed to create project');
+
+      // Add temas using ProyectoTemaService
+      for (const temaId of temaIds) {
+        await this.proyectoTemaService.create({ proyecto_id: newProject.id, tema_id: temaId });
       }
 
-      const { error } = await this.supabase
-        .from('proyecto_tema')
-        .insert({
-          proyecto_id: proyectoId,
-          tema_id: temaId
+      // Add personas using ProyectoPersonaRolService
+      for (const persona of personaIds) {
+        await this.proyectoPersonaRolService.create({
+          proyecto_id: newProject.id,
+          persona_id: persona.id,
+          rol: persona.rol
         });
-
-      if (error) throw error;
-      return this.createSuccessResult(undefined);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTema', proyectoId, temaId }));
-    }
-  }
-
-  async removeTema(proyectoId: string, temaId: string): Promise<ServiceResult<void>> {
-    try {
-      if (!proyectoId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both proyectoId and temaId are required', 'relationship', { proyectoId, temaId })
-        );
       }
 
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { error } = await this.supabase
-        .from('proyecto_tema')
-        .delete()
-        .eq('proyecto_id', proyectoId)
-        .eq('tema_id', temaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(undefined);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTema', proyectoId, temaId }));
-    }
-  }
-
-  async getTemas(
-    proyectoId: string,
-    options?: QueryOptions
-  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
-    try {
-      if (!proyectoId) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
-        );
-      }
-
-      return this.getRelatedEntities<Database['public']['Tables']['temas']['Row']>(
-        proyectoId,
-        'proyectos',
-        'temas',
-        'proyecto_tema',
-        options
-      );
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getTemas', proyectoId }));
-    }
-  }
-
-  async addPersona(proyectoId: string, personaId: string, rol: string): Promise<ServiceResult<void>> {
-    try {
-      if (!proyectoId || !personaId || !rol) {
-        return this.createErrorResult(
-          mapValidationError('All fields are required', 'relationship', { proyectoId, personaId, rol })
-        );
-      }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { error } = await this.supabase
-        .from('proyecto_persona_rol')
-        .insert({
-          proyecto_id: proyectoId,
-          persona_id: personaId,
-          rol
+      // Add organizaciones using ProyectoOrganizacionRolService
+      for (const organizacion of organizacionIds) {
+        await this.proyectoOrganizacionRolService.create({
+          proyecto_id: newProject.id,
+          organizacion_id: organizacion.id,
+          rol: organizacion.rol
         });
+      }
 
-      if (error) throw error;
-      return this.createSuccessResult(undefined);
+      // Cache the new project
+      await this.setInCache(newProject.id, newProject);
+
+      return this.createSuccessResult(newProject);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addPersona', proyectoId, personaId, rol }));
+      return this.createErrorResult(this.handleError(error, { operation: 'addProject' }));
     }
   }
 
-  async removePersona(proyectoId: string, personaId: string): Promise<ServiceResult<void>> {
-    try {
-      if (!proyectoId || !personaId) {
-        return this.createErrorResult(
-          mapValidationError('Both proyectoId and personaId are required', 'relationship', { proyectoId, personaId })
-        );
-      }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { error } = await this.supabase
-        .from('proyecto_persona_rol')
-        .delete()
-        .eq('proyecto_id', proyectoId)
-        .eq('persona_id', personaId);
-
-      if (error) throw error;
-      return this.createSuccessResult(undefined);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removePersona', proyectoId, personaId }));
-    }
-  }
-
-  async getPersonas(
-    proyectoId: string,
-    options?: QueryOptions
-  ): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
-    try {
-      if (!proyectoId) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
-        );
-      }
-      return this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
-        proyectoId,
-        'proyectos',
-        'personas',
-        'proyecto_persona_rol',
-        options
-      );
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPersonas', proyectoId }));
-    }
-  }
-
-  async addOrganizacion(proyectoId: string, organizacionId: string, rol: string): Promise<ServiceResult<void>> {
-    try {
-      if (!proyectoId || !organizacionId || !rol) {
-        return this.createErrorResult(
-          mapValidationError('All fields are required', 'relationship', { proyectoId, organizacionId, rol })
-        );
-      }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { error } = await this.supabase
-        .from('proyecto_organizacion_rol')
-        .insert({
-          proyecto_id: proyectoId,
-          organizacion_id: organizacionId,
-          rol
-        });
-
-      if (error) throw error;
-
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(proyectoId, ['byId', 'list']);
-
-      return this.createSuccessResult(undefined);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addOrganizacion', proyectoId, organizacionId, rol }));
-    }
-  }
-
-  async removeOrganizacion(proyectoId: string, organizacionId: string): Promise<ServiceResult<void>> {
-    try {
-      if (!proyectoId || !organizacionId) {
-        return this.createErrorResult(
-          mapValidationError('Both proyectoId and organizacionId are required', 'relationship', { proyectoId, organizacionId })
-        );
-      }
-
-      const proyectoExists = await this.exists(proyectoId);
-      if (!proyectoExists) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
-        );
-      }
-
-      const { error } = await this.supabase
-        .from('proyecto_organizacion_rol')
-        .delete()
-        .eq('proyecto_id', proyectoId)
-        .eq('organizacion_id', organizacionId);
-
-      if (error) throw error;
-
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(proyectoId, ['byId', 'list']);
-
-      return this.createSuccessResult(undefined);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeOrganizacion', proyectoId, organizacionId }));
-    }
-  }
-
-  async getOrganizaciones(
-    proyectoId: string,
-    options?: QueryOptions
-  ): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
-    try {
-      if (!proyectoId) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
-        );
-      }
-      return this.getRelatedEntities<Database['public']['Tables']['organizaciones']['Row']>(
-        proyectoId,
-        'proyectos',
-        'organizaciones',
-        'proyecto_organizacion_rol',
-        options
-      );
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getOrganizaciones', proyectoId }));
-    }
-  }
-
-  // Override search to include descripcion in search
   async search(
     query: string,
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!query) {
-        return this.createErrorResult(
-          mapValidationError('Search query is required', 'query', query)
-        );
-      }
-
-      let searchQuery = this.supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
-        .select(this.getDefaultFields(this.tableName as string))
-        .textSearch('search_vector', query);
-
-      // Apply filters
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          searchQuery = searchQuery.eq(key, value);
-        });
-      }
-
-      // Apply pagination
-      if (options?.page && options?.pageSize) {
-        const from = (options.page - 1) * options.pageSize;
-        const to = from + options.pageSize - 1;
-        searchQuery = searchQuery.range(from, to);
-      }
-
-      // Apply sorting
-      if (options?.sortBy) {
-        searchQuery = searchQuery.order(options.sortBy, { 
-          ascending: options.sortOrder !== 'desc' 
-        });
-      }
-
-      const { data, error } = await searchQuery;
+        .select()
+        .or(`titulo.ilike.%${query}%,descripcion.ilike.%${query}%`)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       if (!data) return this.createSuccessResult(null);
 
-      // Cast the data to Proyecto[] since we know the structure matches
-      return this.createSuccessResult(data as unknown as Proyecto[]);
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
+      }
+
+      return this.createSuccessResult(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query }));
+      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
     }
   }
 
-  async getAll(options?: QueryOptions): Promise<ServiceResult<Proyecto[] | null>> {
-    return this.getAllWithPagination(options);
+  async getProjectsForUser(
+    userId: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*, proyecto_persona_rol!inner(*)')
+        .eq('proyecto_persona_rol.persona_id', userId)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getProjectsForUser' }));
+    }
+  }
+
+  async getPublicProjects(
+    options?: QueryOptions
+  ): Promise<ServiceResult<Proyecto[] | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .eq('status', 'published')
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Cache results
+      for (const result of data) {
+        await this.setInCache(result.id, result);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublicProjects' }));
+    }
+  }
+
+  async logicalDelete(id: string, userId: string): Promise<ServiceResult<Proyecto | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .update({
+          esta_eliminado: true,
+          eliminado_en: new Date().toISOString(),
+          eliminado_por_uid: userId
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // No need to update cache on logical delete
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'logicalDelete' }));
+    }
+  }
+
+  async restore(id: string, userId: string): Promise<ServiceResult<Proyecto | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .update({
+          esta_eliminado: false,
+          eliminado_en: null,
+          eliminado_por_uid: null
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult(null);
+
+      // Update cache
+      await this.setInCache(id, data);
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'restore' }));
+    }
   }
 } 

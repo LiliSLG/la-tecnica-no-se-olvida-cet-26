@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import NoticiaForm from '@/components/forms/NoticiaForm';
 import type { NoticiaFormData } from '@/lib/schemas/noticiaSchema';
-import { addNoticia } from '@/lib/supabase/noticiasService';
+import { addNoticia } from '@/lib/supabase/services/noticiasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle } from 'lucide-react';

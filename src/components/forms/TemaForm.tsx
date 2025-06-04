@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -14,6 +13,10 @@ import { TagsIcon, Text, Tag as CategoryTagIcon, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import UnsavedChangesModal from '@/components/modals/UnsavedChangesModal';
 import { useRouter } from 'next/navigation'; // For router.back()
+
+// TODO: Migrate TemaForm.tsx to use the new Supabase service (TemasService) for CRUD operations
+// import { TemasService } from '@/lib/supabase/services/temasService';
+// import { supabase } from '@/lib/supabase/supabaseClient';
 
 interface TemaFormProps {
   onSubmit: (data: TemaFormData) => Promise<boolean>; // Returns promise for success/failure

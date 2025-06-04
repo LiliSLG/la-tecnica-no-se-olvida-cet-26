@@ -1,13 +1,12 @@
-
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getPublicadasNoticias } from '@/lib/supabase/noticiasService';
+import { getPublicadasNoticias } from '@/lib/supabase/services/noticiasService';
 import type { Noticia, Persona } from '@/lib/types'; // Import Persona
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { getPersonaById } from "@/lib/supabase/personasService"; // Import getPersonaById
+import { getPersonaById } from "@/lib/supabase/services/personasService"; // Import getPersonaById
 import { useToast } from '@/hooks/use-toast';
 import { Newspaper, CalendarDays, Link as LinkIconLucide, ChevronRight, RefreshCw, AlertTriangle, PlusCircle, Filter, XCircle } from 'lucide-react'; // Added PlusCircle, Filter, XCircle
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +18,9 @@ import { Switch } from '@/components/ui/switch'; // For esDestacada filter
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Breadcrumbs from '@/components/ui/Breadcrumbs'; 
+import { NoticiasService } from '@/lib/supabase/services/noticiasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import type { Database } from '@/lib/supabase/types/database.types';
 
 const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);

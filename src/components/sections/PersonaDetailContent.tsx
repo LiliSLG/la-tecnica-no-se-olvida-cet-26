@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getPersonaById } from '@/lib/supabase/personasService';
+import { getPersonaById } from '@/lib/supabase/services/personasService';
 import type { Persona, EstadoSituacionLaboral } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {

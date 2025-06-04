@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllEntrevistasForAdmin, logicalDeleteEntrevista, restoreEntrevista } from '@/lib/supabase/entrevistasService';
+import { getAllEntrevistasForAdmin, logicalDeleteEntrevista, restoreEntrevista } from '@/lib/supabase/services/entrevistasService';
 import type { Entrevista } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {

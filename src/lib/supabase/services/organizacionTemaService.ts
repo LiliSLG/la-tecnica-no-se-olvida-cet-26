@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { RelationshipService } from './relationshipService';
+import { RelationshipService } from '@/lib/supabase/services/relationshipService';
 import { ServiceResult } from '../types/service';
 
 type Tema = Database['public']['Tables']['temas']['Row'];

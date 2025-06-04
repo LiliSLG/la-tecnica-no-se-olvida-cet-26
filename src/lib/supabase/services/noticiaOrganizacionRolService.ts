@@ -5,7 +5,7 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type NoticiaOrganizacionRol = Database['public']['Tables']['noticia_organizacion_rol']['Row'];
+type NoticiaOrganizacionRol = Database['public']['Tables']['noticia_organizacion_rol']['Row'] & { id: string };
 type CreateNoticiaOrganizacionRol = Database['public']['Tables']['noticia_organizacion_rol']['Insert'];
 type UpdateNoticiaOrganizacionRol = Database['public']['Tables']['noticia_organizacion_rol']['Update'];
 type Organizacion = Database['public']['Tables']['organizaciones']['Row'];
@@ -14,9 +14,13 @@ type Noticia = Database['public']['Tables']['noticias']['Row'];
 const VALID_ROLES = ['editor', 'publicador', 'colaborador'] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
-export class NoticiaOrganizacionRolService extends BaseService<NoticiaOrganizacionRol, CreateNoticiaOrganizacionRol, UpdateNoticiaOrganizacionRol> {
+export class NoticiaOrganizacionRolService extends BaseService<NoticiaOrganizacionRol, 'noticia_organizacion_rol'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'noticia_organizacion_rol', supabase });
+    super(supabase, 'noticia_organizacion_rol', {
+      entityType: 'noticia',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateNoticiaOrganizacionRol): ValidationError | null {

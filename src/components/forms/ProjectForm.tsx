@@ -65,21 +65,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-// React import was duplicated, removed one.
 import {
   searchPersonas,
   getPersonasByIds,
   createPersonaPlaceholder,
-} from "@/lib/firebase/personasService";
+} from '@/lib/supabase/services/personasService';
 import {
   searchOrganizacionesByName,
   getOrganizacionesByIds,
   addOrganizacion,
-} from "@/lib/firebase/organizacionesService";
+} from '@/lib/supabase/services/organizacionesService';
 import {
   getAllTemasActivos as getAllTemasActivosService,
   getTemasByIds as getTemasByIdsService,
-} from "@/lib/firebase/temasService";
+} from '@/lib/supabase/services/temasService';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";

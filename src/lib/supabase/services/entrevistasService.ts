@@ -10,8 +10,12 @@ import { CacheableServiceConfig } from './cacheableService';
 type Entrevista = Database['public']['Tables']['entrevistas']['Row'];
 
 export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
-  constructor(supabase: SupabaseClient<Database>, cacheConfig: CacheableServiceConfig) {
-    super(supabase, 'entrevistas', cacheConfig);
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, 'entrevistas', {
+      entityType: 'entrevista',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: Database['public']['Tables']['entrevistas']['Insert']): ValidationError | null {
@@ -200,6 +204,31 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
       );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getOrganizaciones', entrevistaId }));
+    }
+  }
+
+  public async getPublicadas(
+    options?: QueryOptions
+  ): Promise<ServiceResult<Entrevista[] | null>> {
+    try {
+      const { data: results, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .eq('esta_publicada', true)
+        .eq('esta_eliminada', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!results) return this.createSuccessResult(null);
+
+      // Cache individual results
+      for (const result of results) {
+        await this.setInCache(result.id, result);
+      }
+
+      return this.createSuccessResult(results);
+    } catch (error) {
+      return this.createErrorResult(error as Error);
     }
   }
 } 

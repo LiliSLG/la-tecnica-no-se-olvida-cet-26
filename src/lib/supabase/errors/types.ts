@@ -1,3 +1,4 @@
+// src/lib/supabase/errors/types.ts
 export interface ValidationError extends Error {
   message: string;
   field: string;
@@ -5,9 +6,11 @@ export interface ValidationError extends Error {
   code?: string;
 }
 
-export interface ServiceError {
-  message: string;
+export interface ServiceError extends Error {
+  // <--- CAMBIO CLAVE
+  // message: string; // 'message' ya es heredado de Error
+  // name: string;    // 'name' ya es heredado de Error
   code?: string;
   details?: any;
   context?: any;
-} 
+}

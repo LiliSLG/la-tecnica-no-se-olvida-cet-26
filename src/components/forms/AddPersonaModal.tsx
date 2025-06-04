@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,11 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { UploadCloud, Image as ImageIcon, Trash2, Loader2, UserPlus, Tags } from 'lucide-react';
 import NextImage from 'next/image';
-import { storage } from '@/lib/firebase/config';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { createPersonaPlaceholder } from '@/lib/firebase/personasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle as ModalCardTitle } from '@/components/ui/card';
@@ -147,32 +143,55 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
       setIsUploading(true);
       console.log('Modal: Attempting to upload profile picture:', selectedFile.name);
       try {
+        // TODO: Migrate to Supabase Storage
+        // const uploadToSupabaseStorage = async (file: File) => {
+        //   const { data, error } = await supabase.storage
+        //     .from('fotos_perfil_placeholders')
+        //     .upload(`${Date.now()}_${file.name.replace(/\s+/g, '_')}`, file);
+        //   if (error) throw error;
+        //   return data;
+        // };
+
+        // TODO: Replace Firebase storage upload with Supabase Storage
+        // const uploadToSupabaseStorage = async (file: File) => {
+        //   const { data, error } = await supabase.storage
+        //     .from('fotos_perfil_placeholders')
+        //     .upload(`${Date.now()}_${file.name.replace(/\s+/g, '_')}`, file);
+        //   if (error) throw error;
+        //   return data;
+        // };
+
+        // TODO: Replace createPersonaPlaceholder with PersonasService.create
+        // const personasService = new PersonasService(supabase);
+
         const uniqueFileName = `fotos_perfil_placeholders/${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
-        const fileRef = storageRef(storage, uniqueFileName);
-        const metadata = { contentType: selectedFile.type };
-        const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
+        // TODO: Migrate to Supabase Storage
+        // const fileRef = storageRef(storage, uniqueFileName);
+        // const metadata = { contentType: selectedFile.type };
+        // const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
 
         finalModalFotoURL = await new Promise<string | null>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-            (error) => { 
-                console.error("Modal: Upload error:", error); 
-                toast({ title: "Error de Subida (Modal)", description: `No se pudo subir la imagen. ${error.message}`, variant: "destructive" });
-                reject(error); 
-            },
-            async () => {
-              try {
-                const url = await getDownloadURL(uploadTask.snapshot.ref);
-                console.log('Modal: Image uploaded successfully. URL:', url);
-                resolve(url);
-              } catch (getUrlError) { 
-                console.error("Modal: Get URL error:", getUrlError); 
-                toast({ title: "Error de Subida (Modal)", description: `No se pudo obtener la URL de la imagen. ${(getUrlError as Error).message}`, variant: "destructive" });
-                reject(getUrlError); 
-              }
-            }
-          );
+          // TODO: Migrate to Supabase Storage
+          // uploadTask.on(
+          //   'state_changed',
+          //   (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+          //   (error) => { 
+          //       console.error("Modal: Upload error:", error); 
+          //       toast({ title: "Error de Subida (Modal)", description: `No se pudo subir la imagen. ${error.message}`, variant: "destructive" });
+          //       reject(error); 
+          //   },
+          //   async () => {
+          //     try {
+          //       const url = await getDownloadURL(uploadTask.snapshot.ref);
+          //       console.log('Modal: Image uploaded successfully. URL:', url);
+          //       resolve(url);
+          //     } catch (getUrlError) { 
+          //       console.error("Modal: Get URL error:", getUrlError); 
+          //       toast({ title: "Error de Subida (Modal)", description: `No se pudo obtener la URL de la imagen. ${(getUrlError as Error).message}`, variant: "destructive" });
+          //       reject(getUrlError); 
+          //     }
+          //   }
+          // );
         });
       } catch (error) {
         setIsUploading(false);
@@ -199,15 +218,16 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
       };
       
       console.log('Modal: Calling createPersonaPlaceholder with:', newPersonaDataForPlaceholder);
-      const createdPersona = await createPersonaPlaceholder(newPersonaDataForPlaceholder, user.uid);
-      console.log('Modal: Placeholder created in Firestore:', createdPersona);
+      // TODO: Replace createPersonaPlaceholder with PersonasService.create
+      // const createdPersona = await createPersonaPlaceholder(newPersonaDataForPlaceholder, user.uid);
+      console.log('Modal: Placeholder created in Firestore:', newPersonaDataForPlaceholder);
       
       const newFormAuthorForParent: FormAuthor = {
-        id: createdPersona.id!,
-        nombre: createdPersona.nombre,
-        apellido: createdPersona.apellido,
-        email: createdPersona.email || null,
-        fotoURL: createdPersona.fotoURL || null,
+        id: newPersonaDataForPlaceholder.id!,
+        nombre: newPersonaDataForPlaceholder.nombre,
+        apellido: newPersonaDataForPlaceholder.apellido,
+        email: newPersonaDataForPlaceholder.email || null,
+        fotoURL: newPersonaDataForPlaceholder.fotoURL || null,
         isNewPlaceholder: true,
       };
       

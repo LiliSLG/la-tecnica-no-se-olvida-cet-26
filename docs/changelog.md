@@ -1,6 +1,13 @@
 # Changelog
 
-
+### Refactored
+- Standardized all service classes to correctly extend `BaseService` with proper generic parameters and constructor calls.
+- Fixed inheritance and super() calls in:
+  - `proyectoOrganizacionRolService.ts`
+  - `proyectoPersonaRolService.ts`
+  - `entrevistaOrganizacionRolService.ts`
+  - `entrevistaPersonaRolService.ts`
+  
 ## [2025-06-01] Migración Firestore → Supabase (Fase 1 y Fase 2)
 
 - Migración completa de servicios:

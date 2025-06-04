@@ -72,7 +72,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getAllTemasActivos } from "@/lib/supabase/temasService";
+import { getAllTemasActivos } from "@/lib/supabase/services/temasService";
 import type { Tema, TemaOption } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -904,10 +904,10 @@ export default function EntrevistaForm({
                                     key={tema.id}
                                     value={tema.nombre}
                                     onSelect={() => {
-                                      // Cambiamos “Tema[]” por “TemaOption[]”
+                                      // Cambiamos "Tema[]" por "TemaOption[]"
                                       let newSelected: TemaOption[];
 
-                                      // “isChecked” debería venir de:
+                                      // "isChecked" debería venir de:
                                       // const isChecked = selectedTemaObjects.some(t => t.id === tema.id);
 
                                       if (isChecked) {
@@ -924,7 +924,7 @@ export default function EntrevistaForm({
                                         ];
                                       }
 
-                                      // Ahora “newSelected” es TemaOption[], acorde a setValue("temas", …)
+                                      // Ahora "newSelected" es TemaOption[], acorde a setValue("temas", …)
                                       field.onChange(newSelected);
                                       trigger("temas");
                                     }}

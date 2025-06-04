@@ -220,16 +220,12 @@ export interface Persona {
 export interface Tema {
   id: string;
   nombre: string;
-  descripcion?: string | null;
-  categoriaTema?: TemaCategoria | null;
-
-  ingresadoPorUid?: string | null;
-  creadoEn: string;
-  actualizadoEn: string;
-  modificadoPorUid?: string | null;
-  estaEliminada: boolean;
-  eliminadoEn?: string | null;
-  eliminadoPorUid?: string | null;
+  descripcion: string | null;
+  created_at: string;
+  updated_at: string;
+  esta_eliminado: boolean;
+  eliminado_por_uid: string | null;
+  eliminado_en: string | null;
 }
 
 // --- FormAuthor: Used for selection in ProjectForm ---

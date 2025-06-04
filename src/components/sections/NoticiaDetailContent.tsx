@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getNoticiaById } from '@/lib/supabase/noticiasService';
+import { getNoticiaById } from '@/lib/supabase/services/noticiasService';
 import type { Noticia } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Newspaper, CalendarDays, UserCircle, Tag, ArrowLeft, AlertTriangle, RefreshCw, Link as LinkIcon } from 'lucide-react';
@@ -15,6 +14,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
+import { NoticiasService } from '@/lib/supabase/services/noticiasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import type { Database } from '@/lib/supabase/types/database.types';
 
 interface NoticiaDetailContentProps {
   noticiaId: string;

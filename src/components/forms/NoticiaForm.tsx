@@ -66,7 +66,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Tema, TemaOption } from "@/lib/types";
-import { getAllTemasActivos } from "@/lib/supabase/temasService";
+import { getAllTemasActivos } from "@/lib/supabase/services/temasService";
 import AddTemaModal from "./AddTemaModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {

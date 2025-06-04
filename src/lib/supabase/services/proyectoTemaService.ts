@@ -5,12 +5,16 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type ProyectoTema = Database['public']['Tables']['proyecto_tema']['Row'];
+type ProyectoTema = Database['public']['Tables']['proyecto_tema']['Row'] & { id: string };
 type CreateProyectoTema = Database['public']['Tables']['proyecto_tema']['Insert'];
 
-export class ProyectoTemaService extends BaseService<ProyectoTema, CreateProyectoTema, never> {
+export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tema'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'proyecto_tema', supabase });
+    super(supabase, 'proyecto_tema', {
+      entityType: 'proyecto',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateProyectoTema): ValidationError | null {

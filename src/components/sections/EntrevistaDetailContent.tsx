@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getEntrevistaById } from "@/lib/supabase/entrevistasService";
+import { getEntrevistaById } from "@/lib/supabase/services/entrevistasService";
 import type { Entrevista, Tema } from "@/lib/types";
-import { getTemasByIds } from "@/lib/supabase/temasService";
+import { getTemasByIds } from "@/lib/supabase/services/temasService";
 import { useToast } from "@/hooks/use-toast";
 import {
   MessageSquare,

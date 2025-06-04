@@ -10,8 +10,12 @@ import { CacheableServiceConfig } from './cacheableService';
 type Tema = Database['public']['Tables']['temas']['Row'];
 
 export class TemasService extends BaseService<Tema, 'temas'> {
-  constructor(supabase: SupabaseClient<Database>, cacheConfig: CacheableServiceConfig) {
-    super(supabase, 'temas', cacheConfig);
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, 'temas', {
+      entityType: 'tema',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: Database['public']['Tables']['temas']['Insert']): ValidationError | null {
@@ -215,6 +219,30 @@ export class TemasService extends BaseService<Tema, 'temas'> {
       );
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getNoticias', temaId }));
+    }
+  }
+
+  public async getAllActivos(
+    options?: QueryOptions
+  ): Promise<ServiceResult<Tema[] | null>> {
+    try {
+      const { data: results, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .eq('esta_eliminado', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!results) return this.createSuccessResult(null);
+
+      // Cache individual results
+      for (const result of results) {
+        await this.setInCache(result.id, result);
+      }
+
+      return this.createSuccessResult(results);
+    } catch (error) {
+      return this.createErrorResult(error as Error);
     }
   }
 } 

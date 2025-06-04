@@ -1,16 +1,16 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProjectForm from '@/components/forms/ProjectForm';
 import type { ProjectFormData } from '@/lib/schemas/projectSchema';
-import { addProject } from '@/lib/supabase/proyectosService';
+import { addProject } from '@/lib/supabase/services/proyectosService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { convertFormDataToSupabaseProject } from "@/lib/schemas/projectSchema";
 import { PlusCircle } from 'lucide-react';
 import type { Proyecto } from "@/lib/types";
+import { ProyectosService } from '@/lib/supabase/services/proyectosService';
 
 export default function CreateProjectContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,34 +28,42 @@ export default function CreateProjectContent() {
       return false;
     }
 
-    setIsSubmitting(true);
     try {
-      // 1. Convertimos el form a Partial<Proyecto>
+      setIsSubmitting(true);
+      const proyectosService = new ProyectosService(supabase);
+      
       const partial: Partial<Proyecto> = convertFormDataToSupabaseProject(data);
-
-      // 2. Hacemos el “cast” para que encaje en lo que addProject espera
+      
+      // 2. Hacemos el "cast" para que encaje en lo que addProject espera
       const dataForSupabase = partial as Omit<
         Proyecto,
-        | "id"
-        | "estaEliminado"
-        | "creadoPorUid"
-        | "creadoEn"
-        | "actualizadoPorUid"
-        | "actualizadoEn"
+        'id' | 'created_at' | 'updated_at' | 'eliminado_por_uid' | 'eliminado_en'
       >;
 
-      // 3. Insertamos en Supabase
-      await addProject(dataForSupabase, user.id);
+      const result = await proyectosService.addProject(
+        dataForSupabase,
+        data.temas,
+        data.personas,
+        data.organizaciones
+      );
 
-      toast({ title: "Éxito", description: "Proyecto creado correctamente." });
-      router.push(`/proyectos`);
+      if (result.error) {
+        throw result.error;
+      }
+
+      toast({
+        title: 'Proyecto creado',
+        description: 'El proyecto se ha creado correctamente.',
+      });
+
+      router.push('/admin/gestion-proyectos');
       return true;
     } catch (error) {
-      console.error("Error creating project:", error);
+      console.error('Error creating project:', error);
       toast({
-        title: "Error",
-        description: "No se pudo crear el proyecto.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Ha ocurrido un error al crear el proyecto.',
+        variant: 'destructive',
       });
       return false;
     } finally {

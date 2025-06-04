@@ -5,14 +5,18 @@ import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
-type ProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Row'];
+type ProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Row'] & { id: string };
 type CreateProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Insert'];
 
 const VALID_ROLES = ['patrocinador', 'colaborador', 'investigador', 'institucion'];
 
-export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganizacionRol, CreateProyectoOrganizacionRol, never> {
+export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganizacionRol, 'proyecto_organizacion_rol'> {
   constructor(supabase: SupabaseClient<Database>) {
-    super({ tableName: 'proyecto_organizacion_rol', supabase });
+    super(supabase, 'proyecto_organizacion_rol', {
+      entityType: 'proyecto',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateProyectoOrganizacionRol): ValidationError | null {

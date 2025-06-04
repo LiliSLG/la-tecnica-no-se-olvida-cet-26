@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TemaForm from '@/components/forms/TemaForm';
 import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { addTema } from '@/lib/supabase/temasService';
+import { addTema } from '@/lib/supabase/services/temasService';
 import { convertFormDataToSupabaseTema } from "@/lib/schemas/temaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

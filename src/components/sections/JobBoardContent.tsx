@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { OfertaTrabajo, TipoContratoOferta, Tema } from '@/lib/types';
@@ -11,7 +10,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllTemasActivos } from '@/lib/supabase/temasService';
+import { getAllTemasActivos } from '@/lib/supabase/services/temasService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const mockOfertas: OfertaTrabajo[] = [

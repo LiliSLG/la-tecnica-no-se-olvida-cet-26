@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllTemasForAdmin, logicalDeleteTema, restoreTema } from '@/lib/supabase/temasService';
+import { getAllTemasForAdmin, logicalDeleteTema, restoreTema } from '@/lib/supabase/services/temasService';
 import type { Tema } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {

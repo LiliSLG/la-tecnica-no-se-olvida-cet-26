@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EntrevistaForm from '@/components/forms/EntrevistaForm';
 import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
-import { addEntrevista } from '@/lib/supabase/entrevistasService';
+import { addEntrevista } from '@/lib/supabase/services/entrevistasService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, MessageSquare } from 'lucide-react';

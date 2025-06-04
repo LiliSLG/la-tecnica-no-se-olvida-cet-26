@@ -140,6 +140,7 @@ export abstract class BaseService<
       // Try to get from cache first
       const cached = await this.getFromCache(id);
       if (cached) return createSuccessResult(cached);
+      console.log("LLAMANDO getById - entrando a supabase.from()");
 
       const { data: result, error } = await this.supabase
         .from(this.tableName)
@@ -317,7 +318,18 @@ export abstract class BaseService<
       if (error) throw error;
       if (!data) return createSuccessResult(null);
 
-      return createSuccessResult(data as T[]);
+      if (
+        !data ||
+        (Array.isArray(data) && data.some((item) => "message" in item))
+      ) {
+        return createErrorResult(
+          new Error("Unexpected data format from Supabase")
+        );
+      }
+
+      return createSuccessResult(data as unknown as T[]);
+
+      
     } catch (error) {
       return createErrorResult(error as Error);
     }
