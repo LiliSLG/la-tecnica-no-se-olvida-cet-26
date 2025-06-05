@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Curso, NivelCurso } from '@/lib/types';
@@ -10,7 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BookCopy, Search, Filter, XIcon, Info, Wrench } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CursosService } from '@/lib/supabase/services/cursosService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
 
+// TODO: Remove mock data once cursosService is implemented
 const mockCursos: Curso[] = [
   {
     id: 'c1',
@@ -123,7 +126,10 @@ const nivelOptions: Array<{value: NivelCurso | 'all', label: string}> = [
   { value: 'todos', label: 'Para Todos (General)' },
 ];
 
+const cursosService = new CursosService(supabase);
+
 export default function CoursesContent() {
+  const { toast } = useToast();
   const [cursos, setCursos] = useState<Curso[]>(mockCursos);
   const [filteredCursos, setFilteredCursos] = useState<Curso[]>(mockCursos);
   const [loading, setLoading] = useState(false); 
@@ -134,13 +140,39 @@ export default function CoursesContent() {
 
   const allAvailableTemas = useMemo(() => {
     const temasSet = new Set<string>();
-    mockCursos.forEach(curso => curso.temas?.forEach(tema => temasSet.add(tema)));
+    cursos.forEach(curso => curso.temas?.forEach(tema => temasSet.add(tema)));
     return Array.from(temasSet).sort();
-  }, []); 
+  }, [cursos]); 
+
+  useEffect(() => {
+    const fetchCursos = async () => {
+      setLoading(true);
+      try {
+        // TODO: Replace with cursosService.getAll() once implemented
+        const result = await cursosService.getAll();
+        if (result.data) {
+          setCursos(result.data);
+          setFilteredCursos(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los cursos. Por favor, intenta nuevamente más tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCursos();
+  }, [toast]);
 
   useEffect(() => {
     let currentCursos = [...cursos];
     if (searchTerm) {
+      // TODO: Replace with cursosService.search(searchTerm) once implemented
       currentCursos = currentCursos.filter(c =>
         c.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.descripcionCorta.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -148,9 +180,11 @@ export default function CoursesContent() {
       );
     }
     if (selectedNivelFilter !== 'all') {
+      // TODO: Replace with cursosService.getByNivel(selectedNivelFilter) once implemented
       currentCursos = currentCursos.filter(c => c.nivel === selectedNivelFilter);
     }
     if (selectedTemaFilter !== 'all') {
+      // TODO: Replace with cursosService.getByTema(selectedTemaFilter) once implemented
       currentCursos = currentCursos.filter(c => c.temas?.includes(selectedTemaFilter));
     }
     setFilteredCursos(currentCursos);

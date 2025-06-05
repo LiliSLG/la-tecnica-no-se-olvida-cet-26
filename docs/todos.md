@@ -132,6 +132,14 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
     - [ ] Map `created_at` to `creadoEn`
     - [ ] Map `updated_at` to `actualizadoEn`
 
+### CursosService
+- [ ] Create `cursosService.ts` with the following methods:
+  - [ ] `getAll(): Promise<ServiceResult<Curso[]>>` - To retrieve all courses
+  - [ ] `getById(id: string): Promise<ServiceResult<Curso>>` - To retrieve a course by ID
+  - [ ] `search(term: string): Promise<ServiceResult<Curso[]>>` - To search courses by term
+  - [ ] `getByNivel(nivel: NivelCurso): Promise<ServiceResult<Curso[]>>` - To get courses by level
+  - [ ] `getByTema(tema: string): Promise<ServiceResult<Curso[]>>` - To get courses by topic
+
 ---
 
 ## ③ Migración de Formularios a Supabase Services y Storage
@@ -282,6 +290,14 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
   - [ ] Map `eliminado_en` to `eliminadoEn`
   - [ ] Map `created_at` to `creadoEn`
   - [ ] Map `updated_at` to `actualizadoEn`
+
+### CursosService
+- [ ] Create `cursosService.ts` with the following methods:
+  - [ ] `getAll(): Promise<ServiceResult<Curso[]>>` - To retrieve all courses
+  - [ ] `getById(id: string): Promise<ServiceResult<Curso>>` - To retrieve a course by ID
+  - [ ] `search(term: string): Promise<ServiceResult<Curso[]>>` - To search courses by term
+  - [ ] `getByNivel(nivel: NivelCurso): Promise<ServiceResult<Curso[]>>` - To get courses by level
+  - [ ] `getByTema(tema: string): Promise<ServiceResult<Curso[]>>` - To get courses by topic
 
 ## Type Definitions
 - [ ] Export `RolInstitucional` type from `@/lib/types`
