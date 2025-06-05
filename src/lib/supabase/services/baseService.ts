@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { ServiceResult, createSuccessResult, createErrorResult } from '../types/serviceResult';
-import { QueryOptions } from '../types/service';
+import { ServiceResult, QueryOptions } from '@/lib/supabase/types/service';
+import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 import { CacheableService, CacheableServiceConfig } from './cacheableService';

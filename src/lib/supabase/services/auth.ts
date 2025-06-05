@@ -3,7 +3,8 @@ import { Database } from '@/lib/supabase/types/database.types';
 import { ServiceResult } from '@/lib/supabase/types/service';
 import { ValidationError } from '@/lib/supabase/errors/types';
 import { mapValidationError } from '@/lib/supabase/errors/utils';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
+import { createSuccessResult, createErrorResult }
+  from '@/lib/supabase/types/service';
 import { supabase } from '@/lib/supabase/supabaseClient';
 
 export async function signIn(email: string, password: string): Promise<ServiceResult<{ user: any; session: any }>> {

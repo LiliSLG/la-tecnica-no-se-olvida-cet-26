@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import type { Noticia, Tema, TemaOption } from "@/lib/types";
+import type { Noticia, Tema, TemaOption } from "@/lib/supabase/types";
 import { stringToArrayZod } from "@/lib/schemas/projectSchema";
 
 /**

@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
-import { ServiceResult } from '../types/serviceResult';
+import { ServiceResult } from '../types/service';
 import { QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';

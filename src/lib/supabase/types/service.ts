@@ -1,72 +1,57 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
-import { ServiceError } from '../errors/types';
+// src/lib/supabase/types/service.ts
 
-export type ServiceResult<T> = {
-  data: T | null;
-  error: ServiceError | null;
+import { ServiceError } from '@/lib/supabase/errors/types';
+
+export interface ServiceResult<T> {
   success: boolean;
-};
+  data: T | null;
+  error?: ServiceError;
+}
 
 export interface QueryOptions {
-  limit?: number;
-  offset?: number;
-  orderBy?: string;
-  filters?: Record<string, any>;
-  includeDeleted?: boolean;
+  useCache?: boolean;
+  bypassCache?: boolean;
   page?: number;
   pageSize?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  filters?: Record<string, any>;
 }
-
-export type CreateOptions = {
-  returning?: boolean;
-};
-
-export type UpdateOptions = {
-  returning?: boolean;
-};
-
-export type DeleteOptions = {
-  hardDelete?: boolean;
-  returning?: boolean;
-};
 
 export interface BaseServiceConfig {
-  tableName: string;
-  supabase: SupabaseClient<Database>;
+  useCache?: boolean;
+  cacheTtl?: number;
 }
 
-export interface IBaseService<T, CreateInput, UpdateInput> {
-  // CRUD Operations
-  create(data: CreateInput, options?: CreateOptions): Promise<ServiceResult<T>>;
-  getById(id: string): Promise<ServiceResult<T>>;
-  getAll(options?: QueryOptions): Promise<ServiceResult<T[]>>;
-  update(id: string, data: UpdateInput, options?: UpdateOptions): Promise<ServiceResult<T>>;
-  delete(id: string, options?: DeleteOptions): Promise<ServiceResult<T>>;
-  
-  // Utility Operations
-  exists(id: string): Promise<boolean>;
-  count(options?: QueryOptions): Promise<number>;
-  
-  // Soft Delete Operations
-  softDelete(id: string): Promise<ServiceResult<T>>;
-  restore(id: string): Promise<ServiceResult<T>>;
-  
-  // Search Operations
-  search(query: string, options?: QueryOptions): Promise<ServiceResult<T[]>>;
+export interface CreateOptions {
+  bypassCache?: boolean;
 }
 
-export type WithTimestamps = {
-  created_at: string;
-  updated_at: string;
-};
+export interface UpdateOptions {
+  bypassCache?: boolean;
+}
 
-export type WithSoftDelete = {
-  esta_eliminada?: boolean;
-  eliminado_por_uid?: string | null;
-  eliminado_en?: string | null;
-};
+export interface DeleteOptions {
+  bypassCache?: boolean;
+}
 
-export type BaseEntity = WithTimestamps & WithSoftDelete; 
+export interface BaseEntity {
+  id: string;
+  creadoEn: string | null;
+  actualizadoEn: string | null;
+}
+
+export function createSuccessResult<T>(data: T): ServiceResult<T> {
+  return {
+    success: true,
+    data,
+  };
+}
+
+export function createErrorResult<T>(error: ServiceError): ServiceResult<T> {
+  return {
+    success: false,
+    data: null,
+    error,
+  };
+}

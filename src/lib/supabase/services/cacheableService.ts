@@ -1,7 +1,9 @@
 import { cacheService } from '../../redis/cacheService';
 import { cacheKeys } from '../../redis/cacheKeys';
-import { ServiceResult } from '../types/serviceResult';
 import { Database } from '../types/database.types';
+import { ServiceError } from '../errors/types';
+import { ServiceResult, QueryOptions, BaseServiceConfig } from '@/lib/supabase/types/service';
+
 
 type EntityType = Exclude<keyof typeof cacheKeys, 'helpers'>;
 type EntityId = string;
@@ -34,7 +36,7 @@ export class CacheableService<T extends { id: string }> {
     if (!this.enableCache) return;
     
     const key = cacheKeys[this.entityType].byId(id);
-    await cacheService.set(key, data, { ttl: this.ttl });
+    await cacheService.set(key, data, this.ttl);
   }
 
   protected async invalidateCache(id: EntityId): Promise<void> {
@@ -70,7 +72,7 @@ export class CacheableService<T extends { id: string }> {
     if (!this.enableCache) return;
     
     const key = cacheKeys[this.entityType].list();
-    await cacheService.set(key, data, { ttl: this.ttl });
+    await cacheService.set(key, data, this.ttl);
   }
 
   protected async getQueryFromCache(query: string): Promise<T[] | null> {
@@ -84,7 +86,7 @@ export class CacheableService<T extends { id: string }> {
     if (!this.enableCache) return;
     
     const key = cacheKeys[this.entityType].byQuery(query);
-    await cacheService.set(key, data, { ttl: this.ttl });
+    await cacheService.set(key, data, this.ttl);
   }
 
   protected async getStatsFromCache(): Promise<Record<string, any> | null> {
@@ -98,6 +100,6 @@ export class CacheableService<T extends { id: string }> {
     if (!this.enableCache) return;
     
     const key = cacheKeys[this.entityType].stats();
-    await cacheService.set(key, stats, { ttl: this.ttl });
+    await cacheService.set(key, stats, this.ttl);
   }
 } 

@@ -1,6 +1,6 @@
 import { PersonasService } from '@/lib/supabase/services/personasService';
 import { supabase } from '@/lib/supabase/supabaseClient';
-import { ServiceError } from '@/lib/supabase/services/baseService';
+import { ServiceError } from '@/lib/supabase/errors/types';
 import { Persona } from '@/types/persona';
 
 const personasService = new PersonasService(supabase);

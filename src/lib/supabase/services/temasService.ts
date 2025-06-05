@@ -1,6 +1,6 @@
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
-import { ServiceResult } from '../types/serviceResult';
+import { ServiceResult } from '../types/service';
 import { QueryOptions } from '../types/service';
 import { mapValidationError } from '../errors/utils';
 import { ValidationError } from '../errors/types';

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/supabaseClient';
-import { ServiceResult, ServiceError } from './baseService';
+import { ServiceResult } from '../types/service';
+import { ServiceError } from '../errors/types';
 import { Persona } from '@/types/persona';
 import { PersonasService } from './personasService';
 
