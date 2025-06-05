@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form'; // Added Controller
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { FormAuthor, CapacidadPlataforma, CategoriaPrincipalPersona } from '@/lib/types';
-import { addPersonaModalSchema, type AddPersonaModalFormData, categoriasPrincipalesPersonaLabels } from '@/lib/schemas/personaSchema';
+import type { FormAuthor } from '@/lib/types';
+import { addPersonaModalSchema, type AddPersonaModalFormData, categoriasPrincipalesPersonaLabels, type CategoriaPrincipalPersona, type CapacidadPlataforma } from '@/lib/schemas/personaSchema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -15,7 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle as ModalCardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { personasService } from '@/lib/supabase/services/personasService';
+import { uploadFile, getPublicUrl } from '@/lib/supabase/supabaseStorage';
 
 interface AddPersonaModalProps {
   open: boolean;
@@ -60,17 +62,17 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
 
   useEffect(() => {
     if (!open) {
-        // Reset image-related state when modal closes
-        setSelectedFile(null);
-        setPreviewURL(null);
-        setIsUploading(false);
-        setUploadProgress(0);
-        setIsSvgPreview(false);
-        // Consider resetting the form if modal is re-used for different contexts without re-mounting
-        resetModalForm({ 
-          nombre: '', apellido: '', email: '', fotoURL: '',
-          categoriaPrincipal: opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado' 
-        });
+      // Reset image-related state when modal closes
+      setSelectedFile(null);
+      setPreviewURL(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setIsSvgPreview(false);
+      // Consider resetting the form if modal is re-used for different contexts without re-mounting
+      resetModalForm({
+        nombre: '', apellido: '', email: '', fotoURL: '',
+        categoriaPrincipal: opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado'
+      });
     } else {
       // When modal opens, ensure default category is set if form values were stale
       setValue('categoriaPrincipal', opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado');
@@ -89,18 +91,18 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
       setIsSvgPreview(selectedFile.type === 'image/svg+xml');
     } else if (currentFotoURL && isValidImageUrl(currentFotoURL) && currentFotoURL !== 'PENDING_UPLOAD_MODAL') {
       if (previewURL && previewURL.startsWith('blob:')) {
-         objectUrlToRevoke = previewURL;
+        objectUrlToRevoke = previewURL;
       }
       setPreviewURL(currentFotoURL);
       setIsSvgPreview(currentFotoURL.toLowerCase().endsWith('.svg') || currentFotoURL.includes('data:image/svg+xml'));
-    } else if (!currentFotoURL && !selectedFile) { 
-        if (previewURL && previewURL.startsWith('blob:')) {
-         objectUrlToRevoke = previewURL;
+    } else if (!currentFotoURL && !selectedFile) {
+      if (previewURL && previewURL.startsWith('blob:')) {
+        objectUrlToRevoke = previewURL;
       }
       setPreviewURL(null);
       setIsSvgPreview(false);
     }
-    
+
     return () => {
       if (objectUrlToRevoke) {
         URL.revokeObjectURL(objectUrlToRevoke);
@@ -117,14 +119,14 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
     } else {
       setSelectedFile(null);
       if (watch('fotoURL') === 'PENDING_UPLOAD_MODAL') {
-         setValue('fotoURL', '', { shouldDirty: true });
+        setValue('fotoURL', '', { shouldDirty: true });
       }
     }
   };
 
   const handleRemoveImage = () => {
     setSelectedFile(null);
-    setValue('fotoURL', '', { shouldDirty: true }); 
+    setValue('fotoURL', '', { shouldDirty: true });
     setUploadProgress(0);
   };
 
@@ -137,117 +139,90 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
       return;
     }
     setIsSubmittingModal(true);
-    let finalModalFotoURL: string | null = data.fotoURL as string | null; // Type assertion
+    let finalModalFotoURL: string | null = data.fotoURL as string | null;
 
     if (selectedFile) {
       setIsUploading(true);
       console.log('Modal: Attempting to upload profile picture:', selectedFile.name);
       try {
-        // TODO: Migrate to Supabase Storage
-        // const uploadToSupabaseStorage = async (file: File) => {
-        //   const { data, error } = await supabase.storage
-        //     .from('fotos_perfil_placeholders')
-        //     .upload(`${Date.now()}_${file.name.replace(/\s+/g, '_')}`, file);
-        //   if (error) throw error;
-        //   return data;
-        // };
-
-        // TODO: Replace Firebase storage upload with Supabase Storage
-        // const uploadToSupabaseStorage = async (file: File) => {
-        //   const { data, error } = await supabase.storage
-        //     .from('fotos_perfil_placeholders')
-        //     .upload(`${Date.now()}_${file.name.replace(/\s+/g, '_')}`, file);
-        //   if (error) throw error;
-        //   return data;
-        // };
-
-        // TODO: Replace createPersonaPlaceholder with PersonasService.create
-        // const personasService = new PersonasService(supabase);
-
         const uniqueFileName = `fotos_perfil_placeholders/${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
-        // TODO: Migrate to Supabase Storage
-        // const fileRef = storageRef(storage, uniqueFileName);
-        // const metadata = { contentType: selectedFile.type };
-        // const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
-
-        finalModalFotoURL = await new Promise<string | null>((resolve, reject) => {
-          // TODO: Migrate to Supabase Storage
-          // uploadTask.on(
-          //   'state_changed',
-          //   (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-          //   (error) => { 
-          //       console.error("Modal: Upload error:", error); 
-          //       toast({ title: "Error de Subida (Modal)", description: `No se pudo subir la imagen. ${error.message}`, variant: "destructive" });
-          //       reject(error); 
-          //   },
-          //   async () => {
-          //     try {
-          //       const url = await getDownloadURL(uploadTask.snapshot.ref);
-          //       console.log('Modal: Image uploaded successfully. URL:', url);
-          //       resolve(url);
-          //     } catch (getUrlError) { 
-          //       console.error("Modal: Get URL error:", getUrlError); 
-          //       toast({ title: "Error de Subida (Modal)", description: `No se pudo obtener la URL de la imagen. ${(getUrlError as Error).message}`, variant: "destructive" });
-          //       reject(getUrlError); 
-          //     }
-          //   }
-          // );
-        });
+        finalModalFotoURL = await uploadFile(selectedFile, 'profile-pictures', (progress) => setUploadProgress(progress));
       } catch (error) {
+        console.error("Modal: Upload error:", error);
+        toast({ title: "Error de Subida (Modal)", description: `No se pudo subir la imagen. ${(error as Error).message}`, variant: "destructive" });
         setIsUploading(false);
         setIsSubmittingModal(false);
-        return; 
+        return;
       } finally {
         setIsUploading(false);
       }
     } else if (finalModalFotoURL === 'PENDING_UPLOAD_MODAL') {
-        finalModalFotoURL = null; 
+      finalModalFotoURL = null;
     } else if (finalModalFotoURL === '') {
-        finalModalFotoURL = null;
+      finalModalFotoURL = null;
     }
 
-
     try {
-      const newPersonaDataForPlaceholder = {
-        nombre: data.nombre,
-        apellido: data.apellido,
+      const now = new Date().toISOString();
+      const newPersonaData = {
+        nombre: `${data.nombre} ${data.apellido}`.trim(),
         email: data.email || null,
-        fotoURL: finalModalFotoURL || null,
-        capacidadesPlataforma: [roleToAssign],
-        categoriaPrincipal: data.categoriaPrincipal, // Pass selected category
+        foto_url: finalModalFotoURL || null,
+        capacidades_plataforma: [roleToAssign],
+        categoria_principal: data.categoriaPrincipal,
+        biografia: null,
+        es_admin: false,
+        created_at: now,
+        updated_at: now,
+        esta_eliminada: false,
+        eliminado_por_uid: null,
+        eliminado_en: null
       };
-      
-      console.log('Modal: Calling createPersonaPlaceholder with:', newPersonaDataForPlaceholder);
-      // TODO: Replace createPersonaPlaceholder with PersonasService.create
-      // const createdPersona = await createPersonaPlaceholder(newPersonaDataForPlaceholder, user.uid);
-      console.log('Modal: Placeholder created in Firestore:', newPersonaDataForPlaceholder);
-      
+
+      console.log('Modal: Calling personasService.create with:', newPersonaData);
+      const result = await personasService.create(newPersonaData);
+
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to create persona');
+      }
+
+      const createdPersona = result.data;
+      if (!createdPersona) {
+        throw new Error('No persona data returned from create');
+      }
+
+      console.log('Modal: Persona created in Supabase:', createdPersona);
+
+      // Split the full name back into nombre and apellido for the frontend
+      const [nombre, ...apellidoParts] = createdPersona.nombre.split(' ');
+      const apellido = apellidoParts.join(' ');
+
       const newFormAuthorForParent: FormAuthor = {
-        id: newPersonaDataForPlaceholder.id!,
-        nombre: newPersonaDataForPlaceholder.nombre,
-        apellido: newPersonaDataForPlaceholder.apellido,
-        email: newPersonaDataForPlaceholder.email || null,
-        fotoURL: newPersonaDataForPlaceholder.fotoURL || null,
-        isNewPlaceholder: true,
+        id: createdPersona.id,
+        nombre,
+        apellido,
+        email: createdPersona.email || null,
+        fotoURL: createdPersona.foto_url || null,
+        isNewPlaceholder: true as const
       };
-      
+
       console.log('Modal: Calling onPersonaCreated with:', newFormAuthorForParent);
       onPersonaCreated(newFormAuthorForParent);
-      
+
       toast({ title: "Éxito", description: `${data.nombre} ${data.apellido} añadido como perfil placeholder.` });
       handleCloseModal(true);
     } catch (error) {
-      console.error("Modal: Error creating persona placeholder:", error);
+      console.error("Modal: Error creating persona:", error);
       toast({ title: "Error", description: `No se pudo crear el perfil placeholder. ${(error as Error).message}`, variant: "destructive" });
     } finally {
       setIsSubmittingModal(false);
     }
   };
-  
+
   const handleCloseModal = (submittedSuccessfully: boolean = false) => {
-    resetModalForm({ 
-        nombre: '', apellido: '', email: '', fotoURL: '',
-        categoriaPrincipal: opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado'
+    resetModalForm({
+      nombre: '', apellido: '', email: '', fotoURL: '',
+      categoriaPrincipal: opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado'
     });
     setSelectedFile(null);
     setPreviewURL(null);
@@ -267,12 +242,12 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form 
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
               form.handleSubmit(onSubmitModal)(e);
-            }} 
+            }}
             className="space-y-6 py-4"
           >
             <FormField
@@ -314,10 +289,10 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1"><Tags className="h-4 w-4" /> Categoría Principal *</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     value={field.value}
-                    // defaultValue={opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado'}
+                  // defaultValue={opcionesCategoriaPrincipal[0]?.value || 'ninguno_asignado'}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -336,46 +311,47 @@ export default function AddPersonaModal({ open, onOpenChange, onPersonaCreated, 
                 </FormItem>
               )}
             />
-            
+
             <Card className="border-dashed">
-                <CardHeader className="p-4">
-                    <ModalCardTitle className="text-base flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Foto de Perfil (Opcional)</ModalCardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0">
-                    {previewURL && isValidImageUrl(previewURL) && (
-                    <div className="my-2 flex flex-col items-center">
-                        <NextImage src={previewURL} alt="Vista previa de foto" width={100} height={100} className="rounded-full object-cover border-2 border-primary/30 shadow-sm h-24 w-24" unoptimized={isSvgPreview && previewURL && !previewURL.startsWith('blob:')} />
-                    </div>
-                    )}
-                    <FormField
-                        control={control}
-                        name="fotoURL" 
-                        render={() => ( 
-                        <FormItem>
-                            <FormLabel htmlFor="foto-upload-modal" className="sr-only">Seleccionar Foto</FormLabel>
-                            <FormControl>
-                                <Input 
-                                    id="foto-upload-modal" 
-                                    type="file" 
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                    className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" 
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
+              <CardHeader className="p-4">
+                <ModalCardTitle className="text-base flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Foto de Perfil (Opcional)</ModalCardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4 pt-0">
+                {previewURL && isValidImageUrl(previewURL) && (
+                  <div className="my-2 flex flex-col items-center">
+                    <NextImage src={previewURL} alt="Vista previa de foto" width={100} height={100} className="rounded-full object-cover border-2 border-primary/30 shadow-sm h-24 w-24" unoptimized={!!(isSvgPreview && previewURL && !previewURL.startsWith('blob:'))}
                     />
-                    {isUploading && (
-                    <div className="mt-2 space-y-1">
-                        <Progress value={uploadProgress} className="w-full h-2" />
-                        <p className="text-xs text-muted-foreground text-center">Subiendo: {uploadProgress.toFixed(0)}%</p>
-                    </div>
-                    )}
-                    {(previewURL || currentFotoURL === 'PENDING_UPLOAD_MODAL' || selectedFile) && !isUploading && (
-                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} className="w-full mt-2 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"><Trash2 className="mr-2 h-3.5 w-3.5" /> Quitar Foto</Button>
-                    )}
-                </CardContent>
+                  </div>
+                )}
+                <FormField
+                  control={control}
+                  name="fotoURL"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel htmlFor="foto-upload-modal" className="sr-only">Seleccionar Foto</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="foto-upload-modal"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {isUploading && (
+                  <div className="mt-2 space-y-1">
+                    <Progress value={uploadProgress} className="w-full h-2" />
+                    <p className="text-xs text-muted-foreground text-center">Subiendo: {uploadProgress.toFixed(0)}%</p>
+                  </div>
+                )}
+                {(previewURL || currentFotoURL === 'PENDING_UPLOAD_MODAL' || selectedFile) && !isUploading && (
+                  <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} className="w-full mt-2 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"><Trash2 className="mr-2 h-3.5 w-3.5" /> Quitar Foto</Button>
+                )}
+              </CardContent>
             </Card>
 
             <DialogFooter>
