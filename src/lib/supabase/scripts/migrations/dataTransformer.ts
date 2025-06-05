@@ -1,4 +1,8 @@
 import { ServiceResult, ServiceError } from '../../types/service';
+import { Persona } from '@/types/persona';
+import { Proyecto } from '@/types/proyecto';
+import { Curso } from '@/types/curso';
+import { Organizacion } from '@/types/organizacion';
 
 export interface FieldMapping {
   sourceField: string;
@@ -23,6 +27,70 @@ export interface TransformationProgress {
     id: string;
     error: any;
   }>;
+}
+
+export interface FirebaseUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  disabled: boolean;
+  metadata: {
+    creationTime: string;
+    lastSignInTime: string | null;
+  };
+}
+
+export interface OldUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OldProject {
+  id: string;
+  title: string;
+  description: string | null;
+  main_file_url: string | null;
+  status: 'draft' | 'published' | 'archived';
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_by_uid: string | null;
+  deleted_at: string | null;
+}
+
+export interface OldCourse {
+  id: string;
+  title: string;
+  description: string | null;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  duration: number;
+  status: 'draft' | 'published' | 'archived';
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_by_uid: string | null;
+  deleted_at: string | null;
+}
+
+export interface OldOrganization {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  website: string | null;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_by_uid: string | null;
+  deleted_at: string | null;
 }
 
 export class DataTransformer {
@@ -185,6 +253,85 @@ export class DataTransformer {
       successful: 0,
       failed: 0,
       errors: []
+    };
+  }
+
+  static transformFirebaseUser(user: FirebaseUser): Partial<Persona> {
+    return {
+      id: user.uid,
+      email: user.email || '',
+      nombre: user.displayName?.split(' ')[0] || '',
+      apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
+      avatarUrl: user.photoURL,
+      estado: 'activo',
+      categoriaPrincipal: 'estudiante',
+      activo: !user.disabled,
+      esAdmin: false,
+      creadoEn: user.metadata.creationTime,
+      actualizadoEn: user.metadata.lastSignInTime || user.metadata.creationTime,
+    };
+  }
+
+  static transformOldUser(user: OldUser): Partial<Persona> {
+    return {
+      id: user.id,
+      email: user.email,
+      nombre: user.first_name || '',
+      apellido: user.last_name || '',
+      avatarUrl: user.avatar_url,
+      estado: 'activo',
+      categoriaPrincipal: 'estudiante',
+      activo: true,
+      esAdmin: user.is_admin,
+      creadoEn: user.created_at,
+      actualizadoEn: user.updated_at,
+    };
+  }
+
+  static transformOldProject(project: OldProject): Partial<Proyecto> {
+    return {
+      id: project.id,
+      titulo: project.title,
+      descripcion: project.description,
+      archivoPrincipalUrl: project.main_file_url,
+      estado: project.status === 'published' ? 'activo' : 'inactivo',
+      activo: !project.is_deleted,
+      creadoEn: project.created_at,
+      actualizadoEn: project.updated_at,
+      eliminadoPorUid: project.deleted_by_uid,
+      eliminadoEn: project.deleted_at,
+    };
+  }
+
+  static transformOldCourse(course: OldCourse): Partial<Curso> {
+    return {
+      id: course.id,
+      titulo: course.title,
+      descripcion: course.description,
+      nivel: course.level,
+      duracion: course.duration,
+      estado: course.status === 'published' ? 'activo' : 'inactivo',
+      activo: !course.is_deleted,
+      creadoEn: course.created_at,
+      actualizadoEn: course.updated_at,
+      eliminadoPorUid: course.deleted_by_uid,
+      eliminadoEn: course.deleted_at,
+    };
+  }
+
+  static transformOldOrganization(org: OldOrganization): Partial<Organizacion> {
+    return {
+      id: org.id,
+      nombre: org.name,
+      descripcion: org.description,
+      logoUrl: org.logo_url,
+      sitioWeb: org.website,
+      estado: org.status === 'active' ? 'activo' : 'inactivo',
+      activo: !org.is_deleted,
+      creadoEn: org.created_at,
+      actualizadoEn: org.updated_at,
+      eliminadoPorUid: org.deleted_by_uid,
+      eliminadoEn: org.deleted_at,
     };
   }
 } 

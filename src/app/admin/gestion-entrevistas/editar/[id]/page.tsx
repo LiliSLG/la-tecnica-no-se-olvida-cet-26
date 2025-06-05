@@ -1,89 +1,90 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import EntrevistaForm from '@/components/forms/EntrevistaForm';
-import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
-import { getEntrevistaById, updateEntrevista } from '@/lib/supabase/services/entrevistasService';
-import { convertSupabaseDataToFormEntrevista } from "@/lib/schemas/entrevistaSchema";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import type { Entrevista } from '@/lib/types';
+import { HistoriasOralesService } from '@/lib/supabase/services/historiasOralesService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import EntrevistaForm from '@/components/forms/EntrevistaForm';
+import type { EntrevistaFormData } from '@/lib/schemas/entrevistaSchema';
 
-interface EditarEntrevistaPageProps {
-  params: Promise<{ id: string }> | { id: string };
+interface EditEntrevistaPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function EditarEntrevistaPage({ params: paramsProp }: EditarEntrevistaPageProps) {
-  const resolvedParams = use(paramsProp as Promise<{ id: string }>);
-  const { id: entrevistaId } = resolvedParams;
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initialData, setInitialData] = useState<EntrevistaFormData | undefined>(undefined);
+export default function EditEntrevistaPage({ params }: EditEntrevistaPageProps) {
+  const [entrevista, setEntrevista] = useState<Entrevista | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
-  const volverAPath = searchParams.get('volverA') || '/admin/entrevistas-gestion';
+  const historiasOralesService = new HistoriasOralesService(supabase);
 
   useEffect(() => {
     const fetchEntrevista = async () => {
-      if (!entrevistaId) return;
+      if (!params.id) return;
       setLoading(true);
+      setError(null);
       try {
-        const entrevista = await getEntrevistaById(entrevistaId);
-        if (entrevista) {
-          setInitialData(convertSupabaseDataToFormEntrevista(entrevista));
+        const result = await historiasOralesService.getById(params.id);
+        if (result.data) {
+          setEntrevista(result.data);
         } else {
           setError("Entrevista no encontrada.");
           toast({ title: "Error", description: "Entrevista no encontrada.", variant: "destructive" });
-          router.push(volverAPath); 
+          router.push('/admin/gestion-entrevistas'); 
         }
       } catch (err) {
-        console.error("Error fetching entrevista for editing:", err);
-        setError("No se pudo cargar la entrevista para editar.");
+        console.error("Error fetching entrevista:", err);
+        setError("No se pudo cargar la entrevista.");
         toast({ title: "Error", description: "No se pudo cargar la entrevista.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
     fetchEntrevista();
-  }, [entrevistaId, router, toast, volverAPath]);
+  }, [params.id, router, toast]);
 
   const handleSubmit = async (data: EntrevistaFormData): Promise<boolean> => {
     if (!user) {
-      toast({ title: "Error de Autenticación", description: "Debes estar autenticado.", variant: "destructive" });
-      return false;
-    }
-    if (!entrevistaId) {
-      toast({ title: "Error", description: "No se pudo identificar la entrevista a editar.", variant: "destructive" });
+      toast({ title: "Error", description: "Debes iniciar sesión para editar una entrevista.", variant: "destructive" });
       return false;
     }
 
-    setIsSubmitting(true);
+    setLoading(true);
+    setError(null);
     try {
-      await updateEntrevista(entrevistaId, data, user.id);
-      toast({ title: "Éxito", description: "Entrevista actualizada correctamente." });
-      router.push(volverAPath);
-      return true;
+      const result = await historiasOralesService.update(params.id, data, user.id);
+      if (result.data) {
+        toast({ title: "Éxito", description: "Entrevista actualizada correctamente." });
+        router.push('/admin/gestion-entrevistas');
+        return true;
+      } else {
+        throw new Error(result.error?.message || "Error al actualizar la entrevista");
+      }
     } catch (error) {
       console.error("Error updating entrevista:", error);
+      setError("No se pudo actualizar la entrevista.");
       toast({ title: "Error", description: "No se pudo actualizar la entrevista.", variant: "destructive" });
       return false;
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-        Cargando datos de la entrevista...
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-muted-foreground">Cargando entrevista...</p>
       </div>
     );
   }
@@ -93,35 +94,34 @@ export default function EditarEntrevistaPage({ params: paramsProp }: EditarEntre
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <p className="text-xl text-destructive mb-4">{error}</p>
-        <Button onClick={() => router.push(volverAPath)} variant="outline">Volver al listado</Button>
+        <Button onClick={() => router.push('/admin/gestion-entrevistas')} variant="outline">Volver al listado</Button>
       </div>
     );
   }
-  
-  if (!initialData) {
-     return (
+
+  if (!entrevista) {
+    return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
         <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-xl text-muted-foreground mb-4">Entrevista no encontrada.</p>
-        <Button onClick={() => router.push(volverAPath)} variant="outline">Ir al listado</Button>
+        <Button onClick={() => router.push('/admin/gestion-entrevistas')} variant="outline">Ir al listado</Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <MessageSquare className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">Editar Entrevista / Saber</h1>
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold">Editar Entrevista</h1>
+        <p className="text-muted-foreground">
+          Modifica la información de "{entrevista.tituloSaber}".
+        </p>
       </header>
-      <p className="text-muted-foreground">
-        Modifica la información de "{initialData.tituloSaber}".
-      </p>
       <EntrevistaForm 
         onSubmit={handleSubmit} 
-        initialData={initialData} 
-        isSubmitting={isSubmitting} 
-        volverAPath={volverAPath}
+        initialData={entrevista} 
+        isSubmitting={loading} 
+        volverAPath="/admin/gestion-entrevistas"
       />
     </div>
   );

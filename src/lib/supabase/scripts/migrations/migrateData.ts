@@ -1,223 +1,119 @@
-import { Firestore } from 'firebase-admin/firestore';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { FirebaseExtractor } from './firebaseExtractor';
-import { DataTransformer } from './dataTransformer';
-import { personaTransformationConfig } from './configs/personaTransformer';
-import { organizacionTransformationConfig } from './configs/organizacionTransformer';
-import { temaTransformationConfig } from './configs/temaTransformer';
-import { proyectoTransformationConfig } from './configs/proyectoTransformer';
-import { entrevistaTransformationConfig } from './configs/entrevistaTransformer';
-import { noticiaTransformationConfig } from './configs/noticiaTransformer';
-import { ServiceResult, ServiceError } from '../../types/service';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { BaseMigration, MigrationResult } from './baseMigration';
+import { DataTransformer, OldUser, OldProject, OldCourse, OldOrganization } from './dataTransformer';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { ProyectosService } from '@/lib/supabase/services/proyectosService';
+import { CursosService } from '@/lib/supabase/services/cursosService';
+import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
+import { ServiceError } from '@/lib/supabase/services/baseService';
+import { Persona } from '@/types/persona';
+import { Proyecto } from '@/types/proyecto';
+import { Curso } from '@/types/curso';
+import { Organizacion } from '@/types/organizacion';
 
-interface MigrationConfig {
-  batchSize?: number;
-  maxRetries?: number;
-  retryDelay?: number;
-  dryRun?: boolean;
+const personasService = new PersonasService(supabase);
+const proyectosService = new ProyectosService(supabase);
+const cursosService = new CursosService(supabase);
+const organizacionesService = new OrganizacionesService(supabase);
+
+export class DataMigration extends BaseMigration {
+  private table: string;
+  private transformer: (data: any) => any;
+
+  constructor(table: string, transformer: (data: any) => any) {
+    super();
+    this.table = table;
+    this.transformer = transformer;
+  }
+
+  async getSourceData(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from(this.table)
+      .select('*');
+
+    if (error) {
+      throw new Error(`Error fetching data from ${this.table}: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async transformData(data: any): Promise<any> {
+    return this.transformer(data);
+  }
+
+  validateData(data: any): boolean {
+    return !!data.id;
+  }
+
+  async saveData(data: any): Promise<void> {
+    let result;
+    switch (this.table) {
+      case 'users':
+        result = await personasService.create(data as Partial<Persona>);
+        break;
+      case 'projects':
+        result = await proyectosService.create(data as Partial<Proyecto>);
+        break;
+      case 'courses':
+        result = await cursosService.create(data as Partial<Curso>);
+        break;
+      case 'organizations':
+        result = await organizacionesService.create(data as Partial<Organizacion>);
+        break;
+      default:
+        throw new Error(`Unknown table: ${this.table}`);
+    }
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+  }
 }
 
-interface MigrationProgress {
-  total: number;
-  completed: number;
-  failed: number;
-  currentEntity: string;
-  errors: Array<{
-    entity: string;
-    error: any;
-  }>;
+// Run migrations
+async function runMigrations() {
+  const migrations = [
+    {
+      table: 'users',
+      transformer: DataTransformer.transformOldUser,
+    },
+    {
+      table: 'projects',
+      transformer: DataTransformer.transformOldProject,
+    },
+    {
+      table: 'courses',
+      transformer: DataTransformer.transformOldCourse,
+    },
+    {
+      table: 'organizations',
+      transformer: DataTransformer.transformOldOrganization,
+    },
+  ];
+
+  for (const migration of migrations) {
+    console.log(`Starting migration for ${migration.table}...`);
+    const migrator = new DataMigration(migration.table, migration.transformer);
+    const result = await migrator.execute();
+    
+    if (result.success) {
+      console.log(`Migration for ${migration.table} completed successfully`);
+      console.log('Details:', result.details);
+    } else {
+      console.error(`Migration for ${migration.table} failed:`, result.error);
+      process.exit(1);
+    }
+  }
 }
 
-export class DataMigration {
-  private firestore: Firestore;
-  private supabase: SupabaseClient;
-  private extractor: FirebaseExtractor;
-  private transformer: DataTransformer | null = null;
-  private config: Required<MigrationConfig>;
-  private progress: MigrationProgress;
-
-  constructor(
-    firestore: Firestore,
-    supabase: SupabaseClient,
-    config: MigrationConfig = {}
-  ) {
-    this.firestore = firestore;
-    this.supabase = supabase;
-    this.config = {
-      batchSize: config.batchSize ?? 100,
-      maxRetries: config.maxRetries ?? 3,
-      retryDelay: config.retryDelay ?? 1000,
-      dryRun: config.dryRun ?? false
-    };
-    this.extractor = new FirebaseExtractor(firestore, {
-      batchSize: this.config.batchSize,
-      maxRetries: this.config.maxRetries,
-      retryDelay: this.config.retryDelay
-    });
-    this.progress = {
-      total: 0,
-      completed: 0,
-      failed: 0,
-      currentEntity: '',
-      errors: []
-    };
-  }
-
-  private logProgress(message: string): void {
-    console.log(`[DataMigration] ${message}`);
-  }
-
-  private logError(entity: string, error: any): void {
-    console.error(`[DataMigration] Error migrating ${entity}:`, error);
-    this.progress.errors.push({ entity, error });
-  }
-
-  private async migrateEntity<T>(
-    collectionPath: string,
-    config: any,
-    entityName: string
-  ): Promise<ServiceResult<T[]>> {
-    try {
-      this.progress.currentEntity = entityName;
-      this.logProgress(`Starting migration of ${entityName}`);
-
-      // Extract data from Firebase
-      const extractionResult = await this.extractor.extractCollection(collectionPath);
-      if (extractionResult.error || !extractionResult.data) {
-        throw extractionResult.error || new Error('No data extracted');
-      }
-
-      // Transform data
-      this.transformer = new DataTransformer(config);
-      const transformationResult = await this.transformer.transform(extractionResult.data);
-      if (transformationResult.error || !transformationResult.data) {
-        throw transformationResult.error || new Error('No data transformed');
-      }
-
-      // Insert data into Supabase (if not dry run)
-      if (!this.config.dryRun) {
-        const { data, error } = await this.supabase
-          .from(entityName.toLowerCase())
-          .upsert(transformationResult.data, { onConflict: 'id' });
-
-        if (error) {
-          throw error;
-        }
-
-        this.progress.completed += transformationResult.data.length;
-        this.logProgress(`Successfully migrated ${transformationResult.data.length} ${entityName}`);
-        return { data, error: null };
-      }
-
-      this.progress.completed += transformationResult.data.length;
-      this.logProgress(`[DRY RUN] Would migrate ${transformationResult.data.length} ${entityName}`);
-      return { data: transformationResult.data, error: null };
-    } catch (error) {
-      this.logError(entityName, error);
-      this.progress.failed++;
-      const serviceError: ServiceError = {
-        code: 'MIGRATION_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error during migration',
-        details: error
-      };
-      return { data: null, error: serviceError };
-    }
-  }
-
-  private async migrateRelationships(
-    collectionPath: string,
-    sourceField: string,
-    targetField: string,
-    junctionTable: string,
-    entityName: string
-  ): Promise<ServiceResult<any[]>> {
-    try {
-      this.logProgress(`Starting migration of ${entityName} relationships`);
-
-      const extractionResult = await this.extractor.extractRelationships(
-        collectionPath,
-        [sourceField],
-        [targetField]
-      );
-      if (extractionResult.error || !extractionResult.data) {
-        throw extractionResult.error || new Error('No relationship data extracted');
-      }
-
-      const relationshipData = extractionResult.data;
-
-      if (!this.config.dryRun) {
-        const { data, error } = await this.supabase
-          .from(junctionTable)
-          .upsert(relationshipData, { onConflict: `${sourceField},${targetField}` });
-
-        if (error) {
-          throw error;
-        }
-
-        this.logProgress(`Successfully migrated ${relationshipData.length} ${entityName} relationships`);
-        return { data, error: null };
-      }
-
-      this.logProgress(`[DRY RUN] Would migrate ${relationshipData.length} ${entityName} relationships`);
-      return { data: relationshipData, error: null };
-    } catch (error) {
-      this.logError(`${entityName} relationships`, error);
-      const serviceError: ServiceError = {
-        code: 'MIGRATION_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error during relationship migration',
-        details: error
-      };
-      return { data: null, error: serviceError };
-    }
-  }
-
-  public async migrate(): Promise<ServiceResult<void>> {
-    try {
-      this.logProgress('Starting data migration');
-      this.progress.total = 6; // Number of entities to migrate
-
-      // Migrate entities in order
-      await this.migrateEntity('personas', personaTransformationConfig, 'Personas');
-      await this.migrateEntity('organizaciones', organizacionTransformationConfig, 'Organizaciones');
-      await this.migrateEntity('temas', temaTransformationConfig, 'Temas');
-      await this.migrateEntity('proyectos', proyectoTransformationConfig, 'Proyectos');
-      await this.migrateEntity('entrevistas', entrevistaTransformationConfig, 'Entrevistas');
-      await this.migrateEntity('noticias', noticiaTransformationConfig, 'Noticias');
-
-      // Migrate relationships
-      await this.migrateRelationships('persona_tema', 'persona_id', 'tema_id', 'persona_tema', 'Persona-Tema');
-      await this.migrateRelationships('organizacion_tema', 'organizacion_id', 'tema_id', 'organizacion_tema', 'Organizacion-Tema');
-      await this.migrateRelationships('proyecto_tema', 'proyecto_id', 'tema_id', 'proyecto_tema', 'Proyecto-Tema');
-      await this.migrateRelationships('entrevista_tema', 'entrevista_id', 'tema_id', 'entrevista_tema', 'Entrevista-Tema');
-      await this.migrateRelationships('noticia_tema', 'noticia_id', 'tema_id', 'noticia_tema', 'Noticia-Tema');
-      await this.migrateRelationships('proyecto_persona_rol', 'proyecto_id', 'persona_id', 'proyecto_persona_rol', 'Proyecto-Persona-Rol');
-      await this.migrateRelationships('proyecto_organizacion_rol', 'proyecto_id', 'organizacion_id', 'proyecto_organizacion_rol', 'Proyecto-Organizacion-Rol');
-      await this.migrateRelationships('entrevista_persona_rol', 'entrevista_id', 'persona_id', 'entrevista_persona_rol', 'Entrevista-Persona-Rol');
-      await this.migrateRelationships('entrevista_organizacion_rol', 'entrevista_id', 'organizacion_id', 'entrevista_organizacion_rol', 'Entrevista-Organizacion-Rol');
-
-      this.logProgress('Data migration completed');
-      return { data: undefined, error: null };
-    } catch (error) {
-      const serviceError: ServiceError = {
-        code: 'MIGRATION_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error during migration',
-        details: error
-      };
-      return { data: null, error: serviceError };
-    }
-  }
-
-  public getProgress(): MigrationProgress {
-    return { ...this.progress };
-  }
-
-  public resetProgress(): void {
-    this.progress = {
-      total: 0,
-      completed: 0,
-      failed: 0,
-      currentEntity: '',
-      errors: []
-    };
-  }
-} 
+// Run all migrations
+runMigrations()
+  .then(() => {
+    console.log('All migrations completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('Migration failed:', error);
+    process.exit(1);
+  }); 

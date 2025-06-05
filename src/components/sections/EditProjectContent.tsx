@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProjectForm from '@/components/forms/ProjectForm';
 import type { ProjectFormData } from '@/lib/schemas/projectSchema';
-import { getProjectById, updateProject } from '@/lib/supabase/services/proyectosService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Proyecto } from '@/lib/types';
@@ -13,9 +12,9 @@ import {
   convertSupabaseDataToFormProject,
 } from "@/lib/schemas/projectSchema";
 import { Edit, Loader2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // Corrected import for Button
+import { Button } from '@/components/ui/button';
 import { ProyectosService } from '@/lib/supabase/services/proyectosService';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/supabaseClient';
 
 interface EditProjectContentProps {
   projectId: string;
@@ -31,6 +30,7 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const proyectosService = new ProyectosService(supabase);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -38,10 +38,10 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
       setLoading(true);
       setError(null);
       try {
-        const project = await getProjectById(projectId);
-        if (project) {
+        const result = await proyectosService.getById(projectId);
+        if (result.data) {
           // Convert Firestore data to form-compatible data before setting initialData
-          setInitialData(convertSupabaseDataToFormProject(project));
+          setInitialData(convertSupabaseDataToFormProject(result.data));
         } else {
           setError("Proyecto no encontrado.");
           toast({ title: "Error", description: "Proyecto no encontrado.", variant: "destructive" });
@@ -61,7 +61,6 @@ export default function EditProjectContent({ projectId }: EditProjectContentProp
   const handleSubmit = async (data: ProjectFormData): Promise<boolean> => {
     try {
       setIsSubmitting(true);
-      const proyectosService = new ProyectosService(supabase);
       
       const partial: Partial<Proyecto> = convertFormDataToSupabaseProject(data);
       

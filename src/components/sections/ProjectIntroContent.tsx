@@ -1,11 +1,22 @@
+"use client";
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Archive, BookOpen, Lightbulb, ArrowRight, Building, Handshake, Briefcase, BookCopy, MapPin } from 'lucide-react';
-import type { Curso, NivelCurso } from '@/lib/types'; 
+import { Users, Archive, BookOpen, Lightbulb, ArrowRight, Building, Handshake, Briefcase, BookCopy, MapPin, Loader2, AlertTriangle, Search } from 'lucide-react';
+import type { Curso, NivelCurso, Proyecto } from '@/lib/types'; 
 import CourseCard from '@/components/cards/CourseCard'; 
+import { ProyectosService } from '@/lib/supabase/services/proyectosService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Seleccionamos algunos cursos para mostrar en la homepage, incluyendo uno de la municipalidad y el nuevo de la cooperativa de agua.
 const homepageMockCursos: Curso[] = [
@@ -54,8 +65,63 @@ const homepageMockCursos: Curso[] = [
   }
 ];
 
+const proyectosService = new ProyectosService();
 
 export default function ProjectIntroContent() {
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadProyectos();
+  }, []);
+
+  const loadProyectos = async () => {
+    try {
+      setLoading(true);
+      const result = await proyectosService.getPublic();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setProyectos(result.data || []);
+    } catch (error) {
+      console.error('Error loading proyectos:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los proyectos',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      await loadProyectos();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await proyectosService.search(searchTerm);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setProyectos(result.data || []);
+    } catch (error) {
+      console.error('Error searching proyectos:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al buscar proyectos',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-12">
       <section className="text-center py-12 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl shadow-lg">
@@ -268,6 +334,70 @@ export default function ProjectIntroContent() {
             Consultar a la IA <Lightbulb className="ml-2 h-5 w-5" />
           </Link>
         </Button>
+      </section>
+
+      <section className="container mx-auto py-10">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Proyectos</h1>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Buscar por título..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="w-64"
+            />
+            <Button
+              variant="outline"
+              onClick={handleSearch}
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Buscar
+            </Button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ) : proyectos.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No se encontraron proyectos</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {proyectos.map((proyecto) => (
+              <Card key={proyecto.id}>
+                <CardHeader>
+                  <CardTitle>{proyecto.titulo}</CardTitle>
+                  <CardDescription>
+                    {format(new Date(proyecto.fechaCreacion), 'PPP', { locale: es })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {proyecto.descripcion}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <Badge variant="outline" className="capitalize">
+                        {proyecto.nivel}
+                      </Badge>
+                      <Button variant="link" asChild>
+                        <Link href={`/proyectos/${proyecto.id}`}>
+                          Ver detalles
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

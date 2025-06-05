@@ -1,67 +1,59 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import OrganizacionForm from "@/components/forms/OrganizacionForm";
-import type { OrganizacionFormData } from "@/lib/schemas/organizacionSchema";
-import { addOrganizacion } from "@/lib/supabase/services/organizacionesService";
-import { convertFormDataToSupabaseOrganizacion } from "@/lib/schemas/organizacionSchema";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { PlusCircle } from "lucide-react";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import OrganizacionForm from '@/components/forms/OrganizacionForm';
+import type { OrganizacionFormData } from '@/lib/schemas/organizacionSchema';
 
 export default function NuevaOrganizacionPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const organizacionesService = new OrganizacionesService(supabase);
 
-  const handleSubmit = async (data: OrganizacionFormData) => {
+  const handleSubmit = async (data: OrganizacionFormData): Promise<boolean> => {
     if (!user) {
-      toast({
-        title: "Error de Autenticación",
-        description: "Debes estar autenticado como administrador.",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Error", description: "Debes iniciar sesión para crear una organización.", variant: "destructive" });
+      return false;
     }
-    setIsSubmitting(true);
+
+    setLoading(true);
     try {
-      const dataForSupabase = convertFormDataToSupabaseOrganizacion(
-        data,
-        user.id
-      );
-      const orgId = await addOrganizacion(dataForSupabase, user.id);
-      toast({
-        title: "Éxito",
-        description: "Organización creada correctamente.",
-      });
-      router.push("/admin/organizaciones-gestion");
+      const result = await organizacionesService.create(data, user.id);
+      if (result.data) {
+        toast({ title: "Éxito", description: "Organización creada correctamente." });
+        router.push('/admin/organizaciones-gestion');
+        return true;
+      } else {
+        throw new Error(result.error?.message || "Error al crear la organización");
+      }
     } catch (error) {
       console.error("Error creating organizacion:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear la organización.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo crear la organización.", variant: "destructive" });
+      return false;
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <PlusCircle className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">
-          Crear Nueva Organización
-        </h1>
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold">Nueva Organización</h1>
+        <p className="text-muted-foreground">
+          Crea una nueva organización para el sitio.
+        </p>
       </header>
-      <p className="text-muted-foreground">
-        Completa la información a continuación para registrar una nueva
-        organización.
-      </p>
-      <OrganizacionForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      <OrganizacionForm 
+        onSubmit={handleSubmit} 
+        isSubmitting={loading} 
+        volverAPath="/admin/organizaciones-gestion"
+      />
     </div>
   );
 }

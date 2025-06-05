@@ -182,3 +182,104 @@ await personasService.delete(id);
 
 - ✅ Architecture cleaned and committed.
 - 🔄 Forms and Sections: In progress (see `/docs/todos.md`).
+
+## Service Architecture
+
+### BaseService
+The `BaseService` class provides a foundation for all services in the application. It handles:
+- Supabase client initialization
+- Common CRUD operations
+- Error handling
+- Type safety
+- Field mapping between database and domain models
+
+### CacheableService
+The `CacheableService` extends `BaseService` to add caching capabilities:
+- In-memory caching for frequently accessed data
+- Automatic cache invalidation on updates
+- Configurable cache TTL (Time To Live)
+- Cache key management
+- Cache hit/miss tracking
+
+Usage:
+```typescript
+class MyService extends CacheableService<MyType> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'my_table', {
+      ttl: 5 * 60 * 1000, // 5 minutes
+      maxSize: 1000 // Maximum number of items in cache
+    });
+  }
+}
+```
+
+### ServiceResult
+The `ServiceResult` type standardizes service responses:
+```typescript
+type ServiceResult<T> = {
+  data: T | null;
+  error: {
+    message: string;
+    code?: string;
+    details?: unknown;
+  } | null;
+};
+```
+
+Usage:
+- All service methods should return `Promise<ServiceResult<T>>`
+- `data` is null when operation fails
+- `error` is null when operation succeeds
+- Provides consistent error handling across the application
+
+## Forms Migration Status
+
+### Migrated Forms
+- [x] PersonaForm
+- [x] ProyectoForm
+- [x] NoticiaForm
+- [x] EntrevistaForm
+- [x] OrganizacionForm
+- [x] TemaForm
+
+### Pending Forms
+- [ ] CursoForm
+
+## Admin Pages Migration Status
+
+### Migrated Pages
+- [x] gestion-personas/editar/[id]
+- [x] gestion-personas/nueva
+- [x] gestion-proyectos/editar/[id]
+- [x] gestion-proyectos/nueva
+- [x] gestion-noticias/editar/[id]
+- [x] gestion-noticias/nueva
+- [x] gestion-entrevistas/editar/[id]
+- [x] gestion-entrevistas/nueva
+- [x] gestion-temas/editar/[id]
+- [x] gestion-temas/nueva
+- [x] organizaciones-gestion/editar/[id]
+- [x] organizaciones-gestion/nueva
+
+### Pending Pages
+- [ ] gestion-cursos/editar/[id]
+- [ ] gestion-cursos/nueva
+
+## Section Components Migration Status
+
+### Migrated Sections
+- [x] PersonaDetailContent
+- [x] ProjectDetailContent
+- [x] ProjectIntroContent
+- [x] ProjectListContent
+- [x] NoticiasListContent
+- [x] NoticiaDetailContent
+- [x] EgresadosEstudiantesContent
+- [x] HistoriaOralListContent
+- [x] JobBoardContent
+- [x] TutorsNetworkContent
+- [x] CoursesContent
+
+### Pending Sections
+- [ ] CourseDetailContent
+- [ ] CourseListContent

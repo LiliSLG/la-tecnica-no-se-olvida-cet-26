@@ -2,54 +2,56 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import TemaForm from '@/components/forms/TemaForm';
-import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { addTema } from '@/lib/supabase/services/temasService';
-import { convertFormDataToSupabaseTema } from "@/lib/schemas/temaSchema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle } from 'lucide-react';
+import { TemasService } from '@/lib/supabase/services/temasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import TemaForm from '@/components/forms/TemaForm';
+import type { TemaFormData } from '@/lib/schemas/temaSchema';
 
-export default function NuevoTemaPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function NuevaTemaPage() {
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const temasService = new TemasService(supabase);
 
   const handleSubmit = async (data: TemaFormData): Promise<boolean> => {
     if (!user) {
-      toast({ title: "Error de Autenticación", description: "Debes estar autenticado como administrador.", variant: "destructive" });
+      toast({ title: "Error", description: "Debes iniciar sesión para crear un tema.", variant: "destructive" });
       return false;
     }
-    setIsSubmitting(true);
+
+    setLoading(true);
     try {
-      const dataForSupabase = convertFormDataToSupabaseTema(data, user.id);
-      // addTema in service now handles setting timestamps and other audit fields
-      const temaId = await addTema(dataForSupabase as TemaFormData, user.id); // Cast needed if service expects more complete data
-      toast({ title: "Éxito", description: "Tema creado correctamente." });
-      router.push('/admin/gestion-temas'); 
-      return true;
+      const result = await temasService.create(data, user.id);
+      if (result.data) {
+        toast({ title: "Éxito", description: "Tema creado correctamente." });
+        router.push('/admin/gestion-temas');
+        return true;
+      } else {
+        throw new Error(result.error?.message || "Error al crear el tema");
+      }
     } catch (error) {
       console.error("Error creating tema:", error);
       toast({ title: "Error", description: "No se pudo crear el tema.", variant: "destructive" });
       return false;
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <PlusCircle className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">Crear Nuevo Tema</h1>
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold">Nuevo Tema</h1>
+        <p className="text-muted-foreground">
+          Crea un nuevo tema para el sitio.
+        </p>
       </header>
-      <p className="text-muted-foreground">
-        Completa la información a continuación para registrar un nuevo tema.
-      </p>
       <TemaForm 
         onSubmit={handleSubmit} 
-        isSubmitting={isSubmitting} 
+        isSubmitting={loading} 
         volverAPath="/admin/gestion-temas"
       />
     </div>

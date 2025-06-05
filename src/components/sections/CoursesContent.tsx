@@ -130,10 +130,9 @@ const cursosService = new CursosService(supabase);
 
 export default function CoursesContent() {
   const { toast } = useToast();
-  const [cursos, setCursos] = useState<Curso[]>(mockCursos);
-  const [filteredCursos, setFilteredCursos] = useState<Curso[]>(mockCursos);
-  const [loading, setLoading] = useState(false); 
-
+  const [cursos, setCursos] = useState<Curso[]>([]);
+  const [filteredCursos, setFilteredCursos] = useState<Curso[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNivelFilter, setSelectedNivelFilter] = useState<NivelCurso | 'all'>('all');
   const [selectedTemaFilter, setSelectedTemaFilter] = useState<string | 'all'>('all');
@@ -142,53 +141,58 @@ export default function CoursesContent() {
     const temasSet = new Set<string>();
     cursos.forEach(curso => curso.temas?.forEach(tema => temasSet.add(tema)));
     return Array.from(temasSet).sort();
-  }, [cursos]); 
+  }, [cursos]);
 
   useEffect(() => {
-    const fetchCursos = async () => {
+    loadCursos();
+  }, []);
+
+  const loadCursos = async () => {
+    try {
       setLoading(true);
-      try {
-        // TODO: Replace with cursosService.getAll() once implemented
-        const result = await cursosService.getAll();
-        if (result.data) {
-          setCursos(result.data);
-          setFilteredCursos(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching courses:', error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los cursos. Por favor, intenta nuevamente más tarde.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      const result = await cursosService.getPublic();
+      if (result.error) {
+        throw new Error(result.error.message);
       }
-    };
+      setCursos(result.data || []);
+      setFilteredCursos(result.data || []);
+    } catch (error) {
+      console.error('Error loading cursos:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los cursos',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchCursos();
-  }, [toast]);
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      await loadCursos();
+      return;
+    }
 
-  useEffect(() => {
-    let currentCursos = [...cursos];
-    if (searchTerm) {
-      // TODO: Replace with cursosService.search(searchTerm) once implemented
-      currentCursos = currentCursos.filter(c =>
-        c.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.descripcionCorta.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.instructor.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    try {
+      setLoading(true);
+      const result = await cursosService.search(searchTerm);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setCursos(result.data || []);
+      setFilteredCursos(result.data || []);
+    } catch (error) {
+      console.error('Error searching cursos:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al buscar cursos',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-    if (selectedNivelFilter !== 'all') {
-      // TODO: Replace with cursosService.getByNivel(selectedNivelFilter) once implemented
-      currentCursos = currentCursos.filter(c => c.nivel === selectedNivelFilter);
-    }
-    if (selectedTemaFilter !== 'all') {
-      // TODO: Replace with cursosService.getByTema(selectedTemaFilter) once implemented
-      currentCursos = currentCursos.filter(c => c.temas?.includes(selectedTemaFilter));
-    }
-    setFilteredCursos(currentCursos);
-  }, [searchTerm, selectedNivelFilter, selectedTemaFilter, cursos]);
+  };
 
   const resetFilters = () => {
     setSearchTerm('');

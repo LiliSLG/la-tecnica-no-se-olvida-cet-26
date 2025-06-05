@@ -12,6 +12,22 @@ type Persona = Database['public']['Tables']['personas']['Row'];
 type CreatePersona = Database['public']['Tables']['personas']['Insert'];
 type UpdatePersona = Database['public']['Tables']['personas']['Update'];
 
+interface MappedPersona {
+  id: string;
+  nombre: string;
+  email: string | null;
+  fotoURL: string | null;
+  biografia: string | null;
+  categoriaPrincipal: string | null;
+  capacidadesPlataforma: string[] | null;
+  esAdmin: boolean;
+  activo: boolean;
+  eliminadoPorUid: string | null;
+  eliminadoEn: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
 export class PersonasService extends BaseService<Persona, 'personas'> {
   constructor(
     supabase: SupabaseClient<Database>,
@@ -19,6 +35,38 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'persona' }
   ) {
     super(supabase, tableName, cacheConfig);
+  }
+
+  private mapPersonaToDomain(persona: Persona): MappedPersona {
+    return {
+      ...persona,
+      fotoURL: persona.foto_url,
+      categoriaPrincipal: persona.categoria_principal,
+      esAdmin: persona.es_admin,
+      activo: !persona.esta_eliminada,
+      eliminadoPorUid: persona.eliminado_por_uid,
+      eliminadoEn: persona.eliminado_en,
+      creadoEn: persona.created_at,
+      actualizadoEn: persona.updated_at
+    };
+  }
+
+  private mapPersonasToDomain(personas: Persona[]): MappedPersona[] {
+    return personas.map(persona => this.mapPersonaToDomain(persona));
+  }
+
+  private mapDomainToPersona(data: any): Partial<Persona> {
+    return {
+      ...data,
+      foto_url: data.fotoURL,
+      categoria_principal: data.categoriaPrincipal,
+      es_admin: data.esAdmin,
+      esta_eliminada: !data.activo,
+      eliminado_por_uid: data.eliminadoPorUid,
+      eliminado_en: data.eliminadoEn,
+      created_at: data.creadoEn,
+      updated_at: data.actualizadoEn
+    };
   }
 
   protected validateCreateInput(data: CreatePersona): ValidationError | null {
@@ -110,11 +158,10 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     }
   }
 
-  async getById(id: string): Promise<ServiceResult<Persona>> {
+  async getById(id: string): Promise<ServiceResult<MappedPersona | null>> {
     try {
-      // Try to get from cache first
       const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(cached);
+      if (cached) return this.createSuccessResult(this.mapPersonaToDomain(cached));
 
       const { data: persona, error } = await this.supabase
         .from(this.tableName)
@@ -125,12 +172,40 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
       if (error) throw error;
       if (!persona) return this.createSuccessResult(null);
 
-      // Cache the result
       await this.setInCache(id, persona);
-
-      return this.createSuccessResult(persona);
+      return this.createSuccessResult(this.mapPersonaToDomain(persona));
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<ServiceResult<MappedPersona[]>> {
+    try {
+      if (!ids.length) return this.createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return this.createSuccessResult(this.mapPersonasToDomain(cachedResults.filter(Boolean) as Persona[]));
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
+      }
+
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return this.createSuccessResult(this.mapPersonasToDomain(allResults));
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
     }
   }
 
@@ -161,7 +236,7 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     }
   }
 
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Persona[]>> {
+  async search(query: string, options?: QueryOptions): Promise<ServiceResult<MappedPersona[]>> {
     try {
       if (!query.trim()) return this.createSuccessResult([]);
 
@@ -176,12 +251,11 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
       if (error) throw error;
       if (!data) return this.createSuccessResult([]);
 
-      // Cache results
       for (const persona of data) {
         await this.setInCache(persona.id, persona);
       }
 
-      return this.createSuccessResult(data);
+      return this.createSuccessResult(this.mapPersonasToDomain(data));
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'search' }));
     }
@@ -241,54 +315,64 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     }
   }
 
-  public async getByEmail(email: string): Promise<ServiceResult<Persona | null>> {
+  public async getByEmail(email: string): Promise<ServiceResult<MappedPersona | null>> {
     try {
       if (!this.isValidEmail(email)) {
-        return createErrorResult(
-          mapValidationError('Invalid email format', 'email', email)
-        );
+        return this.createErrorResult({
+          name: 'ValidationError',
+          message: 'Email inválido',
+          field: 'email',
+          value: email
+        });
       }
 
-      const { data: result, error } = await this.supabase
+      const { data: persona, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .eq('email', email)
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .eq('esta_eliminada', false)
         .single();
 
       if (error) throw error;
-      if (!result) return createSuccessResult(null);
+      if (!persona) return this.createSuccessResult(null);
 
       // Cache the result
-      await this.setInCache(result.id, result);
+      await this.setInCache(persona.id, persona);
 
-      return createSuccessResult(result);
+      return this.createSuccessResult(this.mapPersonaToDomain(persona));
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getByEmail' }));
     }
   }
 
-  public async getAdmins(): Promise<ServiceResult<Persona[] | null>> {
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  public async getAdmins(): Promise<ServiceResult<Persona[]>> {
     try {
-      const { data: results, error } = await this.supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .eq('es_admin', true);
+        .select('*')
+        .eq('es_admin', true)
+        .eq('esta_eliminada', false);
 
       if (error) throw error;
-      if (!results) return createSuccessResult(null);
+      if (!data) return this.createSuccessResult([]);
 
-      // Cache individual results
-      for (const result of results) {
-        await this.setInCache(result.id, result);
+      // Cache results
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
       }
 
-      return createSuccessResult(results);
+      return this.createSuccessResult(data);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getAdmins' }));
     }
   }
 
-  public async getAllWithPagination(options?: QueryOptions): Promise<ServiceResult<Persona[] | null>> {
+  public async getAllWithPagination(options?: QueryOptions): Promise<ServiceResult<Persona[]>> {
     try {
       let query = this.supabase
         .from(this.tableName)
@@ -299,231 +383,266 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
         query = query.order(options.orderBy, { ascending: true });
       }
 
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
-      if (!data) return createSuccessResult(null);
+      if (!data) return this.createSuccessResult([]);
 
       // Cache results
       for (const persona of data) {
         await this.setInCache(persona.id, persona);
       }
 
-      return createSuccessResult(data);
+      return this.createSuccessResult(data);
     } catch (error) {
-      return createErrorResult(this.handleError(error, { operation: 'getAllWithPagination' }));
+      return this.createErrorResult(this.handleError(error, { operation: 'getAllWithPagination' }));
     }
   }
 
   public async getByCategoria(
     categoria: string,
     options?: QueryOptions
-  ): Promise<ServiceResult<Persona[] | null>> {
+  ): Promise<ServiceResult<Persona[]>> {
     try {
-      if (!categoria) {
-        return createErrorResult(
-          mapValidationError('Category is required', 'categoria_principal', categoria)
-        );
+      let query = this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('categoria_principal', categoria)
+        .eq('esta_eliminada', false);
+
+      if (options?.orderBy) {
+        query = query.order(options.orderBy, { ascending: true });
       }
 
-      return this.getAllWithPagination({
-        ...options,
-        filters: {
-          ...options?.filters,
-          categoria_principal: categoria
-        }
-      });
+      const { data, error } = await query;
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      // Cache results
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
+      }
+
+      return this.createSuccessResult(data);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getByCategoria' }));
     }
   }
 
   public async getByCapacidad(
     capacidad: string,
     options?: QueryOptions
-  ): Promise<ServiceResult<Persona[] | null>> {
+  ): Promise<ServiceResult<Persona[]>> {
     try {
-      if (!capacidad) {
-        return createErrorResult(
-          mapValidationError('Capacity is required', 'capacidad', capacidad)
-        );
-      }
-
-      const { data: results, error } = await this.supabase
+      let query = this.supabase
         .from(this.tableName)
         .select('*')
         .contains('capacidades_plataforma', [capacidad])
         .eq('esta_eliminada', false);
 
+      if (options?.orderBy) {
+        query = query.order(options.orderBy, { ascending: true });
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      if (!results) return createSuccessResult(null);
+      if (!data) return this.createSuccessResult([]);
 
-      // Apply pagination and sorting
-      let filteredResults = results;
-      if (options?.sortBy) {
-        filteredResults = filteredResults.sort((a, b) => {
-          const aValue = a[options.sortBy as keyof Persona];
-          const bValue = b[options.sortBy as keyof Persona];
-          if (typeof aValue === 'string' && typeof bValue === 'string') {
-            return options.sortOrder === 'desc' 
-              ? bValue.localeCompare(aValue)
-              : aValue.localeCompare(bValue);
-          }
-          return 0;
-        });
+      // Cache results
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
       }
 
-      if (options?.page && options?.pageSize) {
-        const start = (options.page - 1) * options.pageSize;
-        const end = start + options.pageSize;
-        filteredResults = filteredResults.slice(start, end);
-      }
-
-      // Cache individual results
-      for (const result of filteredResults) {
-        await this.setInCache(result.id, result);
-      }
-
-      return createSuccessResult(filteredResults);
+      return this.createSuccessResult(data);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getByCapacidad' }));
     }
   }
 
   public async getByTema(
-    temaId: string, 
+    temaId: string,
     options?: QueryOptions
-  ): Promise<ServiceResult<Persona[] | null>> {
+  ): Promise<ServiceResult<Persona[]>> {
     try {
-      if (!temaId) {
-        return createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
-      }
+      const { data, error } = await this.supabase
+        .from('personas_temas')
+        .select('persona_id')
+        .eq('tema_id', temaId);
 
-      return this.getRelatedEntities<Persona>(
-        temaId,
-        'temas',
-        'personas',
-        'persona_tema',
-        options
-      );
+      if (error) throw error;
+      if (!data || !data.length) return this.createSuccessResult([]);
+
+      const personaIds = data.map(pt => pt.persona_id);
+      return this.getByIds(personaIds);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getByTema' }));
     }
   }
 
   public async getTemas(
     id: string,
     options?: QueryOptions
-  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][] | null>> {
+  ): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][]>> {
     try {
-      if (!id) {
-        return createErrorResult(
-          mapValidationError('Persona ID is required', 'id', id)
-        );
-      }
+      const { data, error } = await this.supabase
+        .from('personas_temas')
+        .select('temas(*)')
+        .eq('persona_id', id);
 
-      return this.getRelatedEntities<Database['public']['Tables']['temas']['Row']>(
-        id,
-        'personas',
-        'temas',
-        'persona_tema',
-        options
-      );
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      return this.createSuccessResult(data.map(pt => pt.temas as Database['public']['Tables']['temas']['Row']));
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getTemas' }));
     }
   }
 
   public async addTema(personaId: string, temaId: string): Promise<ServiceResult<boolean>> {
     try {
-      if (!personaId || !temaId) {
-        return createErrorResult(
-          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
-        );
-      }
-
       const { error } = await this.supabase
-        .from('persona_tema')
-        .insert({
-          persona_id: personaId,
-          tema_id: temaId
-        });
+        .from('personas_temas')
+        .insert({ persona_id: personaId, tema_id: temaId });
 
       if (error) throw error;
 
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(personaId, ['byId', 'list']);
-
-      return createSuccessResult(true);
+      return this.createSuccessResult(true);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'addTema' }));
     }
   }
 
   public async removeTema(personaId: string, temaId: string): Promise<ServiceResult<boolean>> {
     try {
-      if (!personaId || !temaId) {
-        return createErrorResult(
-          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
-        );
-      }
-
       const { error } = await this.supabase
-        .from('persona_tema')
+        .from('personas_temas')
         .delete()
         .eq('persona_id', personaId)
         .eq('tema_id', temaId);
 
       if (error) throw error;
 
-      // Invalidate related caches
-      await this.invalidateRelatedCaches(personaId, ['byId', 'list']);
-
-      return createSuccessResult(true);
+      return this.createSuccessResult(true);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'removeTema' }));
     }
   }
 
   public async getPublicEgresadosYEstudiantes(
     options?: QueryOptions
-  ): Promise<ServiceResult<Persona[] | null>> {
+  ): Promise<ServiceResult<MappedPersona[]>> {
     try {
-      const { data: results, error } = await this.supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .in('categoria_principal', ['egresado', 'estudiante'])
+        .select('*')
         .eq('esta_eliminada', false)
-        .eq('es_publico', true)
-        .order('created_at', { ascending: false });
+        .in('categoria_principal', ['egresado', 'estudiante'])
+        .order('nombre', { ascending: true });
 
       if (error) throw error;
-      if (!results) return createSuccessResult(null);
+      if (!data) return this.createSuccessResult([]);
 
-      // Cache individual results
-      for (const result of results) {
-        await this.setInCache(result.id, result);
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
       }
 
-      return createSuccessResult(results);
+      return this.createSuccessResult(this.mapPersonasToDomain(data));
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublicEgresadosYEstudiantes' }));
     }
   }
 
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  public async getPublicTutoresYColaboradores(
+    options?: QueryOptions
+  ): Promise<ServiceResult<MappedPersona[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
+        .in('categoria_principal', ['tutor', 'colaborador'])
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
+      }
+
+      return this.createSuccessResult(this.mapPersonasToDomain(data));
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublicTutoresYColaboradores' }));
+    }
+  }
+
+  async getPublic(): Promise<ServiceResult<MappedPersona[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const persona of data) {
+        await this.setInCache(persona.id, persona);
+      }
+
+      return this.createSuccessResult(this.mapPersonasToDomain(data));
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+    }
+  }
+
+  async getCurrentUser(): Promise<ServiceResult<Persona | null>> {
+    try {
+      const { data: { user }, error: authError } = await this.supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) return this.createSuccessResult(null);
+
+      const { data: persona, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      if (!persona) return this.createSuccessResult(null);
+
+      await this.setInCache(persona.id, persona);
+      return this.createSuccessResult(persona);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getCurrentUser' }));
+    }
+  }
+
+  async logout(): Promise<ServiceResult<void>> {
+    try {
+      const { error } = await this.supabase.auth.signOut();
+      if (error) throw error;
+      return this.createSuccessResult(undefined);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'logout' }));
+    }
   }
 }
 
-// Singleton instance
 export const personasService = new PersonasService(supabase);
 
-// Export individual functions for backward compatibility
 export const getPersonaById = (id: string) => personasService.getById(id);
-export const getPersonasByIds = (ids: string[]) => Promise.all(ids.map(id => personasService.getById(id)));
+export const getPersonasByIds = (ids: string[]) => personasService.getByIds(ids);
 export const getPublicEgresadosYEstudiantes = (options?: QueryOptions) => personasService.getPublicEgresadosYEstudiantes(options);
-export const getPublicTutoresYColaboradores = (options?: QueryOptions) => personasService.getByCategoria('tutor', options);
+export const getPublicTutoresYColaboradores = (options?: QueryOptions) => personasService.getPublicTutoresYColaboradores(options);

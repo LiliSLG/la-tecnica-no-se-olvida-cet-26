@@ -404,6 +404,23 @@ export interface Database {
           rol?: 'autor' | 'editor' | 'colaborador'
         }
       }
+      ofertas_laborales: {
+        Row: {
+          id: string;
+          titulo: string;
+          descripcion: string | null;
+          empresa: string | null;
+          ubicacion: string | null;
+          estado: string;
+          esta_eliminada: boolean;
+          eliminado_por_uid: string | null;
+          eliminado_en: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['ofertas_laborales']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['ofertas_laborales']['Insert']>;
+      }
     }
     Views: {
       [_ in never]: never

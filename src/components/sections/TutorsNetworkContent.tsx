@@ -26,6 +26,11 @@ import { PersonasService } from '@/lib/supabase/services/personasService';
 import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
 import { supabase } from '@/lib/supabase/supabaseClient';
 import type { Database } from '@/lib/supabase/types/database.types';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 as NewLoader2, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 const tutorNetworkPersonaCategorias: Array<{ value: CategoriaPrincipalPersona; label: string }> = [
   { value: 'docente_cet', label: categoriasPrincipalesPersonaLabels['docente_cet'] },
@@ -39,72 +44,78 @@ const tutorNetworkPersonaCategorias: Array<{ value: CategoriaPrincipalPersona; l
 
 const tutorNetworkCategoriaValues = tutorNetworkPersonaCategorias.map(cat => cat.value);
 
+const personasService = new PersonasService();
+
 export default function TutorsNetworkContent() {
-  const [allPersonas, setAllPersonas] = useState<Persona[]>([]);
-  const [filteredPersonas, setFilteredPersonas] = useState<Persona[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [allOrganizaciones, setAllOrganizaciones] = useState<Organizacion[]>([]);
   const [filteredOrganizaciones, setFilteredOrganizaciones] = useState<Organizacion[]>([]);
   
-  const [loadingPersonas, setLoadingPersonas] = useState(true);
-  const [loadingOrganizaciones, setLoadingOrganizaciones] = useState(true);
+  const router = useRouter();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   // Filters for Personas
-  const [searchTermPersonas, setSearchTermPersonas] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedPersonaCategoriaFilter, setSelectedPersonaCategoriaFilter] = useState<CategoriaPrincipalPersona | 'all'>('all');
 
   // Filters for Organizaciones
   const [searchTermOrganizaciones, setSearchTermOrganizaciones] = useState('');
   const [selectedOrganizacionTipoFilter, setSelectedOrganizacionTipoFilter] = useState<TipoOrganizacion | 'all'>('all');
 
-  const fetchPersonasData = useCallback(async () => {
-    setLoadingPersonas(true);
+  useEffect(() => {
+    loadPersonas();
+  }, []);
+
+  const loadPersonas = async () => {
     try {
-      let fetchedPersonas = await getPublicTutoresYColaboradores();
-      // Apply category filter here, after fetching from service
-      // This filters for general categories suitable for this network
-      let relevantPersonas = fetchedPersonas.filter(p => 
-        tutorNetworkCategoriaValues.includes(p.categoriaPrincipal)
-      );
-
-      // Further refine: if an ex-student, ensure they have more than just 'es_autor_invitado'
-      relevantPersonas = relevantPersonas.filter(p => {
-        if (p.categoriaPrincipal === 'ex_alumno_cet') {
-          const capacidades = p.capacidadesPlataforma || [];
-          // Include if they have at least one capacity other than 'es_autor_invitado',
-          // OR if they explicitly have 'es_tutor_invitado' or 'es_colaborador_invitado'.
-          // Or, if their capacities list is empty/null but they are 'ex_alumno_cet' (less likely, but a fallback).
-          const relevantCapacities = capacidades.filter(cap => cap !== 'es_autor_invitado');
-          const isRelevantTutorOrCollaborator = capacidades.includes('es_tutor_invitado') || capacidades.includes('es_colaborador_invitado') || capacidades.includes('es_tutor') || capacidades.includes('es_colaborador');
-          
-          if (capacidades.length === 1 && capacidades.includes('es_autor_invitado')) {
-            return false; // Exclude if ONLY 'es_autor_invitado'
-          }
-          // If they have other capacities, or are explicitly marked as tutor/collaborator, include them.
-          // Or if they are an ex-student marked as available and no specific capacities, include them.
-          return isRelevantTutorOrCollaborator || relevantCapacities.length > 0 || capacidades.length === 0;
-        }
-        return true; // Include other categories that passed the initial filter
-      });
-
-      setAllPersonas(relevantPersonas);
-      setFilteredPersonas(relevantPersonas); 
+      setLoading(true);
+      const result = await personasService.getPublic();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setPersonas(result.data || []);
     } catch (error) {
-      console.error("Error fetching public personas for tutor network:", error);
+      console.error('Error loading personas:', error);
       toast({
-        title: "Error al cargar personas",
-        description: "No se pudieron obtener los datos de colaboradores y tutores.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudieron cargar las personas',
+        variant: 'destructive',
       });
-      setAllPersonas([]);
-      setFilteredPersonas([]);
     } finally {
-      setLoadingPersonas(false);
+      setLoading(false);
     }
-  }, [toast]);
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      await loadPersonas();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await personasService.search(searchTerm);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setPersonas(result.data || []);
+    } catch (error) {
+      console.error('Error searching personas:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al buscar personas',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchOrganizacionesData = useCallback(async () => {
-    setLoadingOrganizaciones(true);
+    setLoading(true);
     try {
       const fetchedOrganizaciones = await getPublicOrganizaciones();
       setAllOrganizaciones(fetchedOrganizaciones);
@@ -119,19 +130,18 @@ export default function TutorsNetworkContent() {
       setAllOrganizaciones([]);
       setFilteredOrganizaciones([]);
     } finally {
-      setLoadingOrganizaciones(false);
+      setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchPersonasData();
     fetchOrganizacionesData();
-  }, [fetchPersonasData, fetchOrganizacionesData]);
+  }, [fetchOrganizacionesData]);
 
   // Effect for filtering Personas based on UI filters
   useEffect(() => {
-    let currentFiltered = [...allPersonas]; // Start with personas already filtered by relevant categories from fetch
-    const term = searchTermPersonas.toLowerCase();
+    let currentFiltered = [...personas]; // Start with personas already filtered by relevant categories from fetch
+    const term = searchTerm.toLowerCase();
 
     if (term) {
       currentFiltered = currentFiltered.filter(p =>
@@ -145,8 +155,8 @@ export default function TutorsNetworkContent() {
       currentFiltered = currentFiltered.filter(p => p.categoriaPrincipal === selectedPersonaCategoriaFilter);
     }
     
-    setFilteredPersonas(currentFiltered);
-  }, [searchTermPersonas, selectedPersonaCategoriaFilter, allPersonas]);
+    setPersonas(currentFiltered);
+  }, [searchTerm, selectedPersonaCategoriaFilter, personas]);
 
   // Effect for filtering Organizaciones based on UI filters
   useEffect(() => {
@@ -170,7 +180,7 @@ export default function TutorsNetworkContent() {
   }, [searchTermOrganizaciones, selectedOrganizacionTipoFilter, allOrganizaciones]);
 
   const resetPersonaFilters = () => {
-    setSearchTermPersonas('');
+    setSearchTerm('');
     setSelectedPersonaCategoriaFilter('all');
   };
 
@@ -217,7 +227,7 @@ export default function TutorsNetworkContent() {
                 <label htmlFor="search-personas" className="block text-sm font-medium text-muted-foreground mb-1">Buscar Persona</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="search-personas" type="text" placeholder="Nombre, apellido, área..." value={searchTermPersonas} onChange={(e) => setSearchTermPersonas(e.target.value)} className="pl-10 shadow-sm" />
+                  <Input id="search-personas" type="text" placeholder="Nombre, apellido, área..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 shadow-sm" />
                 </div>
               </div>
               <div>
@@ -235,15 +245,47 @@ export default function TutorsNetworkContent() {
               </Button>
             </div>
 
-            {loadingPersonas ? (
+            {loading ? (
               <div className="flex flex-col items-center justify-center text-center py-10 text-muted-foreground">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <NewLoader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-lg">Cargando perfiles de personas...</p>
               </div>
-            ) : filteredPersonas.length > 0 ? (
+            ) : personas.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-                {filteredPersonas.map(persona => (
-                  <PersonaCard key={persona.id || persona.email} persona={persona} context="tutor_colaborador" />
+                {personas.map(persona => (
+                  <Card key={persona.id}>
+                    <CardHeader>
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={persona.avatarUrl || ''} alt={persona.nombre} />
+                          <AvatarFallback>
+                            {persona.nombre?.charAt(0)}
+                            {persona.apellido?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <CardTitle>
+                            {persona.nombre} {persona.apellido}
+                          </CardTitle>
+                          <CardDescription>{persona.email}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Badge variant="outline" className="capitalize">
+                            {persona.estado}
+                          </Badge>
+                          <Button variant="link" asChild>
+                            <Link href={`/egresados-estudiantes/${persona.id}`}>
+                              Ver perfil
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -295,9 +337,9 @@ export default function TutorsNetworkContent() {
               </Button>
             </div>
 
-            {loadingOrganizaciones ? (
+            {loading ? (
               <div className="flex flex-col items-center justify-center text-center py-10 text-muted-foreground">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <NewLoader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-lg">Cargando organizaciones...</p>
               </div>
             ) : filteredOrganizaciones.length > 0 ? (

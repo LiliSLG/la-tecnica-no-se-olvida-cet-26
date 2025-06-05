@@ -10,19 +10,19 @@ import { Button } from '@/components/ui/button';
 export default function AboutUsContent() {
   // Placeholder student data - this should be updated with actual information
   const students = [
-    { name: 'Ana Pérez (Ejemplo)' },
-    { name: 'Carlos López (Ejemplo)' },
-    { name: 'Sofía Gómez (Ejemplo)' },
+    { name: 'Camila Franco' },
+    { name: 'Martina Hernandez' },
+    { name: 'Jazmin' },
   ];
-  const schoolYear = '2024'; // Placeholder, update as needed
+  const schoolYear = '2025'; // Placeholder, update as needed
 
   return (
     <div className="space-y-12">
       <header className="text-center py-10 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl shadow-lg">
         <Users className="h-20 w-20 text-primary mx-auto mb-4" />
-        <h1 className="text-5xl font-extrabold text-primary mb-3">Sobre Nosotros</h1>
+        <h1 className="text-5xl font-extrabold text-primary mb-3">Sobre Nosotras</h1>
         <p className="text-xl text-foreground/80 max-w-2xl mx-auto">
-          Conoce al equipo detrás de "La técnica no se olvida" y nuestra misión.
+          Conocé al equipo detrás de "La técnica no se olvida" y nuestra misión.
         </p>
       </header>
 

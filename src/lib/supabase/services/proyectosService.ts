@@ -15,6 +15,19 @@ type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 type CreateProyecto = Database['public']['Tables']['proyectos']['Insert'];
 type UpdateProyecto = Database['public']['Tables']['proyectos']['Update'];
 
+interface MappedProyecto {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  archivoPrincipalURL: string | null;
+  estado: string;
+  activo: boolean;
+  eliminadoPorUid: string | null;
+  eliminadoEn: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
 export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
   private proyectoTemaService: ProyectoTemaService;
   private proyectoPersonaRolService: ProyectoPersonaRolService;
@@ -29,6 +42,122 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     this.proyectoTemaService = new ProyectoTemaService(supabase);
     this.proyectoPersonaRolService = new ProyectoPersonaRolService(supabase);
     this.proyectoOrganizacionRolService = new ProyectoOrganizacionRolService(supabase);
+  }
+
+  private mapProyecto(proyecto: Proyecto): MappedProyecto {
+    return {
+      id: proyecto.id,
+      titulo: proyecto.titulo,
+      descripcion: proyecto.descripcion,
+      archivoPrincipalURL: proyecto.archivo_principal_url,
+      estado: proyecto.status,
+      activo: !proyecto.esta_eliminado,
+      eliminadoPorUid: proyecto.eliminado_por_uid,
+      eliminadoEn: proyecto.eliminado_en,
+      creadoEn: proyecto.created_at,
+      actualizadoEn: proyecto.updated_at
+    };
+  }
+
+  private mapProyectos(proyectos: Proyecto[]): MappedProyecto[] {
+    return proyectos.map(proyecto => this.mapProyecto(proyecto));
+  }
+
+  async getById(id: string): Promise<ServiceResult<Proyecto | null>> {
+    try {
+      const cached = await this.getFromCache(id);
+      if (cached) return this.createSuccessResult(cached);
+
+      const { data: proyecto, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (!proyecto) return this.createSuccessResult(null);
+
+      await this.setInCache(id, proyecto);
+      return this.createSuccessResult(proyecto);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      if (!ids.length) return this.createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return this.createSuccessResult(cachedResults.filter(Boolean) as Proyecto[]);
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const proyecto of data) {
+        await this.setInCache(proyecto.id, proyecto);
+      }
+
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return this.createSuccessResult(allResults);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+    }
+  }
+
+  async getPublic(): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const proyecto of data) {
+        await this.setInCache(proyecto.id, proyecto);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+    }
+  }
+
+  async search(term: string): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      if (!term.trim()) return this.createSuccessResult([]);
+
+      const searchPattern = `%${term.trim()}%`;
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .or(`titulo.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
+        .eq('esta_eliminado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const proyecto of data) {
+        await this.setInCache(proyecto.id, proyecto);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+    }
   }
 
   protected validateCreateInput(data: CreateProyecto): ValidationError | null {
@@ -214,32 +343,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     }
   }
 
-  async search(
-    query: string,
-    options?: QueryOptions
-  ): Promise<ServiceResult<Proyecto[] | null>> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select()
-        .or(`titulo.ilike.%${query}%,descripcion.ilike.%${query}%`)
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
-
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
-
-      return this.createSuccessResult(data);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
-    }
-  }
-
   async getProjectsForUser(
     userId: string,
     options?: QueryOptions
@@ -337,6 +440,61 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       return this.createSuccessResult(data);
     } catch (error) {
       return this.createErrorResult(this.handleError(error, { operation: 'restore' }));
+    }
+  }
+
+  async update(id: string, data: UpdateProyecto): Promise<ServiceResult<Proyecto>> {
+    try {
+      const validationError = this.validateUpdateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: updated, error } = await this.supabase
+        .from(this.tableName)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!updated) {
+        return this.createErrorResult(
+          mapValidationError('Proyecto not found', 'id', id)
+        );
+      }
+
+      await this.setInCache(id, updated);
+      return this.createSuccessResult(updated);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+    }
+  }
+
+  async create(data: CreateProyecto): Promise<ServiceResult<Proyecto>> {
+    try {
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: created, error } = await this.supabase
+        .from(this.tableName)
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!created) {
+        return this.createErrorResult(
+          mapValidationError('Failed to create proyecto', 'data', data)
+        );
+      }
+
+      await this.setInCache(created.id, created);
+      return this.createSuccessResult(created);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
     }
   }
 } 

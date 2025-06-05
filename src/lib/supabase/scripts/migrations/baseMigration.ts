@@ -1,119 +1,91 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '../../types/database.types';
-import { ServiceResult, ServiceError } from '../../types/service';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { ServiceError } from '@/lib/supabase/services/baseService';
 
-export interface MigrationProgress {
-  total: number;
-  processed: number;
-  successful: number;
-  failed: number;
-  errors: Array<{
-    id: string;
-    error: any;
-  }>;
-}
-
-export interface MigrationOptions {
-  batchSize?: number;
-  dryRun?: boolean;
-  continueOnError?: boolean;
+export interface MigrationResult {
+  success: boolean;
+  error?: string;
+  details?: {
+    processed: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+  };
 }
 
 export abstract class BaseMigration {
-  protected supabase: SupabaseClient<Database>;
-  protected progress: MigrationProgress;
-  protected options: Required<MigrationOptions>;
+  protected supabase = supabase;
+  protected processed = 0;
+  protected succeeded = 0;
+  protected failed = 0;
+  protected skipped = 0;
+  protected errors: string[] = [];
 
-  constructor(
-    supabase: SupabaseClient<Database>,
-    options: MigrationOptions = {}
-  ) {
-    this.supabase = supabase;
-    this.progress = {
-      total: 0,
-      processed: 0,
-      successful: 0,
-      failed: 0,
-      errors: []
-    };
-    this.options = {
-      batchSize: options.batchSize || 100,
-      dryRun: options.dryRun || false,
-      continueOnError: options.continueOnError || false
-    };
-  }
+  abstract getSourceData(): Promise<any[]>;
+  abstract transformData(data: any): Promise<any>;
+  abstract validateData(data: any): boolean;
+  abstract saveData(data: any): Promise<void>;
 
-  protected abstract extractData(): Promise<any[]>;
-  protected abstract transformData(data: any[]): Promise<any[]>;
-  protected abstract loadData(data: any[]): Promise<void>;
-
-  protected logProgress(message: string): void {
-    console.log(`[${this.constructor.name}] ${message}`);
-  }
-
-  protected logError(id: string, error: any): void {
-    console.error(`[${this.constructor.name}] Error processing ${id}:`, error);
-    this.progress.errors.push({ id, error });
-  }
-
-  protected async processBatch(items: any[]): Promise<void> {
-    for (const item of items) {
-      try {
-        if (!this.options.dryRun) {
-          await this.loadData([item]);
-        }
-        this.progress.successful++;
-      } catch (error) {
-        this.logError(item.id, error);
-        this.progress.failed++;
-        if (!this.options.continueOnError) {
-          throw error;
-        }
-      }
-      this.progress.processed++;
-      this.logProgress(`Progress: ${this.progress.processed}/${this.progress.total}`);
-    }
-  }
-
-  public async execute(): Promise<ServiceResult<MigrationProgress>> {
+  async execute(): Promise<MigrationResult> {
     try {
-      this.logProgress('Starting migration...');
+      console.log('Starting migration...');
       
-      // Extract data
-      const data = await this.extractData();
-      this.progress.total = data.length;
-      this.logProgress(`Extracted ${data.length} items`);
-
-      // Transform data
-      const transformedData = await this.transformData(data);
-      this.logProgress('Data transformation completed');
-
-      // Process in batches
-      for (let i = 0; i < transformedData.length; i += this.options.batchSize) {
-        const batch = transformedData.slice(i, i + this.options.batchSize);
-        await this.processBatch(batch);
+      const sourceData = await this.getSourceData();
+      console.log(`Found ${sourceData.length} records to process`);
+      
+      for (const item of sourceData) {
+        this.processed++;
+        
+        try {
+          if (!this.validateData(item)) {
+            console.log(`Skipping invalid data:`, item);
+            this.skipped++;
+            continue;
+          }
+          
+          const transformedData = await this.transformData(item);
+          await this.saveData(transformedData);
+          this.succeeded++;
+          
+          if (this.processed % 100 === 0) {
+            console.log(`Processed ${this.processed} records...`);
+          }
+        } catch (error) {
+          this.failed++;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.errors.push(`Error processing record: ${errorMessage}`);
+          console.error(`Error processing record:`, error);
+        }
       }
-
-      this.logProgress('Migration completed');
+      
+      console.log('Migration completed');
+      console.log('Summary:', {
+        processed: this.processed,
+        succeeded: this.succeeded,
+        failed: this.failed,
+        skipped: this.skipped,
+      });
+      
+      if (this.errors.length > 0) {
+        console.log('Errors encountered:', this.errors);
+      }
+      
       return {
-        data: this.progress,
-        error: null
+        success: this.failed === 0,
+        error: this.errors.length > 0 ? this.errors.join('\n') : undefined,
+        details: {
+          processed: this.processed,
+          succeeded: this.succeeded,
+          failed: this.failed,
+          skipped: this.skipped,
+        },
       };
     } catch (error) {
-      this.logProgress('Migration failed');
-      const serviceError: ServiceError = {
-        code: 'MIGRATION_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error during migration',
-        details: error
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Migration failed:', error);
       return {
-        data: null,
-        error: serviceError
+        success: false,
+        error: errorMessage,
       };
     }
-  }
-
-  public getProgress(): MigrationProgress {
-    return { ...this.progress };
   }
 } 

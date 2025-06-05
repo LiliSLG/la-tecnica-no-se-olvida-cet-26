@@ -8,7 +8,7 @@ import type { Noticia, Persona } from '@/lib/types'; // Import Persona
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import { getPersonaById } from "@/lib/supabase/services/personasService"; // Import getPersonaById
 import { useToast } from '@/hooks/use-toast';
-import { Newspaper, CalendarDays, Link as LinkIconLucide, ChevronRight, RefreshCw, AlertTriangle, PlusCircle, Filter, XCircle } from 'lucide-react'; // Added PlusCircle, Filter, XCircle
+import { Newspaper, CalendarDays, Link as LinkIconLucide, ChevronRight, RefreshCw, AlertTriangle, PlusCircle, Filter, XCircle, Loader2, Search } from 'lucide-react'; // Added PlusCircle, Filter, XCircle, Loader2, Search
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { NoticiasService } from '@/lib/supabase/services/noticiasService';
 import { supabase } from '@/lib/supabase/supabaseClient';
 import type { Database } from '@/lib/supabase/types/database.types';
+import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
@@ -113,15 +115,19 @@ const NoticiaCard = ({ noticia }: { noticia: Noticia }) => {
 };
 
 export default function NoticiasListContent() {
-  const { user } = useAuth();
-  const [persona, setPersona] = useState<Persona | null>(null);
-  const [canCreateNoticias, setCanCreateNoticias] = useState(false);
-
   const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
   
+  const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const noticiasService = new NoticiasService(supabase);
+
+  const [persona, setPersona] = useState<Persona | null>(null);
+  const [canCreateNoticias, setCanCreateNoticias] = useState(false);
+
   const [selectedCategoriaFilter, setSelectedCategoriaFilter] = useState<string | 'all'>('all');
   const [esDestacadaFilter, setEsDestacadaFilter] = useState<'all' | boolean>('all');
   const [allUniqueCategorias, setAllUniqueCategorias] = useState<string[]>([]);
@@ -149,51 +155,81 @@ export default function NoticiasListContent() {
     { label: 'Noticias' }
   ];
 
-  const fetchNoticias = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const options: {
-        limit?: number;
-        esDestacada?: boolean | "all";
-        categoria?: string | "all";
-      } = { limit: 20 }; // Limit inicial
-      if (esDestacadaFilter !== "all") options.esDestacada = esDestacadaFilter;
-      if (selectedCategoriaFilter !== "all")
-        options.categoria = selectedCategoriaFilter;
-
-      const fetchedNoticias = await getPublicadasNoticias(options);
-      setNoticias(fetchedNoticias);
-
-      // Extraer nombres únicos de temas solo de las noticias publicadas inicialmente (sin filtros aplicados a la query)
-      if (selectedCategoriaFilter === "all" && esDestacadaFilter === "all") {
-        const uniqueCats = new Set<string>();
-        fetchedNoticias.forEach((n) =>
-          n.temas?.forEach((t) => uniqueCats.add(t.nombre))
-        );
-        setAllUniqueCategorias(Array.from(uniqueCats).sort());
-      }
-      
-    } catch (err) {
-      console.error("Error fetching public noticias:", err);
-      setError("No se pudieron cargar las noticias.");
-      toast({ title: "Error", description: "No se pudieron cargar las noticias.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, esDestacadaFilter, selectedCategoriaFilter]);
-
   useEffect(() => {
+    const fetchNoticias = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await noticiasService.getAll();
+        if (result.data) {
+          setNoticias(result.data);
+        } else {
+          setError("No se pudieron cargar las noticias.");
+          toast({ title: "Error", description: "No se pudieron cargar las noticias.", variant: "destructive" });
+        }
+      } catch (err) {
+        console.error("Error fetching noticias:", err);
+        setError("No se pudieron cargar las noticias.");
+        toast({ title: "Error", description: "No se pudieron cargar las noticias.", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchNoticias();
-  }, [fetchNoticias]);
+  }, [toast]);
 
   const resetFilters = () => {
     setSelectedCategoriaFilter('all');
     setEsDestacadaFilter('all');
   };
 
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      await loadNoticias();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await noticiasService.search(searchTerm);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setNoticias(result.data || []);
+    } catch (error) {
+      console.error('Error searching noticias:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al buscar noticias',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNoticias = async () => {
+    try {
+      setLoading(true);
+      const result = await noticiasService.getPublic();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setNoticias(result.data || []);
+    } catch (error) {
+      console.error('Error loading noticias:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las noticias',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
-    return ( <div className="text-center py-20"> <RefreshCw className="h-10 w-10 mx-auto animate-spin text-primary mb-4" /> <p className="text-muted-foreground">Cargando noticias...</p> </div> );
+    return ( <div className="text-center py-20"> <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary mb-4" /> <p className="text-muted-foreground">Cargando noticias...</p> </div> );
   }
 
   if (error) {
@@ -252,6 +288,26 @@ export default function NoticiasListContent() {
           </Button>
         </CardContent>
       </Card>
+
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Noticias</h1>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Buscar por título..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="w-64"
+          />
+          <Button
+            variant="outline"
+            onClick={handleSearch}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Buscar
+          </Button>
+        </div>
+      </div>
 
       {noticias.length === 0 ? (
         <div className="text-center py-12">

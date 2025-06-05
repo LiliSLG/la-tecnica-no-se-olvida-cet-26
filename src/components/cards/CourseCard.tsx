@@ -1,91 +1,108 @@
-
 "use client";
 
-import type { Curso, NivelCurso } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import { Curso } from '@/types/curso';
+import { CursosService } from '@/lib/supabase/services/cursosService';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, CalendarDays, Clock, Star, Tag, ExternalLink, UserCircle } from 'lucide-react'; // Added Star icon
-import Image from 'next/image';
+import { Calendar, Clock, Users } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import Link from 'next/link';
 
-const nivelLabels: Record<NivelCurso, string> = {
-  principiante: 'Principiante',
-  intermedio: 'Intermedio',
-  avanzado: 'Avanzado',
-  todos: 'Todos los niveles',
-};
+const cursosService = new CursosService();
 
 interface CourseCardProps {
-  curso: Curso;
+  cursoId: string;
 }
 
-export default function CourseCard({ curso }: CourseCardProps) {
-  return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full bg-card">
-      <div className="relative w-full h-48">
-        <Image
-          src={curso.imagenURL || "https://placehold.co/600x400.png"}
-          alt={`Portada de ${curso.titulo}`}
-          data-ai-hint={curso.dataAiHint || "course education"}
-          fill
-          style={{objectFit:"cover"}}
-          className="transition-transform duration-300 group-hover:scale-105"
-        />
-      </div>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl text-primary group-hover:underline">{curso.titulo}</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground pt-1">
-          <span className="flex items-center gap-1.5 mb-1">
-            <UserCircle className="h-4 w-4" /> {curso.instructor}
-          </span>
-          {curso.modalidad && (
-            <Badge variant="outline" className="capitalize text-xs mr-2">
-              {curso.modalidad}
-            </Badge>
-          )}
-          <Badge variant="secondary" className="capitalize text-xs">
-            {nivelLabels[curso.nivel] || curso.nivel}
-          </Badge>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-3">
-        <p className="text-foreground/80 text-sm h-16 overflow-hidden text-ellipsis">
-          {curso.descripcionCorta}
-        </p>
-        <div className="space-y-1.5 text-sm text-muted-foreground">
-          {curso.duracion && (
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary/80" /> Duración: {curso.duracion}
-            </div>
-          )}
-          {curso.fechaInicio && (
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4 text-primary/80" /> Inicio: {curso.fechaInicio}
-            </div>
-          )}
-           {curso.puntosOtorgados !== undefined && (
-            <div className="flex items-center gap-1.5 text-accent-foreground font-medium">
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-400" /> {curso.puntosOtorgados} Puntos
-            </div>
-          )}
-        </div>
-        {curso.temas && curso.temas.length > 0 && (
-          <div className="pt-1 space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1"><Tag className="h-3.5 w-3.5"/>Temas:</h4>
-            <div className="flex flex-wrap gap-1.5">
-              {curso.temas.slice(0, 3).map((tema) => (
-                <Badge key={tema} variant="outline" className="text-xs">{tema}</Badge>
-              ))}
-              {curso.temas.length > 3 && <Badge variant="outline" className="text-xs">...</Badge>}
-            </div>
+export default function CourseCard({ cursoId }: CourseCardProps) {
+  const [curso, setCurso] = useState<Curso | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadCurso();
+  }, [cursoId]);
+
+  const loadCurso = async () => {
+    try {
+      setLoading(true);
+      const result = await cursosService.getById(cursoId);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setCurso(result.data);
+    } catch (error) {
+      console.error('Error loading curso:', error);
+      setError('No se pudo cargar el curso');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <div className="h-6 bg-muted animate-pulse rounded" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="h-4 bg-muted animate-pulse rounded" />
+            <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
           </div>
-        )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !curso) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-destructive">Error</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">{error || 'Curso no encontrado'}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>{curso.titulo}</CardTitle>
+        <CardDescription>{curso.descripcion}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(curso.fechaInicio), 'PPP', { locale: es })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {curso.duracion} horas
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {curso.cuposDisponibles} cupos disponibles
+            </span>
+          </div>
+        </div>
       </CardContent>
       <CardFooter>
-        <Button asChild variant="default" className="w-full" disabled={!curso.linkMasInfo}>
-          <Link href={curso.linkMasInfo || "#"} target={curso.linkMasInfo && curso.linkMasInfo.startsWith('http') ? '_blank' : '_self'} rel="noopener noreferrer">
-            Más Información <ExternalLink className="ml-2 h-4 w-4" />
+        <Button asChild className="w-full">
+          <Link href={`/cursos/${curso.id}`}>
+            Ver detalles
           </Link>
         </Button>
       </CardFooter>

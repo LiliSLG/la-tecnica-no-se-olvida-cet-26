@@ -1,55 +1,133 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import PersonaForm from '@/components/forms/PersonaForm';
-import type { PersonaFormData } from '@/lib/schemas/personaSchema';
-import { addPersona } from '@/lib/firebase/personasService';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { PlusCircle } from 'lucide-react';
-import { convertFormDataForFirestorePersona } from '@/lib/schemas/personaSchema';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function NuevaPersonaPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const personasService = new PersonasService();
+
+export default function NuevaParticipantePage() {
   const router = useRouter();
-  const { user } = useAuth();
   const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    apellido: '',
+    email: '',
+    telefono: '',
+    estado: 'activo',
+  });
 
-  const handleSubmit = async (data: PersonaFormData) => {
-    console.log("Data received in NuevaPersonaPage handleSubmit:", JSON.stringify(data, null, 2));
-    if (!user) {
-      toast({ title: "Error de Autenticación", description: "Debes estar autenticado como administrador.", variant: "destructive" });
-      return;
-    }
-    setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      // Ensure `esAdmin` is explicitly set based on capacities or a direct form field
-      // This logic is now primarily handled by convertFormDataForFirestorePersona
-      const dataForFirestore = convertFormDataForFirestorePersona(data, user.uid);
-      
-      const personaId = await addPersona(dataForFirestore, user.uid);
-      toast({ title: "Éxito", description: "Participante creado correctamente." });
-      router.push('/admin/gestion-participantes'); 
+      setSaving(true);
+      const result = await personasService.create(formData);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      toast({
+        title: 'Éxito',
+        description: 'Participante creado correctamente',
+      });
+      router.push('/admin/gestion-participantes');
     } catch (error) {
-      console.error("Error creating persona:", error);
-      toast({ title: "Error", description: "No se pudo crear el participante.", variant: "destructive" });
+      console.error('Error creating persona:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el participante',
+        variant: 'destructive',
+      });
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <PlusCircle className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">Añadir Nuevo Participante</h1>
-      </header>
-      <p className="text-muted-foreground">
-        Completa la información a continuación para registrar un nuevo participante.
-      </p>
-      <PersonaForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Nuevo Participante</CardTitle>
+          <CardDescription>
+            Ingresa la información del nuevo participante
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="apellido">Apellido</Label>
+                <Input
+                  id="apellido"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="telefono">Teléfono</Label>
+              <Input
+                id="telefono"
+                value={formData.telefono}
+                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Select
+                value={formData.estado}
+                onValueChange={(value) => setFormData({ ...formData, estado: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/admin/gestion-participantes')}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Guardando...' : 'Crear participante'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }

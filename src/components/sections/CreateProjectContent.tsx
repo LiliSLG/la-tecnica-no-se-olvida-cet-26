@@ -2,86 +2,142 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ProjectForm from '@/components/forms/ProjectForm';
-import type { ProjectFormData } from '@/lib/schemas/projectSchema';
-import { addProject } from '@/lib/supabase/services/proyectosService';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { convertFormDataToSupabaseProject } from "@/lib/schemas/projectSchema";
-import { PlusCircle } from 'lucide-react';
-import type { Proyecto } from "@/lib/types";
 import { ProyectosService } from '@/lib/supabase/services/proyectosService';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
+const proyectosService = new ProyectosService();
 
 export default function CreateProjectContent() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
   const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descripcion: '',
+    objetivos: '',
+    requisitos: '',
+    duracion: '',
+    nivel: 'principiante',
+  });
 
-  const handleSubmit = async (data: ProjectFormData): Promise<boolean> => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Debes estar autenticado para crear un proyecto.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      setIsSubmitting(true);
-      const proyectosService = new ProyectosService(supabase);
-      
-      const partial: Partial<Proyecto> = convertFormDataToSupabaseProject(data);
-      
-      // 2. Hacemos el "cast" para que encaje en lo que addProject espera
-      const dataForSupabase = partial as Omit<
-        Proyecto,
-        'id' | 'created_at' | 'updated_at' | 'eliminado_por_uid' | 'eliminado_en'
-      >;
-
-      const result = await proyectosService.addProject(
-        dataForSupabase,
-        data.temas,
-        data.personas,
-        data.organizaciones
-      );
-
+      setSaving(true);
+      const result = await proyectosService.create(formData);
       if (result.error) {
-        throw result.error;
+        throw new Error(result.error.message);
       }
-
       toast({
-        title: 'Proyecto creado',
-        description: 'El proyecto se ha creado correctamente.',
+        title: 'Éxito',
+        description: 'Proyecto creado correctamente',
       });
-
-      router.push('/admin/gestion-proyectos');
-      return true;
+      router.push('/proyectos');
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
         title: 'Error',
-        description: 'Ha ocurrido un error al crear el proyecto.',
+        description: 'No se pudo crear el proyecto',
         variant: 'destructive',
       });
-      return false;
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
-  
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <PlusCircle className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">Crear Nuevo Proyecto</h1>
-      </header>
-      <p className="text-muted-foreground">
-        Completa la información a continuación para registrar un nuevo proyecto técnico.
-      </p>
-      <ProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} volverAPath="/proyectos" />
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Crear Nuevo Proyecto</CardTitle>
+          <CardDescription>
+            Completa el formulario para crear un nuevo proyecto
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="titulo">Título</Label>
+              <Input
+                id="titulo"
+                value={formData.titulo}
+                onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="descripcion">Descripción</Label>
+              <Textarea
+                id="descripcion"
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="objetivos">Objetivos</Label>
+              <Textarea
+                id="objetivos"
+                value={formData.objetivos}
+                onChange={(e) => setFormData({ ...formData, objetivos: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="requisitos">Requisitos</Label>
+              <Textarea
+                id="requisitos"
+                value={formData.requisitos}
+                onChange={(e) => setFormData({ ...formData, requisitos: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duracion">Duración (horas)</Label>
+                <Input
+                  id="duracion"
+                  type="number"
+                  value={formData.duracion}
+                  onChange={(e) => setFormData({ ...formData, duracion: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nivel">Nivel</Label>
+                <select
+                  id="nivel"
+                  value={formData.nivel}
+                  onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  required
+                >
+                  <option value="principiante">Principiante</option>
+                  <option value="intermedio">Intermedio</option>
+                  <option value="avanzado">Avanzado</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/proyectos')}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Guardando...' : 'Crear proyecto'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }

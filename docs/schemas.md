@@ -145,6 +145,44 @@
 
 ---
 
+### ofertas_laborales
+- id (UUID, PK)
+- titulo
+- descripcion
+- empresa
+- ubicacion
+- estado (text)
+- estaEliminada (boolean)
+- eliminadoPorUid
+- eliminadoEn (timestamp)
+- creadoEn (timestamp)
+- actualizadoEn (timestamp)
+
+### historias_orales
+- id (UUID, PK)
+- titulo
+- descripcion
+- archivoPrincipalURL
+- estado (text)
+- estaEliminada (boolean)
+- eliminadoPorUid
+- eliminadoEn (timestamp)
+- creadoEn (timestamp)
+- actualizadoEn (timestamp)
+
+### cursos
+- id (UUID, PK)
+- titulo
+- descripcion
+- nivel (nivel_curso_enum)
+- duracion (integer)
+- estado (text)
+- estaEliminada (boolean)
+- eliminadoPorUid
+- eliminadoEn (timestamp)
+- creadoEn (timestamp)
+- actualizadoEn (timestamp)
+
 ## Tablas relacionales (many-to-many)
 
 ### persona_tema
@@ -270,6 +308,11 @@
 - presentado
 - archivado
 - cancelado
+
+### nivel_curso_enum
+- basico
+- intermedio
+- avanzado
 
 ---
 

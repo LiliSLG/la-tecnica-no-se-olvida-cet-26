@@ -1,61 +1,86 @@
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { handleUserMigration } from './migrateUsers';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { ServiceError } from '@/lib/supabase/services/baseService';
+import { Persona } from '@/types/persona';
 
-interface FirebaseUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  metadata: {
-    creationTime: string;
-    lastSignInTime: string;
-  };
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
 }
 
-/**
- * Extracts user data from Firebase for migration to Supabase
- */
-export async function extractFirebaseUsers(): Promise<void> {
-  try {
-    const auth = getAuth();
-    const db = getFirestore();
+const auth = getAuth();
+const personasService = new PersonasService(supabase);
 
-    // Get all users from Firebase Auth
+async function extractFirebaseUsers() {
+  try {
+    console.log('Starting Firebase users extraction...');
+    
+    // Get all users from Firebase
     const listUsersResult = await auth.listUsers();
-    const users = listUsersResult.users;
-
-    // Get additional user data from Firestore if needed
-    const userProfiles = await db.collection('users').get();
-
-    // Map Firebase users to migration format
-    const firebaseUsers = users.map((user: FirebaseUser) => ({
-      uid: user.uid,
-      email: user.email || '',
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      metadata: {
-        creationTime: user.metadata.creationTime,
-        lastSignInTime: user.metadata.lastSignInTime,
-      },
-    }));
-
-    // Start migration process
-    await handleUserMigration(firebaseUsers);
+    const firebaseUsers = listUsersResult.users;
+    
+    console.log(`Found ${firebaseUsers.length} users in Firebase`);
+    
+    // Process each user
+    for (const user of firebaseUsers) {
+      try {
+        // Check if user already exists in Supabase
+        const { data: existingUser } = await personasService.getByEmail(user.email || '');
+        
+        if (existingUser) {
+          console.log(`User ${user.email} already exists in Supabase, skipping...`);
+          continue;
+        }
+        
+        // Create user in Supabase
+        const persona: Partial<Persona> = {
+          id: user.uid,
+          email: user.email || '',
+          nombre: user.displayName?.split(' ')[0] || '',
+          apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
+          avatarUrl: user.photoURL,
+          estado: 'activo',
+          categoriaPrincipal: 'estudiante',
+          activo: true,
+          esAdmin: false,
+          creadoEn: new Date().toISOString(),
+          actualizadoEn: new Date().toISOString(),
+        };
+        
+        const result = await personasService.create(persona);
+        
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        
+        console.log(`Successfully migrated user ${user.email}`);
+      } catch (error) {
+        console.error(`Error processing user ${user.email}:`, error);
+      }
+    }
+    
+    console.log('Firebase users extraction completed');
   } catch (error) {
-    console.error('Error extracting Firebase users:', error);
+    console.error('Error in Firebase users extraction:', error);
     throw error;
   }
 }
 
-// Export a function to run the extraction and migration
-export async function runUserMigration(): Promise<void> {
-  try {
-    console.log('Starting user data extraction from Firebase...');
-    await extractFirebaseUsers();
-    console.log('User data extraction and migration completed.');
-  } catch (error) {
-    console.error('User migration failed:', error);
-    throw error;
-  }
-} 
+// Run the script
+extractFirebaseUsers()
+  .then(() => {
+    console.log('Script completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('Script failed:', error);
+    process.exit(1);
+  }); 

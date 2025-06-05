@@ -25,7 +25,8 @@ import {
   Building,
   ArrowLeft,
   Handshake,
-  Tags as TagsIcon // Para temas
+  Tags as TagsIcon,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +35,9 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { estadoLabels } from '@/lib/schemas/projectSchema';
-
+import { useRouter } from 'next/navigation';
+import { ProyectosService } from '@/lib/supabase/services/proyectosService';
+import { supabase } from '@/lib/supabase/supabaseClient';
 
 interface ProjectDetailContentProps {
   projectId: string;
@@ -47,16 +50,18 @@ export default function ProjectDetailContent({ projectId }: ProjectDetailContent
   const [tutorDetails, setTutorDetails] = useState<Persona[]>([]);
   const [collaboratorDetails, setCollaboratorDetails] = useState<Persona[]>([]);
   const [organizationDetails, setOrganizationDetails] = useState<Organizacion[]>([]);
-  const [temaDetails, setTemaDetails] = useState<Tema[]>([]); // Para los nombres de los temas
+  const [temaDetails, setTemaDetails] = useState<Tema[]>([]);
   
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadingAuthors, setLoadingAuthors] = useState(false);
   const [loadingTutors, setLoadingTutors] = useState(false);
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
-  const [loadingTemas, setLoadingTemas] = useState(false); // Para temas
+  const [loadingTemas, setLoadingTemas] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
+  const proyectosService = new ProyectosService(supabase);
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -68,12 +73,13 @@ export default function ProjectDetailContent({ projectId }: ProjectDetailContent
       setLoadingProject(true);
       setError(null);
       try {
-        const fetchedProject = await getProjectById(projectId);
-        if (fetchedProject && !fetchedProject.estaEliminado) {
-          setProject(fetchedProject);
+        const result = await proyectosService.getById(projectId);
+        if (result.data) {
+          setProject(result.data);
         } else {
-          setError("Proyecto no encontrado o no disponible.");
-          // toast({ title: "Error", description: "Proyecto no encontrado o no disponible.", variant: "destructive" });
+          setError("Proyecto no encontrado.");
+          toast({ title: "Error", description: "Proyecto no encontrado.", variant: "destructive" });
+          router.push('/proyectos');
         }
       } catch (err) {
         console.error("Error fetching project details:", err);
@@ -84,7 +90,7 @@ export default function ProjectDetailContent({ projectId }: ProjectDetailContent
       }
     };
     fetchProjectData();
-  }, [projectId, toast]);
+  }, [projectId, router, toast]);
 
   useEffect(() => {
     if (project?.autores && project.autores.length > 0) {
@@ -147,7 +153,7 @@ export default function ProjectDetailContent({ projectId }: ProjectDetailContent
   useEffect(() => {
     if (project?.temas && project.temas.length > 0) {
       setLoadingTemas(true);
-      getTemasByIdsService(project.temas.map((tema) => tema.id)) // Usa la función renombrada
+      getTemasByIdsService(project.temas.map((tema) => tema.id))
         .then(setTemaDetails)
         .catch((err) => {
           console.error("Error fetching tema details:", err);

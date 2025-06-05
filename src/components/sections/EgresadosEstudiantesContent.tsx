@@ -1,214 +1,142 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import type { Persona, TemaCategoria } from '@/lib/types';
-import { getPublicEgresadosYEstudiantes } from '@/lib/supabase/services/personasService';
-import { useToast } from '@/hooks/use-toast';
-import PersonaCard from '@/components/cards/PersonaCard';
-import { Users2, Loader2, Info, Search, Filter, XIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { categoriasPrincipalesPersonaLabels } from '@/lib/schemas/personaSchema'; // For labels
+import { useState, useEffect } from 'react';
+import { Persona } from '@/types/persona';
 import { PersonasService } from '@/lib/supabase/services/personasService';
-import { supabase } from '@/lib/supabase/client';
-import type { Database } from '@/lib/supabase/types/database.types';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
-type Persona = Database['public']['Tables']['personas']['Row'];
-
-// Define a relevant subset of categories for filtering this specific network
-const relevantCategorias: Array<{ value: Persona['categoriaPrincipal']; label: string }> = [
-  { value: 'ex_alumno_cet', label: categoriasPrincipalesPersonaLabels['ex_alumno_cet'] },
-  { value: 'estudiante_cet', label: categoriasPrincipalesPersonaLabels['estudiante_cet'] },
-];
-
-const currentSchoolYear = new Date().getFullYear(); // Or get this from a config
-const lastRelevantSchoolYear = 6; // Example: show students from 6th year. Adjust as needed.
+const personasService = new PersonasService();
 
 export default function EgresadosEstudiantesContent() {
   const [personas, setPersonas] = useState<Persona[]>([]);
-  const [filteredPersonas, setFilteredPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoriaFilter, setSelectedCategoriaFilter] = useState<Persona['categoriaPrincipal'] | 'all'>('all');
-  const [selectedAnoEgresoFilter, setSelectedAnoEgresoFilter] = useState<number | 'all'>('all');
-  const [buscandoOportunidadesFilter, setBuscandoOportunidadesFilter] = useState(false);
-  // TODO: Add filter for areasDeInteresOExpertise if needed
+  useEffect(() => {
+    loadPersonas();
+  }, []);
 
-  const uniqueAnosEgreso = Array.from(
-    new Set(
-      personas
-        .filter(p => p.es_ex_alumno_cet && p.ano_egreso_cet)
-        .map(p => p.ano_egreso_cet!)
-    )
-  ).sort((a, b) => b - a);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const loadPersonas = async () => {
     try {
-      const personasService = new PersonasService(supabase);
-      const result = await personasService.getPublicEgresadosYEstudiantes();
-      
+      setLoading(true);
+      const result = await personasService.getPublic();
       if (result.error) {
-        throw result.error;
+        throw new Error(result.error.message);
       }
-
-      const fetchedPersonas = result.data || [];
-      // Further client-side filtering for students in the last year if not done in service
-      const filteredPersonas = fetchedPersonas.filter((p: Persona) => {
-        if (p.categoria_principal === 'estudiante_cet') {
-          return p.ano_cursada_actual_cet === lastRelevantSchoolYear;
-        }
-        return true; // Include all ex-alumnos fetched by the service
-      });
-      setPersonas(filteredPersonas);
-      setFilteredPersonas(filteredPersonas);
+      setPersonas(result.data || []);
     } catch (error) {
-      console.error('Error fetching personas:', error);
+      console.error('Error loading personas:', error);
       toast({
         title: 'Error',
-        description: 'Ha ocurrido un error al cargar los egresados y estudiantes.',
+        description: 'No se pudieron cargar los egresados y estudiantes',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  };
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    let currentFiltered = [...personas];
-
-    if (searchTerm) {
-      currentFiltered = currentFiltered.filter(p =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.areasDeInteresOExpertise && p.areasDeInteresOExpertise.some(area => area.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-        (p.titulacionObtenidaCET && p.titulacionObtenidaCET.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      await loadPersonas();
+      return;
     }
 
-    if (selectedCategoriaFilter !== 'all') {
-      currentFiltered = currentFiltered.filter(p => p.categoriaPrincipal === selectedCategoriaFilter);
+    try {
+      setLoading(true);
+      const result = await personasService.search(searchTerm);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setPersonas(result.data || []);
+    } catch (error) {
+      console.error('Error searching personas:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al buscar egresados y estudiantes',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-
-    if (selectedAnoEgresoFilter !== 'all') {
-      currentFiltered = currentFiltered.filter(p => p.anoEgresoCET === selectedAnoEgresoFilter);
-    }
-
-    if (buscandoOportunidadesFilter) {
-      currentFiltered = currentFiltered.filter(p => p.buscandoOportunidades === true);
-    }
-    
-    setFilteredPersonas(currentFiltered);
-
-  }, [searchTerm, selectedCategoriaFilter, selectedAnoEgresoFilter, buscandoOportunidadesFilter, personas]);
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedCategoriaFilter('all');
-    setSelectedAnoEgresoFilter('all');
-    setBuscandoOportunidadesFilter(false);
   };
 
   return (
-    <div className="space-y-12">
-      <header className="text-center py-10 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl shadow-lg">
-        <Users2 className="h-20 w-20 text-primary mx-auto mb-6" />
-        <h1 className="text-4xl md:text-5xl font-extrabold text-primary mb-4">Red de Egresados CET 26 y Estudiantes</h1>
-        <p className="text-lg md:text-xl text-foreground/80 max-w-3xl mx-auto px-4">
-          Conecta con estudiantes actuales del último año y exalumnos del CET N°26. Descubre sus perfiles, experiencias y aspiraciones.
-        </p>
-      </header>
+    <div className="container mx-auto py-10">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Egresados y Estudiantes</h1>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="w-64"
+          />
+          <Button
+            variant="outline"
+            onClick={handleSearch}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Buscar
+          </Button>
+        </div>
+      </div>
 
-      {/* Filters Section */}
-      <Card className="p-4 md:p-6 mb-8 shadow-md">
-        <CardHeader className="p-0 pb-4">
-          <CardTitle className="text-xl flex items-center gap-2"><Filter className="h-5 w-5 text-primary"/>Filtrar Perfiles</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-          <div>
-            <Label htmlFor="search-egresados" className="block text-sm font-medium text-muted-foreground mb-1">Buscar por Nombre, Email, Área</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="search-egresados" type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 shadow-sm" />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="categoria-filter-egresados" className="block text-sm font-medium text-muted-foreground mb-1">Categoría</Label>
-            <Select value={selectedCategoriaFilter} onValueChange={(value) => setSelectedCategoriaFilter(value as Persona['categoriaPrincipal'] | 'all')}>
-              <SelectTrigger id="categoria-filter-egresados" className="shadow-sm"><SelectValue placeholder="Todas las Categorías" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las Categorías</SelectItem>
-                {relevantCategorias.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="ano-egreso-filter" className="block text-sm font-medium text-muted-foreground mb-1">Año de Egreso (Exalumnos)</Label>
-            <Select 
-                value={selectedAnoEgresoFilter === 'all' ? 'all' : String(selectedAnoEgresoFilter)} 
-                onValueChange={(value) => setSelectedAnoEgresoFilter(value === 'all' ? 'all' : Number(value))}
-                disabled={selectedCategoriaFilter === 'estudiante_cet'}
-            >
-              <SelectTrigger id="ano-egreso-filter" className="shadow-sm"><SelectValue placeholder="Todos los Años" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los Años</SelectItem>
-                {uniqueAnosEgreso.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center space-x-2 pt-5">
-                <Switch 
-                    id="buscando-oportunidades-filter" 
-                    checked={buscandoOportunidadesFilter} 
-                    onCheckedChange={setBuscandoOportunidadesFilter}
-                />
-                <Label htmlFor="buscando-oportunidades-filter" className="text-sm font-medium text-muted-foreground">
-                    Buscando Oportunidades
-                </Label>
-            </div>
-            <Button onClick={resetFilters} variant="outline" className="w-full shadow-sm">
-              <XIcon className="mr-2 h-4 w-4" /> Limpiar Filtros
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-
-      <section className="space-y-8">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center text-center py-10 text-muted-foreground">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg">Cargando perfiles de egresados y estudiantes...</p>
-          </div>
-        ) : filteredPersonas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-            {filteredPersonas.map(persona => (
-              <PersonaCard key={persona.email} persona={persona} context="egresado_estudiante" />
-            ))}
-          </div>
-        ) : (
-          <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
-            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="font-semibold">No se encontraron perfiles</AlertTitle>
-            <AlertDescription>
-              Actualmente no hay perfiles de egresados o estudiantes que coincidan con los filtros. Intenta ajustar tu búsqueda o vuelve más tarde.
-            </AlertDescription>
-          </Alert>
-        )}
-      </section>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
+      ) : personas.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">No se encontraron egresados o estudiantes</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {personas.map((persona) => (
+            <Card key={persona.id}>
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={persona.avatarUrl || ''} alt={persona.nombre} />
+                    <AvatarFallback>
+                      {persona.nombre?.charAt(0)}
+                      {persona.apellido?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-lg">
+                      {persona.nombre} {persona.apellido}
+                    </CardTitle>
+                    <CardDescription>{persona.email}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {persona.telefono && (
+                    <p className="text-sm text-muted-foreground">
+                      Teléfono: {persona.telefono}
+                    </p>
+                  )}
+                  <Badge variant="outline" className="capitalize">
+                    {persona.tipo}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

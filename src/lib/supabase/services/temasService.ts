@@ -245,4 +245,156 @@ export class TemasService extends BaseService<Tema, 'temas'> {
       return this.createErrorResult(error as Error);
     }
   }
+
+  async getById(id: string): Promise<ServiceResult<Tema | null>> {
+    try {
+      const cached = await this.getFromCache(id);
+      if (cached) return this.createSuccessResult(cached);
+
+      const { data: tema, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (!tema) return this.createSuccessResult(null);
+
+      await this.setInCache(id, tema);
+      return this.createSuccessResult(tema);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<ServiceResult<Tema[]>> {
+    try {
+      if (!ids.length) return this.createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return this.createSuccessResult(cachedResults.filter(Boolean) as Tema[]);
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const tema of data) {
+        await this.setInCache(tema.id, tema);
+      }
+
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return this.createSuccessResult(allResults);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+    }
+  }
+
+  async getPublic(): Promise<ServiceResult<Tema[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminado', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const tema of data) {
+        await this.setInCache(tema.id, tema);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+    }
+  }
+
+  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Tema[]>> {
+    try {
+      if (!query.trim()) return this.createSuccessResult([]);
+
+      const searchPattern = `%${query.trim()}%`;
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .or(`nombre.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
+        .eq('esta_eliminado', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const tema of data) {
+        await this.setInCache(tema.id, tema);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+    }
+  }
+
+  async update(id: string, data: Database['public']['Tables']['temas']['Update']): Promise<ServiceResult<Tema>> {
+    try {
+      const validationError = this.validateUpdateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: updated, error } = await this.supabase
+        .from(this.tableName)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!updated) {
+        return this.createErrorResult(
+          mapValidationError('Tema not found', 'id', id)
+        );
+      }
+
+      await this.setInCache(id, updated);
+      return this.createSuccessResult(updated);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+    }
+  }
+
+  async create(data: Database['public']['Tables']['temas']['Insert']): Promise<ServiceResult<Tema>> {
+    try {
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: created, error } = await this.supabase
+        .from(this.tableName)
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!created) {
+        return this.createErrorResult(
+          mapValidationError('Failed to create tema', 'data', data)
+        );
+      }
+
+      await this.setInCache(created.id, created);
+      return this.createSuccessResult(created);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
+    }
+  }
 } 

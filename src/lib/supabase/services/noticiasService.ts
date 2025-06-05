@@ -473,4 +473,156 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
       return this.createErrorResult(this.handleError(error, { operation: 'search', query }));
     }
   }
+
+  async getById(id: string): Promise<ServiceResult<Noticia | null>> {
+    try {
+      const cached = await this.getFromCache(id);
+      if (cached) return this.createSuccessResult(cached);
+
+      const { data: noticia, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (!noticia) return this.createSuccessResult(null);
+
+      await this.setInCache(id, noticia);
+      return this.createSuccessResult(noticia);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<ServiceResult<Noticia[]>> {
+    try {
+      if (!ids.length) return this.createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return this.createSuccessResult(cachedResults.filter(Boolean) as Noticia[]);
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
+      }
+
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return this.createSuccessResult(allResults);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+    }
+  }
+
+  async getPublic(): Promise<ServiceResult<Noticia[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+    }
+  }
+
+  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Noticia[]>> {
+    try {
+      if (!query.trim()) return this.createSuccessResult([]);
+
+      const searchPattern = `%${query.trim()}%`;
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .or(`titulo.ilike.${searchPattern},contenido.ilike.${searchPattern}`)
+        .eq('esta_eliminada', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+    }
+  }
+
+  async update(id: string, data: UpdateNoticia): Promise<ServiceResult<Noticia>> {
+    try {
+      const validationError = this.validateUpdateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: updated, error } = await this.supabase
+        .from(this.tableName)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!updated) {
+        return this.createErrorResult(
+          mapValidationError('Noticia not found', 'id', id)
+        );
+      }
+
+      await this.setInCache(id, updated);
+      return this.createSuccessResult(updated);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+    }
+  }
+
+  async create(data: CreateNoticia): Promise<ServiceResult<Noticia>> {
+    try {
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: created, error } = await this.supabase
+        .from(this.tableName)
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!created) {
+        return this.createErrorResult(
+          mapValidationError('Failed to create noticia', 'data', data)
+        );
+      }
+
+      await this.setInCache(created.id, created);
+      return this.createSuccessResult(created);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
+    }
+  }
 } 

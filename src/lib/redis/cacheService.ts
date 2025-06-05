@@ -1,4 +1,5 @@
-import { redisClient } from './client';
+import { Redis } from 'ioredis';
+import { ServiceResult } from '@/types/service';
 import { REDIS_KEYS } from './config';
 import {
   RedisKey,
@@ -11,6 +12,7 @@ import {
 
 export class CacheService {
   private static instance: CacheService;
+  private redis: Redis;
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
@@ -18,7 +20,9 @@ export class CacheService {
     memoryUsage: 0,
   };
 
-  private constructor() {}
+  private constructor() {
+    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  }
 
   public static getInstance(): CacheService {
     if (!CacheService.instance) {
@@ -32,60 +36,57 @@ export class CacheService {
     return `${prefix}${key}`;
   }
 
-  public async get<T>(key: RedisKey, options?: CacheOptions): Promise<T | null> {
-    const fullKey = this.generateKey(key, options);
-    const client = redisClient.getClient();
-
+  async get<T>(key: string): Promise<ServiceResult<T>> {
     try {
-      const value = await client.get(fullKey);
-      if (value === null) {
-        this.stats.misses++;
-        return null;
+      const data = await this.redis.get(key);
+      if (!data) {
+        return { data: null };
       }
-
-      this.stats.hits++;
-      return JSON.parse(value) as T;
+      return { data: JSON.parse(data) as T };
     } catch (error) {
-      console.error('Cache get error:', error);
-      return null;
+      console.error('Error getting from cache:', error);
+      return { error: { message: 'Error getting from cache' } };
     }
   }
 
-  public async set<T>(
-    key: RedisKey,
-    value: T,
-    options?: CacheOptions
-  ): Promise<void> {
-    const fullKey = this.generateKey(key, options);
-    const client = redisClient.getClient();
-    const ttl = options?.ttl || REDIS_KEYS.TTL.DEFAULT;
-
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<ServiceResult<void>> {
     try {
-      const serializedValue = JSON.stringify(value);
-      await client.set(fullKey, serializedValue, 'EX', ttl);
-      this.stats.keys++;
-      await this.updateStats();
+      const stringValue = JSON.stringify(value);
+      if (ttlSeconds) {
+        await this.redis.setex(key, ttlSeconds, stringValue);
+      } else {
+        await this.redis.set(key, stringValue);
+      }
+      return { data: undefined };
     } catch (error) {
-      console.error('Cache set error:', error);
+      console.error('Error setting cache:', error);
+      return { error: { message: 'Error setting cache' } };
     }
   }
 
-  public async delete(key: RedisKey, options?: CacheOptions): Promise<void> {
-    const fullKey = this.generateKey(key, options);
-    const client = redisClient.getClient();
-
+  async delete(key: string): Promise<ServiceResult<void>> {
     try {
-      await client.del(fullKey);
-      this.stats.keys = Math.max(0, this.stats.keys - 1);
-      await this.updateStats();
+      await this.redis.del(key);
+      return { data: undefined };
     } catch (error) {
-      console.error('Cache delete error:', error);
+      console.error('Error deleting from cache:', error);
+      return { error: { message: 'Error deleting from cache' } };
+    }
+  }
+
+  async clear(): Promise<ServiceResult<void>> {
+    try {
+      await this.redis.flushall();
+      return { data: undefined };
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      return { error: { message: 'Error clearing cache' } };
     }
   }
 
   public async exists(key: RedisKey, options?: CacheOptions): Promise<boolean> {
     const fullKey = this.generateKey(key, options);
-    const client = redisClient.getClient();
+    const client = this.redis;
 
     try {
       const exists = await client.exists(fullKey);
@@ -100,8 +101,8 @@ export class CacheService {
     pattern: string,
     options?: CacheInvalidationOptions
   ): Promise<void> {
-    const client = redisClient.getClient();
-    const subscriber = redisClient.getSubscriber();
+    const client = this.redis;
+    const subscriber = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
     try {
       switch (options?.strategy || 'immediate') {
@@ -142,7 +143,7 @@ export class CacheService {
   }
 
   private async updateStats(): Promise<void> {
-    const client = redisClient.getClient();
+    const client = this.redis;
     try {
       const info = await client.info('memory');
       const memoryUsage = this.parseMemoryUsage(info);
@@ -160,24 +161,6 @@ export class CacheService {
       }
     }
     return 0;
-  }
-
-  public async clear(): Promise<void> {
-    const client = redisClient.getClient();
-    try {
-      const keys = await client.keys(`${REDIS_KEYS.PREFIX}*`);
-      if (keys.length > 0) {
-        await client.del(...keys);
-      }
-      this.stats = {
-        hits: 0,
-        misses: 0,
-        keys: 0,
-        memoryUsage: 0,
-      };
-    } catch (error) {
-      console.error('Cache clear error:', error);
-    }
   }
 }
 

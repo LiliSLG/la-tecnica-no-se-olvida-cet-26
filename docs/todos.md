@@ -66,71 +66,22 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 
 ## ② Capa de Servicios (`/lib/supabase/services/`)
 
-### `proyectosService.ts`
-- [ ] **Revisión Crítica de Métodos:** La lista actual es exhaustiva pero potencialmente excesiva para un servicio genérico. Implementar primero los métodos CRUD básicos y aquellos esenciales para las relaciones principales. Añadir métodos más específicos (`getProjectStats`, `getProjectTimeline`, etc.) *solo cuando sean requeridos por la UI y representen una lógica de datos reutilizable*. Muchos de estos podrían ser cálculos o composiciones hechas en el frontend o en Edge Functions específicas si son complejos.
-- [ ] **Implementar Métodos Esenciales (si no existen o necesitan refactor):**
-    - [ ] `create(data: CreateProyecto): Promise<ServiceResult<Proyecto>>`
-    - [ ] `getById(id: string): Promise<ServiceResult<Proyecto | null>>`
-    - [ ] `getAll(params?: any): Promise<ServiceResult<Proyecto[]>>` (con filtros, paginación)
-    - [ ] `update(id: string, data: UpdateProyecto): Promise<ServiceResult<Proyecto | null>>`
-    - [ ] `delete(id: string): Promise<ServiceResult<void>>` (logical delete)
-    - [ ] `permanentlyDelete(id: string): Promise<ServiceResult<void>>`
-- [ ] **Implementar Métodos Relacionales Clave (ejemplos, añadir según necesidad):**
-    - [ ] `getProjectWithRelations(id: string): Promise<ServiceResult<ProyectoWithRelations | null>>` (incluye autores, temas, organizaciones, etc.)
-    - [ ] `updateProjectWithRelations(id: string, data: UpdateProyectoWithRelations): Promise<ServiceResult<ProyectoWithRelations | null>>` (para manejar la actualización de M:N y otras relaciones complejas en una transacción o secuencia controlada)
-    - [ ] `getProjectContributors(id: string): Promise<ServiceResult<Persona[] | null>>`
-    - [ ] `getProjectOrganizations(id: string): Promise<ServiceResult<Organizacion[] | null>>`
-    - [ ] `getProjectTopics(id: string): Promise<ServiceResult<Tema[] | null>>`
-    - [ ] `getProjectFiles(id: string): Promise<ServiceResult<ProjectFile[] | null>>` (si los archivos se gestionan como entidades relacionadas)
-- [ ] **Evaluar y posponer/descartar el resto de la lista original** (e.g., `getProjectLikes`, `getProjectAuditLog`, `getProjectAPIKeys`, etc.) hasta que haya una necesidad clara en la UI. Algunos podrían ser características futuras separadas.
+### `test-utils.ts`
+- [ ] Update imports to use @/lib/supabase/services/ paths
+- [ ] Update service instances to use proper constructor parameters
+- [ ] Update mock data to match new types and field mappings
+- [ ] Ensure ServiceResult handling is consistent across all mocks
 
-### `noticiasService.ts`
-- [ ] Migrar completamente a la nueva arquitectura `BaseService`.
-- [ ] Asegurar que todos los métodos son consistentes con el nuevo patrón.
-- [ ] Actualizar todas las importaciones y usos en la aplicación para que apunten a `@/lib/supabase/services/noticiasService`.
 
 ### Otros Servicios (`entrevistasService`, `organizacionesService`, `temasService`, `personasService`, `relationshipService`)
 - [ ] Verificar que todos los servicios existentes sigan el patrón `BaseService` y las convenciones del proyecto.
 - [ ] Implementar los métodos CRUD básicos y los métodos relacionales necesarios si aún no existen o requieren adaptación.
 
 ### `personasService.ts`
-- [ ] **Implementar Métodos Faltantes:**
-    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Persona[]>>` - Para obtener múltiples personas por sus IDs
-    - [ ] `search(term: string): Promise<ServiceResult<Persona[]>>` - Para búsqueda de personas
-- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
-    - [ ] Map `foto_url` to `fotoURL`
-    - [ ] Map `categoria_principal` to `categoriaPrincipal`
-    - [ ] Map `es_admin` to `esAdmin`
-    - [ ] Map `esta_eliminado` to `activo`
-    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-    - [ ] Map `eliminado_en` to `eliminadoEn`
-    - [ ] Map `created_at` to `creadoEn`
-    - [ ] Map `updated_at` to `actualizadoEn`
 
-### `organizacionesService.ts`
-- [ ] **Implementar Métodos Faltantes:**
-    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Organizacion[]>>` - Para obtener múltiples organizaciones por sus IDs
-    - [ ] `search(term: string): Promise<ServiceResult<Organizacion[]>>` - Para búsqueda de organizaciones
-- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
-    - [ ] Map `nombre` to `nombreOficial`
-    - [ ] Map `logo_url` to `logoURL`
-    - [ ] Map `sitio_web` to `sitioWeb`
-    - [ ] Map `esta_eliminada` to `estaEliminada`
-    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-    - [ ] Map `eliminado_en` to `eliminadoEn`
-    - [ ] Map `created_at` to `creadoEn`
-    - [ ] Map `updated_at` to `actualizadoEn`
-
-### `temasService.ts`
-- [ ] **Implementar Métodos Faltantes:**
-    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Tema[]>>` - Para obtener múltiples temas por sus IDs
-    - [ ] `getAllActivos(): Promise<ServiceResult<Tema[]>>` - Para obtener todos los temas activos
-- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
-    - [ ] Map `esta_eliminado` to `estaEliminado`
-    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-    - [ ] Map `eliminado_en` to `eliminadoEn`
-    - [ ] Map `created_at` to `creadoEn`
-    - [ ] Map `updated_at` to `actualizadoEn`
+- [ ] **Implementar Método Faltante:**
+    - [ ] `getByEmail(email: string): Promise<ServiceResult<Persona | null>>` - Para obtener una persona por su email
+    - [ ] Asegurar que el método maneje correctamente los casos de error y el mapeo de campos
 
 ### CursosService
 - [ ] Create `cursosService.ts` with the following methods:
@@ -249,58 +200,70 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] `AdminTemaList.tsx` (Usa `temasService.getAll` (admin version), `temasService.delete` (logical), `temasService.restore`)
 - [ ] `AdminEntrevistaList.tsx` (Usa `entrevistasService.getAll` (admin version), `entrevistasService.delete` (logical), `entrevistasService.restore`)
 
----
+### HistoriasOralesService
+- [ ] Implement `getAll` method:
+  ```typescript
+- [ ] Migrate src/app/admin/gestion-entrevistas/editar/[id]/page.tsx to use HistoriasOralesService
+- [ ] Migrate src/app/admin/gestion-entrevistas/nueva/page.tsx to use HistoriasOralesService
 
-## TODOs
+- [ ] Implement `getPublic` method:
+  ```typescript
+  getPublic(): Promise<ServiceResult<Curso[]>>
+  ```
+  - Should retrieve all public courses
+  - Should include proper field mapping for:
+    - `fecha_inicio` -> `fechaInicio`
+    - `fecha_fin` -> `fechaFin`
+    - `cupos_disponibles` -> `cuposDisponibles`
+    - `created_at` -> `creadoEn`
+    - `updated_at` -> `actualizadoEn`
+  - Should handle null values for optional fields
+  - Should filter out non-public courses
 
-## Service Methods
+- [ ] Implement `search` method:
+  ```typescript
+  search(query: string): Promise<ServiceResult<Curso[]>>
+  ```
+  - Should search by titulo, descripcionCorta, and instructor
+  - Should handle partial matches
+  - Should be case-insensitive
+  - Should return empty array if no matches found
+  - Should handle null values for optional fields
 
-### PersonasService
-- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Persona[]>>` method to retrieve multiple persons by their IDs
-- [ ] Add `search(term: string): Promise<ServiceResult<Persona[]>>` method to search persons
-- [ ] Update type conversion in `getById` to properly map database fields to domain model:
-  - [ ] Map `foto_url` to `fotoURL`
-  - [ ] Map `categoria_principal` to `categoriaPrincipal`
-  - [ ] Map `es_admin` to `esAdmin`
-  - [ ] Map `esta_eliminado` to `activo`
-  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-  - [ ] Map `eliminado_en` to `eliminadoEn`
-  - [ ] Map `created_at` to `creadoEn`
-  - [ ] Map `updated_at` to `actualizadoEn`
 
-### OrganizacionesService
-- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Organizacion[]>>` method to retrieve multiple organizations by their IDs
-- [ ] Add `search(term: string): Promise<ServiceResult<Organizacion[]>>` method to search organizations
-- [ ] Update type conversion in `getById` to properly map database fields to domain model:
-  - [ ] Map `nombre` to `nombreOficial`
-  - [ ] Map `logo_url` to `logoURL`
-  - [ ] Map `sitio_web` to `sitioWeb`
-  - [ ] Map `esta_eliminada` to `estaEliminada`
-  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-  - [ ] Map `eliminado_en` to `eliminadoEn`
-  - [ ] Map `created_at` to `creadoEn`
-  - [ ] Map `updated_at` to `actualizadoEn`
+- [ ] Implement `create` method:
+  ```typescript
+  create(proyecto: Partial<Proyecto>): Promise<ServiceResult<Proyecto>>
+  ```
+  - Should create a new proyecto
+  - Should handle field mapping for:
+    - `archivoPrincipalUrl` -> `archivo_principal_url`
+    - `creadoEn` -> `created_at`
+    - `actualizadoEn` -> `updated_at`
+    - `eliminadoPorUid` -> `eliminado_por_uid`
+    - `eliminadoEn` -> `eliminado_en`
+  - Should handle null values for optional fields
+  - Should validate required fields
+  - Should handle unique constraints
+  - Should return the created proyecto with all fields
 
-### TemasService
-- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Tema[]>>` method to retrieve multiple themes by their IDs
-- [ ] Add `getAllActivos(): Promise<ServiceResult<Tema[]>>` method to retrieve all active themes
-- [ ] Update type conversion in `getById` to properly map database fields to domain model:
-  - [ ] Map `esta_eliminado` to `estaEliminado`
-  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
-  - [ ] Map `eliminado_en` to `eliminadoEn`
-  - [ ] Map `created_at` to `creadoEn`
-  - [ ] Map `updated_at` to `actualizadoEn`
+- [ ] Implement `update` method:
+  ```typescript
+  update(id: string, proyecto: Partial<Proyecto>): Promise<ServiceResult<Proyecto>>
+  ```
+  - Should update an existing proyecto
+  - Should handle field mapping for:
+    - `archivoPrincipalUrl` -> `archivo_principal_url`
+    - `actualizadoEn` -> `updated_at`
+  - Should handle null values for optional fields
+  - Should validate required fields
+  - Should handle unique constraints
+  - Should return the updated proyecto with all fields
 
-### CursosService
-- [ ] Create `cursosService.ts` with the following methods:
-  - [ ] `getAll(): Promise<ServiceResult<Curso[]>>` - To retrieve all courses
-  - [ ] `getById(id: string): Promise<ServiceResult<Curso>>` - To retrieve a course by ID
-  - [ ] `search(term: string): Promise<ServiceResult<Curso[]>>` - To search courses by term
-  - [ ] `getByNivel(nivel: NivelCurso): Promise<ServiceResult<Curso[]>>` - To get courses by level
-  - [ ] `getByTema(tema: string): Promise<ServiceResult<Curso[]>>` - To get courses by topic
-
-## Type Definitions
-- [ ] Export `RolInstitucional` type from `@/lib/types`
-- [ ] Export `ServiceResult` type from `@/lib/supabase/services/baseService`
-
----
+- [ ] Implement `getById` method:
+  ```typescript
+  getById(id: string): Promise<ServiceResult<Proyecto>>
+  ```
+  - Should retrieve a proyecto by ID
+  - Should include proper field mapping for:
+    - `archivo_principal_url` -> `

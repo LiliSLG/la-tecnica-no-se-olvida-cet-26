@@ -26,6 +26,17 @@ export interface CacheConfig {
   enableCache: boolean;
 }
 
+export type EntityType =
+  | 'persona'
+  | 'organizacion'
+  | 'tema'
+  | 'proyecto'
+  | 'entrevista'
+  | 'noticia'
+  | 'curso'
+  | 'historia_oral'
+  | 'oferta_laboral';
+
 export abstract class BaseService<
   T extends { id: string },
   TableName extends keyof Database['public']['Tables']

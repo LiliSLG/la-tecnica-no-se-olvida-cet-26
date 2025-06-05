@@ -1,48 +1,72 @@
+
 "use client";
 
-import type { OfertaTrabajo, TipoContratoOferta, Tema } from '@/lib/types';
+// Tipos necesarios para los datos mockeados y el componente
+type TipoContratoOferta =
+  | "jornada_completa"
+  | "media_jornada"
+  | "freelance"
+  | "pasantia"
+  | "voluntariado"
+  | "otro";
+
+interface OfertaTrabajoMock { // Tipo para los datos mockeados, simplificado
+  id: string;
+  titulo: string;
+  publicadoPorNombre: string;
+  esEmpresa: boolean;
+  descripcion: string;
+  descripcionCorta?: string;
+  ubicacionTexto: string;
+  tipoContrato: TipoContratoOferta;
+  idsTemasRequeridos?: string[]; // Array de IDs de temas
+  categoriaOferta?: string; // Podría usarse para filtrar más adelante
+  fechaPublicacion: string; // Mantener como string para el mock
+  // Otros campos de mockOfertas que no se usan directamente en la card pueden omitirse aquí
+}
+
+interface TemaMock { // Tipo para los temas mockeados
+  id: string;
+  nombre: string;
+}
+
+// Componentes UI de Shadcn (solo los que se usan realmente para el layout básico)
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, MapPin, CalendarDays, Tag, Search, Filter, PlusCircle, Building, User, Wrench } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllTemasActivos } from '@/lib/supabase/services/temasService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const mockOfertas: OfertaTrabajo[] = [
+// Iconos (solo los que se usan)
+import { Briefcase, MapPin, CalendarDays, Tag, Building, User, Wrench, Filter, Search, PlusCircle } from 'lucide-react';
+
+import Link from 'next/link'; // Para el botón "Ver Detalles"
+import { useState, useEffect, useMemo } from 'react'; // Hooks de React
+import { Input } from '@/components/ui/input'; // Para filtros
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Para filtros
+
+
+// --- DATOS MOCKEADOS ---
+const mockOfertas: OfertaTrabajoMock[] = [
   {
     id: "1",
-    titulo: "Desarrollador Full-Stack para Proyecto AgroTech",
-    publicadoPorNombre: "AgroSoluciones S.A.",
-    esEmpresa: true,
+    titulo: "Personal para Mantenimiento y Desarrollo de Predio",
+    publicadoPorNombre: "Cooperativa de Agua de Ing. Jacobacci",
+    esEmpresa: true, // Las cooperativas suelen considerarse entidades tipo empresa para estos fines
     descripcion:
-      "Buscamos un desarrollador full-stack con experiencia en Python y React para un innovador proyecto de tecnología aplicada al agro. Responsabilidades incluyen desarrollo frontend y backend, integración con APIs de sensores y manejo de bases de datos.",
+      "La Cooperativa de Agua local busca personal proactivo para tareas de mantenimiento general de instalaciones y desarrollo del predio. Las responsabilidades incluyen reparaciones menores, cuidado de espacios verdes, apoyo en proyectos de expansión de infraestructura y asistencia en operaciones diarias. Se valorará experiencia previa en mantenimiento, plomería, albañilería o jardinería.",
     descripcionCorta:
-      "Desarrollador con experiencia en Python y React para proyecto AgroTech.",
-    ubicacionTexto: "Remoto (Argentina)",
+      "Personal para mantenimiento general de instalaciones y desarrollo del predio de la Cooperativa de Agua.",
+    ubicacionTexto: "Ing. Jacobacci, Río Negro",
     tipoContrato: "jornada_completa",
-    idsTemasRequeridos: ["tecnologico", "agropecuario"], // IDs de temas
-    categoriaOferta: "Desarrollo de Software",
-    requisitos:
-      "Experiencia de 3+ años en Python y React. Conocimiento de Docker. Experiencia con GIS es un plus.",
-    beneficios:
-      "Salario competitivo. Obra Social. Capacitación continua. Horario flexible.",
-    comoAplicar: "Enviar CV y portfolio a rrhh@agrosoluciones.example.com",
-    fechaPublicacion: "2024-07-15",
-    creadoPorUid: "adminUserUid",
-    creadoEn: new Date().toISOString(),
-    actualizadoEn: new Date().toISOString(),
-    estaActiva: true,
+    idsTemasRequeridos: ["mantenimiento", "infraestructura", "servicios_publicos"], // IDs de temas ejemplo
+    categoriaOferta: "Mantenimiento y Oficios",
+    fechaPublicacion: "2024-07-28", // Fecha actualizada
   },
   {
     id: "2",
     titulo: "Técnico de Campo para Relevamiento de Suelos",
     publicadoPorNombre: 'Estancia "La Esperanza"',
-    esEmpresa: true, // Estancia es una empresa/producción
+    esEmpresa: true,
     descripcion:
       "Se necesita técnico agrónomo o estudiante avanzado para realizar relevamiento de suelos y seguimiento de cultivos en estancia ubicada en la zona de Jacobacci. Movilidad propia excluyente.",
     descripcionCorta:
@@ -51,14 +75,7 @@ const mockOfertas: OfertaTrabajo[] = [
     tipoContrato: "media_jornada",
     idsTemasRequeridos: ["manejo_suelo", "agropecuario"],
     categoriaOferta: "Trabajo de Campo",
-    requisitos:
-      "Título de Técnico Agrónomo o estudiante avanzado. Experiencia en muestreo de suelos. Carnet de conducir.",
-    comoAplicar: "Contactar al Sr.Perez al 294-4XXXXXX",
     fechaPublicacion: "2024-07-20",
-    creadoPorUid: "adminUserUid",
-    creadoEn: new Date().toISOString(),
-    actualizadoEn: new Date().toISOString(),
-    estaActiva: true,
   },
   {
     id: "3",
@@ -73,17 +90,18 @@ const mockOfertas: OfertaTrabajo[] = [
     tipoContrato: "pasantia",
     idsTemasRequeridos: ["social", "agropecuario"],
     categoriaOferta: "Administración",
-    requisitos:
-      "Estudiante regular de Administración, Economía o carreras afines. Buen manejo de Office. Proactividad.",
-    comoAplicar:
-      "Presentar CV en las oficinas de la Cooperativa, Av. San Martín 123.",
     fechaPublicacion: "2024-07-22",
-    creadoPorUid: "adminUserUid",
-    creadoEn: new Date().toISOString(),
-    actualizadoEn: new Date().toISOString(),
-    estaActiva: true,
   },
 ];
+
+const mockTemas: TemaMock[] = [
+  { id: "tecnologico", nombre: "Tecnológico" },
+  { id: "agropecuario", nombre: "Agropecuario" },
+  { id: "manejo_suelo", nombre: "Manejo de Suelo" },
+  { id: "social", nombre: "Social" },
+];
+// --- FIN DATOS MOCKEADOS ---
+
 
 const tipoContratoLabels: Record<TipoContratoOferta, string> = {
   jornada_completa: 'Jornada Completa',
@@ -94,17 +112,17 @@ const tipoContratoLabels: Record<TipoContratoOferta, string> = {
   otro: 'Otro',
 };
 
+interface OfertaCardProps {
+  oferta: OfertaTrabajoMock;
+  temasMap: Map<string, string>;
+}
 
-const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map<string, string> }) => {
+const OfertaCard = ({ oferta, temasMap }: OfertaCardProps) => {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (oferta.fechaPublicacion) {
-      const dateObj =
-        typeof oferta.fechaPublicacion === "string"
-          ? new Date(oferta.fechaPublicacion)
-          : oferta.fechaPublicacion;
-
+      const dateObj = new Date(oferta.fechaPublicacion);
       setFormattedDate(dateObj.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }));
     }
   }, [oferta.fechaPublicacion]);
@@ -112,6 +130,8 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
   const temasDeOferta = useMemo(() => {
     return oferta.idsTemasRequeridos?.map(id => temasMap.get(id)).filter(Boolean) as string[] || [];
   }, [oferta.idsTemasRequeridos, temasMap]);
+
+  const descripcionCorta = oferta.descripcionCorta || oferta.descripcion.substring(0, 150) + (oferta.descripcion.length > 150 ? '...' : '');
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">
@@ -128,8 +148,8 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-3">
-        <p className="text-foreground/80 text-sm h-20 overflow-hidden text-ellipsis">
-          {oferta.descripcionCorta || oferta.descripcion.substring(0, 150) + (oferta.descripcion.length > 150 ? '...' : '')}
+        <p className="text-foreground/80 text-sm min-h-[5rem] overflow-hidden">
+          {descripcionCorta}
         </p>
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -141,10 +161,10 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
         </div>
         {temasDeOferta.length > 0 && (
           <div className="pt-2 space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1"><Tag className="h-3.5 w-3.5"/>Temas relacionados:</h4>
+            <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1"><Tag className="h-3.5 w-3.5" />Temas relacionados:</h4>
             <div className="flex flex-wrap gap-1.5">
-              {temasDeOferta.slice(0, 3).map((tema) => (
-                <Badge key={tema} variant="secondary" className="text-xs">{tema}</Badge>
+              {temasDeOferta.slice(0, 3).map((temaNombre) => (
+                <Badge key={temaNombre} variant="secondary" className="text-xs">{temaNombre}</Badge>
               ))}
               {temasDeOferta.length > 3 && <Badge variant="outline" className="text-xs">...</Badge>}
             </div>
@@ -153,6 +173,7 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
       </CardContent>
       <CardFooter>
         <Button asChild variant="default" className="w-full" disabled={!oferta.id}>
+          {/* El link puede ser # o una ruta genérica por ahora */}
           <Link href={`/bolsa-de-trabajo/${oferta.id}`}>
             Ver Detalles y Aplicar
           </Link>
@@ -163,73 +184,26 @@ const OfertaCard = ({ oferta, temasMap }: { oferta: OfertaTrabajo; temasMap: Map
 };
 
 export default function JobBoardContent() {
-  const [ofertas, setOfertas] = useState<OfertaTrabajo[]>(mockOfertas); // Usar mock data por ahora
-  const [filteredOfertas, setFilteredOfertas] = useState<OfertaTrabajo[]>(mockOfertas);
-  const [loading, setLoading] = useState(false);
-  
+  // Estado para los datos mockeados y filtros
+  const [ofertas, setOfertas] = useState<OfertaTrabajoMock[]>(mockOfertas);
+  const [temasMap, setTemasMap] = useState<Map<string, string>>(new Map());
+  const [allAvailableTemas, setAllAvailableTemas] = useState<TemaMock[]>(mockTemas);
+
+  const [filteredOfertas, setFilteredOfertas] = useState<OfertaTrabajoMock[]>(ofertas);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemaFilter, setSelectedTemaFilter] = useState<string | 'all'>('all');
   const [selectedTipoContratoFilter, setSelectedTipoContratoFilter] = useState<TipoContratoOferta | 'all'>('all');
-  
-  const [allAvailableTemas, setAllAvailableTemas] = useState<Tema[]>([]);
-  const [temasMap, setTemasMap] = useState<Map<string, string>>(new Map());
 
-
+  // Simular la carga de temas en un mapa para el componente OfertaCard
   useEffect(() => {
-    const fetchTemas = async () => {
-      try {
-        // const temasFromDb = await getAllTemasActivos(); // Descomentar cuando el servicio esté listo
-        // setAllAvailableTemas(temasFromDb);
-        // const map = new Map<string, string>();
-        // temasFromDb.forEach(tema => map.set(tema.id!, tema.nombre));
-        // setTemasMap(map);
+    const map = new Map<string, string>();
+    mockTemas.forEach(tema => map.set(tema.id, tema.nombre));
+    setTemasMap(map);
+  }, []); // Se ejecuta una vez
 
-        // Mock temas mientras tanto
-        const mockTemas: Tema[] = [
-          {
-            id: "tecnologico",
-            nombre: "Tecnológico",
-            creadoEn: new Date().toISOString(),
-            actualizadoEn: new Date().toISOString(),
-            estaEliminada: false,
-          },
-          {
-            id: "agropecuario",
-            nombre: "Agropecuario",
-            creadoEn: new Date().toISOString(),
-            actualizadoEn: new Date().toISOString(),
-            estaEliminada: false,
-          },
-          {
-            id: "manejo_suelo",
-            nombre: "Manejo de Suelo",
-            creadoEn: new Date().toISOString(),
-            actualizadoEn: new Date().toISOString(),
-            estaEliminada: false,
-          },
-          {
-            id: "social",
-            nombre: "Social",
-            creadoEn: new Date().toISOString(),
-            actualizadoEn: new Date().toISOString(),
-            estaEliminada: false,
-          },
-        ];
-        setAllAvailableTemas(mockTemas);
-        const map = new Map<string,string>();
-        mockTemas.forEach(tema => map.set(tema.id!, tema.nombre));
-        setTemasMap(map);
-
-      } catch (error) {
-        console.error("Error fetching temas for job board:", error);
-      }
-    };
-    fetchTemas();
-  }, []);
-
+  // Lógica de filtrado (simplificada para datos mock)
   useEffect(() => {
-    // Lógica de filtrado
-    let currentOfertas = [...ofertas];
+    let currentOfertas = [...ofertas]; // Usar los datos mock originales
     if (searchTerm) {
       currentOfertas = currentOfertas.filter(o =>
         o.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -262,6 +236,7 @@ export default function JobBoardContent() {
         </p>
       </header>
 
+      {/* El Alerta de "Funcionalidad en Desarrollo" se mantiene */}
       <Alert variant="default" className="max-w-3xl mx-auto bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300">
         <Wrench className="h-5 w-5 text-amber-600 dark:text-amber-400" />
         <AlertTitle className="font-semibold">Funcionalidad en Desarrollo</AlertTitle>
@@ -272,18 +247,19 @@ export default function JobBoardContent() {
 
       <div className="container mx-auto px-4">
         <div className="mb-8 flex flex-col md:flex-row justify-between items-center gap-4 p-4 bg-card rounded-lg shadow">
-            <h2 className="text-2xl font-semibold text-primary">Explorar Ofertas</h2>
-            <Button asChild size="lg">
-                <Link href="/bolsa-de-trabajo/nueva">
-                    <PlusCircle className="mr-2 h-5 w-5" /> Publicar Nueva Oferta
-                </Link>
-            </Button>
+          <h2 className="text-2xl font-semibold text-primary">Explorar Ofertas</h2>
+          {/* El botón de Publicar puede llevar a una ruta genérica o # por ahora */}
+          <Button asChild size="lg">
+            <Link href="/bolsa-de-trabajo/nueva">
+              <PlusCircle className="mr-2 h-5 w-5" /> Publicar Nueva Oferta
+            </Link>
+          </Button>
         </div>
 
         {/* Filtros */}
         <Card className="p-4 md:p-6 mb-8 shadow-md">
           <CardHeader className="p-0 pb-4">
-            <CardTitle className="text-xl flex items-center gap-2"><Filter className="h-5 w-5 text-primary"/>Filtrar Ofertas</CardTitle>
+            <CardTitle className="text-xl flex items-center gap-2"><Filter className="h-5 w-5 text-primary" />Filtrar Ofertas</CardTitle>
           </CardHeader>
           <CardContent className="p-0 space-y-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 items-end">
             <div>
@@ -303,7 +279,7 @@ export default function JobBoardContent() {
                 </SelectContent>
               </Select>
             </div>
-             <div>
+            <div>
               <label htmlFor="tipo-contrato-filter" className="block text-sm font-medium text-muted-foreground mb-1">Tipo de Contrato</label>
               <Select value={selectedTipoContratoFilter} onValueChange={(value) => setSelectedTipoContratoFilter(value as TipoContratoOferta | 'all')}>
                 <SelectTrigger id="tipo-contrato-filter" className="shadow-sm"><SelectValue placeholder="Todos los Tipos" /></SelectTrigger>
@@ -321,9 +297,8 @@ export default function JobBoardContent() {
           </CardContent>
         </Card>
 
-        {loading ? (
-          <p className="text-center text-muted-foreground py-10">Cargando ofertas de trabajo...</p>
-        ) : filteredOfertas.length > 0 ? (
+        {/* Renderizado de las tarjetas */}
+        {filteredOfertas.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {filteredOfertas.map(oferta => (
               <OfertaCard key={oferta.id} oferta={oferta} temasMap={temasMap} />
@@ -333,13 +308,10 @@ export default function JobBoardContent() {
           <div className="text-center py-12">
             <Briefcase className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <p className="text-xl text-muted-foreground">No hay ofertas de trabajo que coincidan con tu búsqueda o filtros.</p>
-            <p className="text-sm text-muted-foreground mt-2">Intenta con otros términos o ajusta los filtros, o vuelve más tarde.</p>
+            <p className="text-sm text-muted-foreground mt-2">Intenta con otros términos o ajusta los filtros.</p>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
-    

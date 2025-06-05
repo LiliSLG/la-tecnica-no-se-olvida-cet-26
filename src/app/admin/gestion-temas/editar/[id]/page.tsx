@@ -1,98 +1,90 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import TemaForm from '@/components/forms/TemaForm';
-import type { TemaFormData } from '@/lib/schemas/temaSchema';
-import { getTemaById, updateTema } from '@/lib/supabase/services/temasService';
-import {
-  convertFormDataToSupabaseTema,
-  convertSupabaseDataToFormTema,
-} from "@/lib/schemas/temaSchema";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Tema } from '@/lib/types';
-import { Edit, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import type { Tema } from '@/lib/types';
+import { TemasService } from '@/lib/supabase/services/temasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import TemaForm from '@/components/forms/TemaForm';
+import type { TemaFormData } from '@/lib/schemas/temaSchema';
 
-interface EditarTemaPageProps {
-  params: Promise<{ id: string }> | { id: string };
+interface EditTemaPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function EditarTemaPage({ params: paramsProp }: EditarTemaPageProps) {
-  const resolvedParams = use(paramsProp as Promise<{ id: string }>);
-  const { id: temaId } = resolvedParams;
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initialData, setInitialData] = useState<TemaFormData | undefined>(undefined);
+export default function EditTemaPage({ params }: EditTemaPageProps) {
+  const [tema, setTema] = useState<Tema | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
-  const volverAPath = searchParams.get('volverA') || '/admin/gestion-temas';
+  const temasService = new TemasService(supabase);
 
   useEffect(() => {
     const fetchTema = async () => {
-      if (!temaId) return;
+      if (!params.id) return;
       setLoading(true);
+      setError(null);
       try {
-        const tema = await getTemaById(temaId);
-        if (tema) {
-          setInitialData(convertSupabaseDataToFormTema(tema));
+        const result = await temasService.getById(params.id);
+        if (result.data) {
+          setTema(result.data);
         } else {
           setError("Tema no encontrado.");
           toast({ title: "Error", description: "Tema no encontrado.", variant: "destructive" });
-          router.push(volverAPath); 
+          router.push('/admin/gestion-temas'); 
         }
       } catch (err) {
-        console.error("Error fetching tema for editing:", err);
-        setError("No se pudo cargar el tema para editar.");
+        console.error("Error fetching tema:", err);
+        setError("No se pudo cargar el tema.");
         toast({ title: "Error", description: "No se pudo cargar el tema.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
     fetchTema();
-  }, [temaId, router, toast, volverAPath]);
+  }, [params.id, router, toast]);
 
   const handleSubmit = async (data: TemaFormData): Promise<boolean> => {
     if (!user) {
-      toast({ title: "Error de Autenticación", description: "Debes estar autenticado como administrador.", variant: "destructive" });
-      return false;
-    }
-    if (!temaId) {
-      toast({ title: "Error", description: "No se pudo identificar el tema a editar.", variant: "destructive" });
+      toast({ title: "Error", description: "Debes iniciar sesión para editar un tema.", variant: "destructive" });
       return false;
     }
 
-    setIsSubmitting(true);
+    setLoading(true);
+    setError(null);
     try {
-      const dataForSupabase = convertFormDataToSupabaseTema(
-        data,
-        user.id,
-        initialData as Tema
-      );
-      await updateTema(temaId, dataForSupabase as TemaFormData, user.id); // Cast if service expects more complete data
-      toast({ title: "Éxito", description: "Tema actualizado correctamente." });
-      router.push(volverAPath);
-      return true;
+      const result = await temasService.update(params.id, data, user.id);
+      if (result.data) {
+        toast({ title: "Éxito", description: "Tema actualizado correctamente." });
+        router.push('/admin/gestion-temas');
+        return true;
+      } else {
+        throw new Error(result.error?.message || "Error al actualizar el tema");
+      }
     } catch (error) {
       console.error("Error updating tema:", error);
+      setError("No se pudo actualizar el tema.");
       toast({ title: "Error", description: "No se pudo actualizar el tema.", variant: "destructive" });
       return false;
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-        Cargando datos del tema...
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-muted-foreground">Cargando tema...</p>
       </div>
     );
   }
@@ -102,35 +94,34 @@ export default function EditarTemaPage({ params: paramsProp }: EditarTemaPagePro
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <p className="text-xl text-destructive mb-4">{error}</p>
-        <Button onClick={() => router.push(volverAPath)} variant="outline">Volver al listado</Button>
+        <Button onClick={() => router.push('/admin/gestion-temas')} variant="outline">Volver al listado</Button>
       </div>
     );
   }
-  
-  if (!initialData) {
-     return (
+
+  if (!tema) {
+    return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
         <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-xl text-muted-foreground mb-4">Tema no encontrado.</p>
-        <Button onClick={() => router.push(volverAPath)} variant="outline">Ir al listado</Button>
+        <Button onClick={() => router.push('/admin/gestion-temas')} variant="outline">Ir al listado</Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto py-10">
-      <header className="flex items-center gap-3">
-        <Edit className="h-10 w-10 text-primary" />
-        <h1 className="text-4xl font-bold text-primary">Editar Tema</h1>
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold">Editar Tema</h1>
+        <p className="text-muted-foreground">
+          Modifica la información de "{tema.nombre}".
+        </p>
       </header>
-      <p className="text-muted-foreground">
-        Modifica la información del tema "{initialData.nombre}".
-      </p>
       <TemaForm 
         onSubmit={handleSubmit} 
-        initialData={initialData} 
-        isSubmitting={isSubmitting} 
-        volverAPath={volverAPath}
+        initialData={tema} 
+        isSubmitting={loading} 
+        volverAPath="/admin/gestion-temas"
       />
     </div>
   );

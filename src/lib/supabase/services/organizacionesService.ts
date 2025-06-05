@@ -241,34 +241,155 @@ export class OrganizacionesService extends BaseService<Organizacion, 'organizaci
     }
   }
 
-  // Override search to include descripcion in search
+  async getById(id: string): Promise<ServiceResult<Organizacion | null>> {
+    try {
+      const cached = await this.getFromCache(id);
+      if (cached) return this.createSuccessResult(cached);
+
+      const { data: organizacion, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (!organizacion) return this.createSuccessResult(null);
+
+      await this.setInCache(id, organizacion);
+      return this.createSuccessResult(organizacion);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<ServiceResult<Organizacion[]>> {
+    try {
+      if (!ids.length) return this.createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return this.createSuccessResult(cachedResults.filter(Boolean) as Organizacion[]);
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const organizacion of data) {
+        await this.setInCache(organizacion.id, organizacion);
+      }
+
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return this.createSuccessResult(allResults);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+    }
+  }
+
+  async getPublic(): Promise<ServiceResult<Organizacion[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const organizacion of data) {
+        await this.setInCache(organizacion.id, organizacion);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+    }
+  }
+
   async search(query: string, options?: QueryOptions): Promise<ServiceResult<Organizacion[]>> {
     try {
-      if (!query) {
+      if (!query.trim()) return this.createSuccessResult([]);
+
+      const searchPattern = `%${query.trim()}%`;
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .or(`nombre.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
+        .eq('esta_eliminada', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return this.createSuccessResult([]);
+
+      for (const organizacion of data) {
+        await this.setInCache(organizacion.id, organizacion);
+      }
+
+      return this.createSuccessResult(data);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+    }
+  }
+
+  async update(id: string, data: UpdateOrganizacion): Promise<ServiceResult<Organizacion>> {
+    try {
+      const validationError = this.validateUpdateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: updated, error } = await this.supabase
+        .from(this.tableName)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!updated) {
         return this.createErrorResult(
-          mapValidationError('Search query is required', 'query', query)
+          mapValidationError('Organizacion not found', 'id', id)
         );
       }
 
-      let searchQuery = this.supabase
+      await this.setInCache(id, updated);
+      return this.createSuccessResult(updated);
+    } catch (error) {
+      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+    }
+  }
+
+  async create(data: CreateOrganizacion): Promise<ServiceResult<Organizacion>> {
+    try {
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return this.createErrorResult(validationError);
+      }
+
+      const { data: created, error } = await this.supabase
         .from(this.tableName)
+        .insert(data)
         .select()
-        .or(`nombre.ilike.%${query}%,descripcion.ilike.%${query}%`);
-
-      if (!options?.includeDeleted) {
-        searchQuery = searchQuery.eq('esta_eliminada', false);
-      }
-
-      if (options?.limit) {
-        searchQuery = searchQuery.limit(options.limit);
-      }
-
-      const { data, error } = await searchQuery;
+        .single();
 
       if (error) throw error;
-      return this.createSuccessResult(data as Organizacion[]);
+      if (!created) {
+        return this.createErrorResult(
+          mapValidationError('Failed to create organizacion', 'data', data)
+        );
+      }
+
+      await this.setInCache(created.id, created);
+      return this.createSuccessResult(created);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search', query, options }));
+      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
     }
   }
 } 

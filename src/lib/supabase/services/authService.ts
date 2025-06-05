@@ -1,216 +1,240 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/supabase/types/database.types';
-import { BaseService } from '@/lib/supabase/services/baseService';
-import { ServiceResult } from '@/lib/supabase/types/service';
-import { ValidationError } from '@/lib/supabase/errors/types';
-import { mapValidationError } from '@/lib/supabase/errors/utils';
-import { CacheableServiceConfig } from '@/lib/supabase/services/cacheableService';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
+import { supabase } from '@/lib/supabase/supabaseClient';
+import { ServiceResult, ServiceError } from './baseService';
+import { Persona } from '@/types/persona';
+import { PersonasService } from './personasService';
 
-type User = Database['public']['Tables']['users']['Row'];
-type CreateUser = Database['public']['Tables']['users']['Insert'];
-type UpdateUser = Database['public']['Tables']['users']['Update'];
+export class AuthService {
+  private personasService: PersonasService;
 
-export class AuthService extends BaseService<User, 'users'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'users' = 'users',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'user' }
-  ) {
-    super(supabase, tableName, cacheConfig);
+  constructor() {
+    this.personasService = new PersonasService();
   }
 
-  protected validateCreateInput(data: CreateUser): ValidationError | null {
-    if (!data.email) {
-      return {
-        name: 'ValidationError',
-        message: 'El email es requerido',
-        field: 'email',
-        value: data.email
-      };
-    }
-    return null;
-  }
-
-  protected validateUpdateInput(data: UpdateUser): ValidationError | null {
-    if (data.email === '') {
-      return {
-        name: 'ValidationError',
-        message: 'El email no puede estar vacío',
-        field: 'email',
-        value: data.email
-      };
-    }
-    return null;
-  }
-
-  async create(data: Omit<User, 'id'>): Promise<ServiceResult<User>> {
+  async signIn(email: string, password: string): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
-      // Validate input
-      const validationError = this.validateCreateInput(data as CreateUser);
-      if (validationError) {
-        return this.createErrorResult(validationError);
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(authError.message),
+        };
       }
 
-      const now = new Date().toISOString();
-      const { data: newUser, error } = await this.supabase
-        .from(this.tableName)
-        .insert({
-          ...data,
-          created_at: now,
-          updated_at: now,
-          esta_eliminada: false,
-          eliminado_por_uid: null,
-          eliminado_en: null
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!newUser) throw new Error('Failed to create user');
-
-      // Cache the new user
-      await this.setInCache(newUser.id, newUser);
-
-      return this.createSuccessResult(newUser);
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
-    }
-  }
-
-  async update(id: string, data: Partial<User>): Promise<ServiceResult<User>> {
-    try {
-      // Validate input
-      const validationError = this.validateUpdateInput(data as UpdateUser);
-      if (validationError) {
-        return this.createErrorResult(validationError);
+      if (!authData.user) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError('No user data returned'),
+        };
       }
 
-      const now = new Date().toISOString();
-      const { data: updatedUser, error } = await this.supabase
-        .from(this.tableName)
-        .update({
-          ...data,
-          updated_at: now
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      // Get user profile
+      const result = await this.personasService.getById(authData.user.id);
+      if (result.error) {
+        return {
+          success: false,
+          data: null,
+          error: result.error,
+        };
+      }
 
-      if (error) throw error;
-      if (!updatedUser) throw new Error('Failed to update user');
-
-      // Update cache
-      await this.setInCache(id, updatedUser);
-
-      return this.createSuccessResult(updatedUser);
+      return {
+        success: true,
+        data: {
+          user: result.data,
+          session: authData.session,
+        },
+        error: null,
+      };
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
     }
   }
 
-  async getById(id: string): Promise<ServiceResult<User>> {
+  async signUp(email: string, password: string, userData: Partial<Persona>): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
-      // Try to get from cache first
-      const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(cached);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-      const { data: user, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
+      if (authError) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(authError.message),
+        };
+      }
 
-      if (error) throw error;
-      if (!user) return this.createSuccessResult(null);
+      if (!authData.user) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError('No user data returned'),
+        };
+      }
 
-      // Cache the result
-      await this.setInCache(id, user);
+      // Create user profile
+      const persona: Partial<Persona> = {
+        ...userData,
+        id: authData.user.id,
+        email,
+        estado: 'activo',
+        activo: true,
+        esAdmin: false,
+        creadoEn: new Date().toISOString(),
+        actualizadoEn: new Date().toISOString(),
+      };
 
-      return this.createSuccessResult(user);
+      const result = await this.personasService.create(persona);
+      if (result.error) {
+        return {
+          success: false,
+          data: null,
+          error: result.error,
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          user: result.data,
+          session: authData.session,
+        },
+        error: null,
+      };
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
     }
   }
 
-  async getByEmail(email: string): Promise<ServiceResult<User>> {
+  async signOut(): Promise<ServiceResult<void>> {
     try {
-      const { data: user, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('email', email)
-        .single();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(error.message),
+        };
+      }
 
-      if (error) throw error;
-      if (!user) return this.createSuccessResult(null);
-
-      // Cache the result
-      await this.setInCache(user.id, user);
-
-      return this.createSuccessResult(user);
+      return {
+        success: true,
+        data: undefined,
+        error: null,
+      };
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByEmail' }));
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
     }
   }
 
-  async logicalDelete(id: string, adminUid: string): Promise<ServiceResult<User>> {
+  async resetPassword(email: string): Promise<ServiceResult<void>> {
     try {
-      const now = new Date().toISOString();
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .update({
-          esta_eliminada: true,
-          eliminado_por_uid: adminUid,
-          eliminado_en: now,
-          updated_at: now
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(error.message),
+        };
+      }
 
-      if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
-
-      // Update cache
-      await this.setInCache(id, data);
-
-      return this.createSuccessResult(data);
+      return {
+        success: true,
+        data: undefined,
+        error: null,
+      };
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'logicalDelete' }));
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
     }
   }
 
-  async restore(id: string, adminUid: string): Promise<ServiceResult<User>> {
+  async updatePassword(password: string): Promise<ServiceResult<void>> {
     try {
-      const now = new Date().toISOString();
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .update({
-          esta_eliminada: false,
-          eliminado_por_uid: null,
-          eliminado_en: null,
-          updated_at: now
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(error.message),
+        };
+      }
 
-      if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
-
-      // Update cache
-      await this.setInCache(id, data);
-
-      return this.createSuccessResult(data);
+      return {
+        success: true,
+        data: undefined,
+        error: null,
+      };
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'restore' }));
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
     }
   }
-}
 
-// Singleton instance
-export const authService = new AuthService(supabase);
+  async getCurrentUser(): Promise<ServiceResult<Persona | null>> {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        return {
+          success: false,
+          data: null,
+          error: new ServiceError(authError.message),
+        };
+      }
 
-// Export individual functions for backward compatibility
-export const getUserById = (id: string) => authService.getById(id);
-export const getUserByEmail = (email: string) => authService.getByEmail(email); 
+      if (!user) {
+        return {
+          success: true,
+          data: null,
+          error: null,
+        };
+      }
+
+      const result = await this.personasService.getById(user.id);
+      if (result.error) {
+        return {
+          success: false,
+          data: null,
+          error: result.error,
+        };
+      }
+
+      return {
+        success: true,
+        data: result.data,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
+      };
+    }
+  }
+} 

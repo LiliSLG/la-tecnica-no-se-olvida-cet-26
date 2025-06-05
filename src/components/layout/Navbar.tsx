@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -49,7 +48,12 @@ import {
 } from "@/components/ui/accordion";
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { Persona } from '@/lib/types/persona';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
+const personasService = new PersonasService();
 
 const Logo = () => (
   <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity mr-2 flex-shrink-0">
@@ -221,9 +225,51 @@ interface NavLinksListProps {
 
 const NavLinksList = ({ userLoggedIn, onLinkClick }: NavLinksListProps) => {
   const [internalMounted, setInternalMounted] = useState(false);
+  const { toast } = useToast();
+  const [persona, setPersona] = useState<Persona | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setInternalMounted(true);
+    loadPersona();
   }, []);
+
+  const loadPersona = async () => {
+    try {
+      setLoading(true);
+      const result = await personasService.getCurrentUser();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      setPersona(result.data);
+    } catch (error) {
+      console.error('Error loading current user:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo cargar la información del usuario',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const result = await personasService.logout();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo cerrar la sesión',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const baseLinks = [
     { href: "/cet-26", icon: <Building className="h-4 w-4" />, text: "El CET 26" },
