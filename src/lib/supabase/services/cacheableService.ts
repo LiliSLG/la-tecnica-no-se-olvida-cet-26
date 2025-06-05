@@ -1,7 +1,6 @@
 import { cacheService } from '../../redis/cacheService';
 import { cacheKeys } from '../../redis/cacheKeys';
 import { Database } from '../types/database.types';
-import { ServiceError } from '../errors/types';
 import { ServiceResult, QueryOptions, BaseServiceConfig } from '@/lib/supabase/types/service';
 
 

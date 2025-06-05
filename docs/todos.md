@@ -265,3 +265,15 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] Implement proper error handling in authService.ts
 - [ ] Add comprehensive tests for authService.ts
 - [ ] Add session management in authService.ts
+
+## Service Improvements
+
+### NoticiasService
+- [ ] Refactor to extend BaseService instead of CacheableService
+- [ ] Add missing methods:
+  - [ ] getByIds
+  - [ ] getPublic
+- [ ] Standardize error handling to use ValidationError
+- [ ] Add QueryOptions support to search method
+- [ ] Add field mapping helpers for consistency
+- [ ] Add proper type definitions for Noticia domain model

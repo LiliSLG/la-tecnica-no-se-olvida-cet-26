@@ -68,19 +68,16 @@ export abstract class BaseService<
   }
 
   protected createSuccessResult<T>(data: T): ServiceResult<T> {
-    return {
-      data,
-      error: null,
-      success: true
-    };
+    return createSuccessResult(data);
   }
 
-  protected createErrorResult<T>(error: Error): ServiceResult<T> {
-    return {
-      data: null,
-      error,
-      success: false
-    };
+  protected createErrorResult<T>(error: any): ServiceResult<T> {
+    return createErrorResult({
+      name: 'ServiceError',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      details: error
+    });
   }
 
   public async create(data: Omit<T, 'id'>): Promise<ServiceResult<T | null>> {
@@ -101,7 +98,7 @@ export abstract class BaseService<
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -124,7 +121,7 @@ export abstract class BaseService<
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -142,7 +139,7 @@ export abstract class BaseService<
 
       return createSuccessResult(true);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -151,7 +148,6 @@ export abstract class BaseService<
       // Try to get from cache first
       const cached = await this.getFromCache(id);
       if (cached) return createSuccessResult(cached);
-      console.log("LLAMANDO getById - entrando a supabase.from()");
 
       const { data: result, error } = await this.supabase
         .from(this.tableName)
@@ -167,7 +163,7 @@ export abstract class BaseService<
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -189,7 +185,7 @@ export abstract class BaseService<
 
       return createSuccessResult(results as T[]);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -208,7 +204,7 @@ export abstract class BaseService<
       if (error) throw error;
       return createSuccessResult(!!data);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -231,7 +227,7 @@ export abstract class BaseService<
 
       return createSuccessResult(results as T[]);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 
@@ -244,9 +240,12 @@ export abstract class BaseService<
   ): Promise<ServiceResult<R[] | null>> {
     try {
       if (!sourceId) {
-        return createErrorResult(
-          mapValidationError('Source ID is required', 'sourceId', sourceId)
-        );
+        return this.createErrorResult({
+          name: 'ServiceError',
+          message: 'Source ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { sourceId }
+        });
       }
 
       let query = this.supabase
@@ -280,7 +279,7 @@ export abstract class BaseService<
       // Cast the data to R[] since we know the structure matches
       return createSuccessResult(data as unknown as R[]);
     } catch (error) {
-      return createErrorResult(error as Error);
+      return this.createErrorResult(error);
     }
   }
 

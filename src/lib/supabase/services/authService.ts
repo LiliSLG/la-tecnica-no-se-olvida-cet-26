@@ -1,17 +1,34 @@
 import { supabase } from '@/lib/supabase/supabaseClient';
-import { ServiceResult } from '../types/service';
-import { ServiceError } from '../errors/types';
-import { Persona } from '@/types/persona';
+import { ServiceResult, createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
 import { PersonasService } from './personasService';
+import { Database } from '../types/database.types';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+type Persona = Database['public']['Tables']['personas']['Row'];
+type MappedPersona = {
+  id: string;
+  nombre: string;
+  email: string | null;
+  fotoURL: string | null;
+  biografia: string | null;
+  categoriaPrincipal: string | null;
+  capacidadesPlataforma: string[] | null;
+  esAdmin: boolean;
+  activo: boolean;
+  eliminadoPorUid: string | null;
+  eliminadoEn: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+};
 
 export class AuthService {
   private personasService: PersonasService;
 
-  constructor() {
-    this.personasService = new PersonasService();
+  constructor(supabase: SupabaseClient<Database>) {
+    this.personasService = new PersonasService(supabase);
   }
 
-  async signIn(email: string, password: string): Promise<ServiceResult<{ user: Persona; session: any }>> {
+  async signIn(email: string, password: string): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -19,49 +36,58 @@ export class AuthService {
       });
 
       if (authError) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(authError.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: authError.message,
+          code: 'AUTH_ERROR',
+          details: authError
+        });
       }
 
       if (!authData.user) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError('No user data returned'),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: 'No user data returned',
+          code: 'AUTH_ERROR',
+          details: null
+        });
       }
 
       // Get user profile
       const result = await this.personasService.getById(authData.user.id);
       if (result.error) {
-        return {
-          success: false,
-          data: null,
-          error: result.error,
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: result.error.message,
+          code: 'DB_ERROR',
+          details: result.error
+        });
       }
 
-      return {
-        success: true,
-        data: {
-          user: result.data,
-          session: authData.session,
-        },
-        error: null,
-      };
+      if (!result.data) {
+        return createErrorResult({
+          name: 'ServiceError',
+          message: 'User profile not found',
+          code: 'DB_ERROR',
+          details: null
+        });
+      }
+
+      return createSuccessResult({
+        user: result.data,
+        session: authData.session,
+      });
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 
-  async signUp(email: string, password: string, userData: Partial<Persona>): Promise<ServiceResult<{ user: Persona; session: any }>> {
+  async signUp(email: string, password: string, userData: Partial<MappedPersona>): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -69,56 +95,86 @@ export class AuthService {
       });
 
       if (authError) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(authError.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: authError.message,
+          code: 'AUTH_ERROR',
+          details: authError
+        });
       }
 
       if (!authData.user) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError('No user data returned'),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: 'No user data returned',
+          code: 'AUTH_ERROR',
+          details: null
+        });
       }
 
       // Create user profile
-      const persona: Partial<Persona> = {
-        ...userData,
-        id: authData.user.id,
+      const persona: Omit<Persona, 'id'> = {
+        nombre: userData.nombre || '',
         email,
-        estado: 'activo',
-        activo: true,
-        esAdmin: false,
-        creadoEn: new Date().toISOString(),
-        actualizadoEn: new Date().toISOString(),
+        foto_url: null,
+        biografia: null,
+        categoria_principal: null,
+        capacidades_plataforma: null,
+        es_admin: false,
+        esta_eliminada: false,
+        eliminado_por_uid: null,
+        eliminado_en: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       const result = await this.personasService.create(persona);
       if (result.error) {
-        return {
-          success: false,
-          data: null,
-          error: result.error,
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: result.error.message,
+          code: 'DB_ERROR',
+          details: result.error
+        });
       }
 
-      return {
-        success: true,
-        data: {
-          user: result.data,
-          session: authData.session,
-        },
-        error: null,
+      if (!result.data) {
+        return createErrorResult({
+          name: 'ServiceError',
+          message: 'Failed to create user profile',
+          code: 'DB_ERROR',
+          details: null
+        });
+      }
+
+      // Map the result to MappedPersona
+      const mappedPersona: MappedPersona = {
+        id: result.data.id,
+        nombre: result.data.nombre,
+        email: result.data.email,
+        fotoURL: result.data.foto_url,
+        biografia: result.data.biografia,
+        categoriaPrincipal: result.data.categoria_principal,
+        capacidadesPlataforma: result.data.capacidades_plataforma,
+        esAdmin: result.data.es_admin,
+        activo: !result.data.esta_eliminada,
+        eliminadoPorUid: result.data.eliminado_por_uid,
+        eliminadoEn: result.data.eliminado_en,
+        creadoEn: result.data.created_at,
+        actualizadoEn: result.data.updated_at
       };
+
+      return createSuccessResult({
+        user: mappedPersona,
+        session: authData.session,
+      });
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 
@@ -126,24 +182,22 @@ export class AuthService {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(error.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: error.message,
+          code: 'AUTH_ERROR',
+          details: error
+        });
       }
 
-      return {
-        success: true,
-        data: undefined,
-        error: null,
-      };
+      return createSuccessResult(undefined);
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 
@@ -151,24 +205,22 @@ export class AuthService {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(error.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: error.message,
+          code: 'AUTH_ERROR',
+          details: error
+        });
       }
 
-      return {
-        success: true,
-        data: undefined,
-        error: null,
-      };
+      return createSuccessResult(undefined);
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 
@@ -176,66 +228,59 @@ export class AuthService {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(error.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: error.message,
+          code: 'AUTH_ERROR',
+          details: error
+        });
       }
 
-      return {
-        success: true,
-        data: undefined,
-        error: null,
-      };
+      return createSuccessResult(undefined);
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 
-  async getCurrentUser(): Promise<ServiceResult<Persona | null>> {
+  async getCurrentUser(): Promise<ServiceResult<MappedPersona | null>> {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
-        return {
-          success: false,
-          data: null,
-          error: new ServiceError(authError.message),
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: authError.message,
+          code: 'AUTH_ERROR',
+          details: authError
+        });
       }
 
       if (!user) {
-        return {
-          success: true,
-          data: null,
-          error: null,
-        };
+        return createSuccessResult(null);
       }
 
       const result = await this.personasService.getById(user.id);
       if (result.error) {
-        return {
-          success: false,
-          data: null,
-          error: result.error,
-        };
+        return createErrorResult({
+          name: 'ServiceError',
+          message: result.error.message,
+          code: 'DB_ERROR',
+          details: result.error
+        });
       }
 
-      return {
-        success: true,
-        data: result.data,
-        error: null,
-      };
+      return createSuccessResult(result.data);
     } catch (error) {
-      return {
-        success: false,
-        data: null,
-        error: new ServiceError(error instanceof Error ? error.message : 'Unknown error'),
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_ERROR',
+        details: error
+      });
     }
   }
 } 

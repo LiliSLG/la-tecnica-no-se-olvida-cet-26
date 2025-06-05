@@ -1,296 +1,271 @@
-import { supabase } from '../supabaseClient';
-import { CacheableService } from './cacheableService';
-import { ServiceResult } from '../types/service';
-import { ServiceError } from '../errors/types';
-import { NoticiaRow, NoticiaInsert, NoticiaUpdate, MappedNoticia } from '../types/noticia';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
+import { BaseService } from './baseService';
+import { ServiceResult, QueryOptions, createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
+import { ValidationError } from '@/lib/supabase/errors/types';
+import { mapValidationError } from '@/lib/supabase/errors/utils';
+import { CacheableServiceConfig } from './cacheableService';
 
-export class NoticiasService extends CacheableService<MappedNoticia> {
-  constructor() {
-    super({
-      entityType: 'noticia',
-      ttl: 3600, // 1 hour
-      enableCache: true
-    });
+type Noticia = Database['public']['Tables']['noticias']['Row'];
+type CreateNoticia = Database['public']['Tables']['noticias']['Insert'];
+type UpdateNoticia = Database['public']['Tables']['noticias']['Update'];
+
+interface MappedNoticia {
+  id: string;
+  titulo: string;
+  contenido: string | null;
+  imagenUrl: string | null;
+  tipo: 'article' | 'link';
+  urlExterna: string | null;
+  activo: boolean;
+  eliminadoPorUid: string | null;
+  eliminadoEn: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export class NoticiasService extends BaseService<Noticia, 'noticias'> {
+  constructor(
+    supabase: SupabaseClient<Database>,
+    tableName: 'noticias' = 'noticias',
+    cacheConfig: CacheableServiceConfig = { ttl: 3600, entityType: 'noticia' }
+  ) {
+    super(supabase, tableName, cacheConfig);
   }
 
-  private validateNoticia(noticia: Partial<NoticiaInsert>): ServiceError | null {
-    if (!noticia.titulo?.trim()) {
-      return {
-        name: 'ValidationError',
-        code: 'VALIDATION_ERROR',
-        message: 'El título es requerido',
-        details: { field: 'titulo' }
-      };
+  private mapNoticia(noticia: Noticia): MappedNoticia {
+    return {
+      id: noticia.id,
+      titulo: noticia.titulo,
+      contenido: noticia.contenido,
+      imagenUrl: noticia.imagen_url,
+      tipo: noticia.tipo,
+      urlExterna: noticia.url_externa,
+      activo: !noticia.esta_eliminada,
+      eliminadoPorUid: noticia.eliminado_por_uid,
+      eliminadoEn: noticia.eliminado_en,
+      creadoEn: noticia.created_at,
+      actualizadoEn: noticia.updated_at
+    };
+  }
+
+  private mapNoticias(noticias: Noticia[]): MappedNoticia[] {
+    return noticias.map(noticia => this.mapNoticia(noticia));
+  }
+
+  protected validateCreateInput(data: CreateNoticia): ValidationError | null {
+    if (!data.titulo?.trim()) {
+      return mapValidationError('El título es requerido', 'titulo', data.titulo);
     }
 
-    if (!noticia.contenido?.trim()) {
-      return {
-        name: 'ValidationError',
-        code: 'VALIDATION_ERROR',
-        message: 'El contenido es requerido',
-        details: { field: 'contenido' }
-      };
+    if (!data.contenido?.trim()) {
+      return mapValidationError('El contenido es requerido', 'contenido', data.contenido);
     }
 
-    if (noticia.tipo === 'link' && !noticia.url_externa?.trim()) {
-      return {
-        name: 'ValidationError',
-        code: 'VALIDATION_ERROR',
-        message: 'La URL externa es requerida para noticias de tipo link',
-        details: { field: 'url_externa' }
-      };
+    if (data.tipo === 'link' && !data.url_externa?.trim()) {
+      return mapValidationError('La URL externa es requerida para noticias de tipo link', 'url_externa', data.url_externa);
     }
 
     return null;
   }
 
-  async create(noticia: NoticiaInsert): Promise<ServiceResult<MappedNoticia>> {
-    try {
-      const error = this.validateNoticia(noticia);
-      if (error) {
-        return { success: false, error, data: null };
-      }
-
-      const { data, error: dbError } = await supabase
-        .from('noticias')
-        .insert(noticia)
-        .select()
-        .single();
-
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al crear la noticia',
-            details: dbError
-          },
-          data: null
-        };
-      }
-
-      await this.invalidateCache('list');
-      return { success: true, data, error: null };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al crear la noticia',
-          details: error
-        },
-        data: null
-      };
+  protected validateUpdateInput(data: UpdateNoticia): ValidationError | null {
+    if (data.titulo === '') {
+      return mapValidationError('El título no puede estar vacío', 'titulo', data.titulo);
     }
+
+    if (data.contenido === '') {
+      return mapValidationError('El contenido no puede estar vacío', 'contenido', data.contenido);
+    }
+
+    if (data.tipo === 'link' && data.url_externa === '') {
+      return mapValidationError('La URL externa no puede estar vacía', 'url_externa', data.url_externa);
+    }
+
+    return null;
   }
 
-  async update(id: string, noticia: NoticiaUpdate): Promise<ServiceResult<MappedNoticia>> {
+  async getById(id: string): Promise<ServiceResult<Noticia | null>> {
     try {
-      const error = this.validateNoticia(noticia);
-      if (error) {
-        return { success: false, error, data: null };
-      }
-
-      const { data, error: dbError } = await supabase
-        .from('noticias')
-        .update(noticia)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al actualizar la noticia',
-            details: dbError
-          },
-          data: null
-        };
-      }
-
-      await this.invalidateCache(id);
-      return { success: true, data, error: null };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al actualizar la noticia',
-          details: error
-        },
-        data: null
-      };
-    }
-  }
-
-  async delete(id: string): Promise<ServiceResult<void>> {
-    try {
-      const { error: dbError } = await supabase
-        .from('noticias')
-        .delete()
-        .eq('id', id);
-
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al eliminar la noticia',
-            details: dbError
-          },
-          data: null
-        };
-      }
-
-      await this.invalidateCache(id);
-      return { success: true, data: undefined, error: null };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al eliminar la noticia',
-          details: error
-        },
-        data: null
-      };
-    }
-  }
-
-  async getById(id: string): Promise<ServiceResult<MappedNoticia>> {
-    try {
-      // Try to get from cache first
       const cached = await this.getFromCache(id);
-      if (cached) {
-        return { success: true, data: cached, error: null };
-      }
+      if (cached) return createSuccessResult(cached);
 
-      const { data, error: dbError } = await supabase
-        .from('noticias')
-        .select()
+      const { data: noticia, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al obtener la noticia',
-            details: dbError
-          },
-          data: null
-        };
-      }
+      if (error) throw error;
+      if (!noticia) return createSuccessResult(null);
 
-      if (!data) {
-        return {
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Noticia no encontrada',
-            details: { id }
-          },
-          data: null
-        };
-      }
-
-      await this.setInCache(id, data);
-      return { success: true, data, error: null };
+      await this.setInCache(id, noticia);
+      return createSuccessResult(noticia);
     } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al obtener la noticia',
-          details: error
-        },
-        data: null
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener la noticia',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getAll(): Promise<ServiceResult<MappedNoticia[]>> {
+  async getByIds(ids: string[]): Promise<ServiceResult<Noticia[]>> {
     try {
-      // Try to get from cache first
-      const cached = await this.getListFromCache();
-      if (cached) {
-        return { success: true, data: cached, error: null };
+      if (!ids.length) return createSuccessResult([]);
+
+      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return createSuccessResult(cachedResults.filter(Boolean) as Noticia[]);
       }
 
-      const { data, error: dbError } = await supabase
-        .from('noticias')
-        .select()
-        .order('created_at', { ascending: false });
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
 
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al obtener las noticias',
-            details: dbError
-          },
-          data: null
-        };
+      if (error) throw error;
+      if (!data) return createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
       }
 
-      await this.setListInCache(data);
-      return { success: true, data, error: null };
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return createSuccessResult(allResults);
     } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al obtener las noticias',
-          details: error
-        },
-        data: null
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener las noticias',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async search(query: string): Promise<ServiceResult<MappedNoticia[]>> {
+  async getPublic(): Promise<ServiceResult<Noticia[]>> {
     try {
-      // Try to get from cache first
-      const cached = await this.getQueryFromCache(query);
-      if (cached) {
-        return { success: true, data: cached, error: null };
-      }
-
-      const { data, error: dbError } = await supabase
-        .from('noticias')
-        .select()
-        .or(`titulo.ilike.%${query}%,contenido.ilike.%${query}%`)
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
         .order('created_at', { ascending: false });
 
-      if (dbError) {
-        return {
-          success: false,
-          error: {
-            code: 'DB_ERROR',
-            message: 'Error al buscar noticias',
-            details: dbError
-          },
-          data: null
-        };
+      if (error) throw error;
+      if (!data) return createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
       }
 
-      await this.setQueryInCache(query, data);
-      return { success: true, data, error: null };
+      return createSuccessResult(data);
     } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'Error inesperado al buscar noticias',
-          details: error
-        },
-        data: null
-      };
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener las noticias públicas',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async search(term: string, options?: QueryOptions): Promise<ServiceResult<Noticia[]>> {
+    try {
+      if (!term.trim()) return createSuccessResult([]);
+
+      const searchPattern = `%${term.trim()}%`;
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .or(`titulo.ilike.${searchPattern},contenido.ilike.${searchPattern}`)
+        .eq('esta_eliminada', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return createSuccessResult([]);
+
+      for (const noticia of data) {
+        await this.setInCache(noticia.id, noticia);
+      }
+
+      return createSuccessResult(data);
+    } catch (error) {
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al buscar noticias',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async update(id: string, data: UpdateNoticia): Promise<ServiceResult<Noticia>> {
+    try {
+      const validationError = this.validateUpdateInput(data);
+      if (validationError) {
+        return createErrorResult({
+          name: 'ServiceError',
+          message: validationError.message,
+          code: 'VALIDATION_ERROR',
+          details: validationError
+        });
+      }
+
+      const { data: noticia, error } = await this.supabase
+        .from(this.tableName)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!noticia) throw new Error('Noticia no encontrada');
+
+      await this.setInCache(id, noticia);
+      return createSuccessResult(noticia);
+    } catch (error) {
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al actualizar la noticia',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async create(data: CreateNoticia): Promise<ServiceResult<Noticia>> {
+    try {
+      const validationError = this.validateCreateInput(data);
+      if (validationError) {
+        return createErrorResult({
+          name: 'ServiceError',
+          message: validationError.message,
+          code: 'VALIDATION_ERROR',
+          details: validationError
+        });
+      }
+
+      const { data: noticia, error } = await this.supabase
+        .from(this.tableName)
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!noticia) throw new Error('Error al crear la noticia');
+
+      await this.setInCache(noticia.id, noticia);
+      return createSuccessResult(noticia);
+    } catch (error) {
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al crear la noticia',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

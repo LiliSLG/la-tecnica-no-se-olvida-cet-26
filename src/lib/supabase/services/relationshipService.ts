@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { ServiceResult } from '../types/service';
-import { ServiceError } from '../errors/types';
+import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
 
 export abstract class RelationshipService {
   protected constructor(
@@ -12,24 +12,16 @@ export abstract class RelationshipService {
   ) {}
 
   protected createSuccessResult<T>(data: T): ServiceResult<T> {
-    return {
-      data,
-      error: null,
-      success: true
-    };
+    return createSuccessResult(data);
   }
 
   protected createErrorResult(error: unknown): ServiceResult<never> {
-    const serviceError: ServiceError = {
+    return createErrorResult({
+      name: 'ServiceError',
       message: error instanceof Error ? error.message : 'An unknown error occurred',
       code: 'RELATIONSHIP_ERROR',
-      name: 'ServiceError'
-    };
-    return {
-      data: null,
-      error: serviceError,
-      success: false
-    };
+      details: error
+    });
   }
 
   async addRelationship(sourceId: string, targetId: string): Promise<ServiceResult<void>> {

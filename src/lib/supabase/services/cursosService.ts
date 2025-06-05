@@ -1,13 +1,49 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
-import { ServiceResult, QueryOptions } from '../types/service';
-import { ValidationError } from '../errors/types';
-import { CacheableServiceConfig } from './cacheableService';
+import { ServiceResult } from '../types/service';
+import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
 
-type Curso = Database['public']['Tables']['cursos']['Row'];
-type CreateCurso = Database['public']['Tables']['cursos']['Insert'];
-type UpdateCurso = Database['public']['Tables']['cursos']['Update'];
+// Mock data for development
+const MOCK_CURSOS = [
+  {
+    id: '1',
+    titulo: 'Introducción a la Programación',
+    descripcion: 'Curso básico de programación para principiantes',
+    nivel: 'principiante',
+    duracion: 40,
+    estado: 'activo',
+    esta_eliminado: false,
+    eliminado_por_uid: null,
+    eliminado_en: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '2',
+    titulo: 'Desarrollo Web Avanzado',
+    descripcion: 'Curso avanzado de desarrollo web con React y Node.js',
+    nivel: 'avanzado',
+    duracion: 60,
+    estado: 'activo',
+    esta_eliminado: false,
+    eliminado_por_uid: null,
+    eliminado_en: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  }
+];
+
+interface Curso {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  nivel: string;
+  duracion: number;
+  estado: string;
+  esta_eliminado: boolean;
+  eliminado_por_uid: string | null;
+  eliminado_en: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 interface MappedCurso {
   id: string;
@@ -23,13 +59,11 @@ interface MappedCurso {
   actualizadoEn: string;
 }
 
-export class CursosService extends BaseService<Curso, 'cursos'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'cursos' = 'cursos',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'curso' }
-  ) {
-    super(supabase, tableName, cacheConfig);
+export class CursosService {
+  private cursos: Curso[];
+
+  constructor() {
+    this.cursos = MOCK_CURSOS;
   }
 
   private mapCursoToDomain(curso: Curso): MappedCurso {
@@ -54,142 +88,75 @@ export class CursosService extends BaseService<Curso, 'cursos'> {
 
   async getById(id: string): Promise<ServiceResult<MappedCurso | null>> {
     try {
-      const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(this.mapCursoToDomain(cached));
-
-      const { data: curso, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      if (!curso) return this.createSuccessResult(null);
-
-      await this.setInCache(id, curso);
-      return this.createSuccessResult(this.mapCursoToDomain(curso));
+      const curso = this.cursos.find(c => c.id === id);
+      if (!curso) {
+        return createSuccessResult(null);
+      }
+      return createSuccessResult(this.mapCursoToDomain(curso));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener el curso',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async getByIds(ids: string[]): Promise<ServiceResult<MappedCurso[]>> {
     try {
-      if (!ids.length) return this.createSuccessResult([]);
-
-      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]);
-
-      if (missingIds.length === 0) {
-        return this.createSuccessResult(this.mapCursosToDomain(cachedResults.filter(Boolean) as Curso[]));
+      if (!ids.length) {
+        return createSuccessResult([]);
       }
 
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .in('id', missingIds);
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const curso of data) {
-        await this.setInCache(curso.id, curso);
-      }
-
-      const allResults = [...cachedResults.filter(Boolean), ...data];
-      return this.createSuccessResult(this.mapCursosToDomain(allResults));
+      const cursos = this.cursos.filter(c => ids.includes(c.id));
+      return createSuccessResult(this.mapCursosToDomain(cursos));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener los cursos',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async getPublic(): Promise<ServiceResult<MappedCurso[]>> {
     try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const curso of data) {
-        await this.setInCache(curso.id, curso);
-      }
-
-      return this.createSuccessResult(this.mapCursosToDomain(data));
+      const cursos = this.cursos.filter(c => !c.esta_eliminado);
+      return createSuccessResult(this.mapCursosToDomain(cursos));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener los cursos públicos',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async search(term: string): Promise<ServiceResult<MappedCurso[]>> {
     try {
-      if (!term.trim()) return this.createSuccessResult([]);
-
-      const searchPattern = `%${term.trim()}%`;
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .or(`titulo.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const curso of data) {
-        await this.setInCache(curso.id, curso);
+      if (!term.trim()) {
+        return createSuccessResult([]);
       }
 
-      return this.createSuccessResult(this.mapCursosToDomain(data));
+      const searchTerm = term.toLowerCase().trim();
+      const cursos = this.cursos.filter(c => 
+        !c.esta_eliminado && (
+          c.titulo.toLowerCase().includes(searchTerm) ||
+          (c.descripcion?.toLowerCase().includes(searchTerm) ?? false)
+        )
+      );
+
+      return createSuccessResult(this.mapCursosToDomain(cursos));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
-    }
-  }
-
-  async getByNivel(nivel: string, options?: QueryOptions): Promise<ServiceResult<MappedCurso[]>> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('nivel', nivel)
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const curso of data) {
-        await this.setInCache(curso.id, curso);
-      }
-
-      return this.createSuccessResult(this.mapCursosToDomain(data));
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByNivel' }));
-    }
-  }
-
-  async getByTema(temaId: string, options?: QueryOptions): Promise<ServiceResult<MappedCurso[]>> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*, curso_tema!inner(*)')
-        .eq('curso_tema.tema_id', temaId)
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const curso of data) {
-        await this.setInCache(curso.id, curso);
-      }
-
-      return this.createSuccessResult(this.mapCursosToDomain(data));
-    } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByTema' }));
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al buscar cursos',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 
