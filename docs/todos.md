@@ -73,7 +73,7 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] Ensure ServiceResult handling is consistent across all mocks
 
 
-### Otros Servicios (`entrevistasService`, `organizacionesService`, `temasService`, `personasService`, `relationshipService`)
+### Otros Servicios (`historiasOralesService`, `organizacionesService`, `temasService`, `personasService`, `relationshipService`)
 - [ ] Verificar que todos los servicios existentes sigan el patrón `BaseService` y las convenciones del proyecto.
 - [ ] Implementar los métodos CRUD básicos y los métodos relacionales necesarios si aún no existen o requieren adaptación.
 
@@ -177,7 +177,7 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] `CreateProjectContent.tsx` (Usa `proyectosService.create`)
 - [ ] `EditProjectContent.tsx` (Usa `proyectosService.getById`, `proyectosService.update`)
 - [ ] `EgresadosEstudiantesContent.tsx` (Usa `personasService.getAll` con filtros apropiados)
-- [ ] `HistoriaOralListContent.tsx` (Usa `entrevistasService.getAll`, `personasService.getById`, `temasService.getAll`)
+- [ ] `HistoriaOralListContent.tsx` (Usa `historiasOralesService.getAll`, `personasService.getById`, `temasService.getAll`)
 - [ ] `JobBoardContent.tsx` (Usa `temasService.getAll`, y futuramente un `ofertasLaboralesService`)
 - [ ] `NoticiaDetailContent.tsx` (Usa `noticiasService.getById`)
 - [ ] `NoticiasListContent.tsx` (Usa `noticiasService.getAll` con filtros de "publicadas")
@@ -191,22 +191,17 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] `admin/gestion-temas/editar/[id]/page.tsx` (Usa `temasService.getById`, `temasService.update`)
 - [ ] `admin/gestion-noticias/nueva/page.tsx` (Usa `noticiasService.create`)
 - [ ] `admin/gestion-noticias/editar/[id]/page.tsx` (Usa `noticiasService.getById`, `noticiasService.update`)
-- [ ] `admin/gestion-entrevistas/nueva/page.tsx` (Usa `entrevistasService.create`)
-- [ ] `admin/gestion-entrevistas/editar/[id]/page.tsx` (Usa `entrevistasService.getById`, `entrevistasService.update`)
+- [ ] `admin/gestion-entrevistas/nueva/page.tsx` (Usa `historiasOralesService.create`)
+- [ ] `admin/gestion-entrevistas/editar/[id]/page.tsx` (Usa `historiasOralesService.getById`, `historiasOralesService.update`)
 
 ### Componentes de Administración (Aplicar Checklist Genérico):
 - [ ] `AdminNoticiaList.tsx` (Usa `noticiasService.getAll` (admin version), `noticiasService.delete` (logical), `noticiasService.restore`)
 - [ ] `AdminOrganizacionList.tsx` (Usa `organizacionesService.getAll` (admin version), `organizacionesService.delete` (logical), `organizacionesService.restore`)
 - [ ] `AdminTemaList.tsx` (Usa `temasService.getAll` (admin version), `temasService.delete` (logical), `temasService.restore`)
-- [ ] `AdminEntrevistaList.tsx` (Usa `entrevistasService.getAll` (admin version), `entrevistasService.delete` (logical), `entrevistasService.restore`)
+- [ ] `AdminEntrevistaList.tsx` (Usa `historiasOralesService.getAll` (admin version), `historiasOralesService.delete` (logical), `historiasOralesService.restore`)
 
 ### HistoriasOralesService
 - [ ] Implement `getAll` method:
-  ```typescript
-- [ ] Migrate src/app/admin/gestion-entrevistas/editar/[id]/page.tsx to use HistoriasOralesService
-- [ ] Migrate src/app/admin/gestion-entrevistas/nueva/page.tsx to use HistoriasOralesService
-
-- [ ] Implement `getPublic` method:
   ```typescript
   getPublic(): Promise<ServiceResult<Curso[]>>
   ```
@@ -229,7 +224,6 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
   - Should be case-insensitive
   - Should return empty array if no matches found
   - Should handle null values for optional fields
-
 
 - [ ] Implement `create` method:
   ```typescript
@@ -266,4 +260,8 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
   ```
   - Should retrieve a proyecto by ID
   - Should include proper field mapping for:
-    - `archivo_principal_url` -> `
+    - `archivo_principal_url` -> `archivo_principal_url`
+
+- [ ] Implement proper error handling in authService.ts
+- [ ] Add comprehensive tests for authService.ts
+- [ ] Add session management in authService.ts

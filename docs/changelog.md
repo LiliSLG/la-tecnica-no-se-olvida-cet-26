@@ -13,7 +13,7 @@
 - Migración completa de servicios:
     - Personas → `personasService.ts`
     - Proyectos → `proyectosService.ts`
-    - Entrevistas → `entrevistasService.ts`
+    - Entrevistas → `historiasOralesService.ts`
     - Noticias → `noticiasService.ts`
     - Organizaciones → `organizacionesService.ts`
     - Temas → `temasService.ts`
@@ -569,6 +569,8 @@
 - Enhanced database schema with proper relationships and constraints
 - Improved type safety across all services
 - Refined search functionality in entity services
+- Removed redundant `auth.ts` file in favor of `authService.ts` for better type safety and user profile integration
+- Consolidated authentication logic into `authService.ts` following service architecture pattern
 
 ### Fixed
 - Type safety issues in relationship services

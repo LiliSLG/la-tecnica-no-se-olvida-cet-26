@@ -310,3 +310,11 @@
 - [ ] Add query logging and analytics
 - [ ] Optimize complex joins and relationships
 
+- **HistoriasOralesService**: Replaced `getAll` with `getAllWithPagination` for pagination and sorting. Updated `getByTema`, `getByPersona`, `getByOrganizacion`, `getTemas`, `getPersonas`, and `getOrganizaciones` methods.
+
+- [ ] HistoriasOralesService tests
+
+- [ ] HistoriasOralesService Tests (0/6)
+
+- [x] Optimize HistoriasOralesService
+

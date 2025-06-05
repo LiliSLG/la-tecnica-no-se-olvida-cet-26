@@ -118,7 +118,7 @@ This section documents the current architecture and conventions for the `/lib/su
 ├── indexes.sql
 ├── services/
 │   ├── authService.ts
-│   ├── entrevistasService.ts
+│   ├── historiasOralesService.ts
 │   ├── noticiasService.ts
 │   ├── organizacionesService.ts
 │   ├── temasService.ts
@@ -283,3 +283,16 @@ Usage:
 ### Pending Sections
 - [ ] CourseDetailContent
 - [ ] CourseListContent
+
+## Authentication
+
+The application uses Supabase Authentication with the following architecture:
+
+- `authService.ts`: Main authentication service that handles:
+  - User sign in/up
+  - Password management
+  - Session handling
+  - User profile integration with PersonasService
+  - Error handling and type safety
+
+The service follows the standard service architecture pattern and integrates with the user profile system through PersonasService.
