@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -32,14 +31,13 @@ import {
   GraduationCap, Eye, InfoIcon, Activity, HandHeart, PhoneIcon, Building, BookUser 
 } from 'lucide-react';
 import NextImage from 'next/image';
-import { storage } from '@/lib/firebase/config';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import UnsavedChangesModal from '@/components/modals/UnsavedChangesModal';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { uploadFile } from '@/lib/supabase/supabaseStorage';
 
 const NO_ESPECIFICADO_VALUE = "_NO_ESPECIFICADO_"; 
 
@@ -60,6 +58,14 @@ const isValidImageUrl = (url: string | null): boolean => {
 };
 
 const projectRelatedCapacities: CapacidadPlataforma[] = ['es_autor', 'es_tutor', 'es_colaborador'];
+
+// TODO: Update VisibilidadPerfil type to match database schema
+// Current type includes 'solo_registrados' but database only has:
+// - 'publico'
+// - 'solo_registrados_plataforma'
+// - 'privado'
+// - 'solo_admins_y_propio'
+type VisibilidadPerfil = 'publico' | 'solo_registrados_plataforma' | 'privado' | 'solo_admins_y_propio';
 
 export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isSubmitting: parentIsSubmitting }: PersonaFormProps) {
   const { toast } = useToast();
@@ -198,71 +204,34 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
     console.log("PersonaForm Zod errors:", JSON.stringify(errors, null, 2));
     console.log("Data from react-hook-form:", JSON.stringify(dataFromHookForm, null, 2));
     
-    let processedFotoURL: string | null | undefined = dataFromHookForm.fotoURL;
+    let processedFotoURL: string | null = dataFromHookForm.fotoURL || null;
 
     if (selectedFile) {
       setIsUploading(true);
       try {
         const uniqueFileName = `fotos_perfil/${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
-        const fileRef = storageRef(storage, uniqueFileName);
-        const metadata = { contentType: selectedFile.type };
-        const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
-
-        const downloadURL = await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-            (error) => {
-              console.error("Error during image upload state_changed:", error);
-              toast({ title: "Error de Subida de Imagen", description: `No se pudo subir la imagen. ${error.message}`, variant: "destructive" });
-              reject(error);
-            },
-            async () => {
-              try {
-                const url = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(url);
-              } catch (getUrlError) {
-                console.error("Error getting download URL:", getUrlError);
-                toast({ title: "Error al obtener URL", description: `No se pudo obtener la URL de la imagen. ${(getUrlError as Error).message}`, variant: "destructive" });
-                reject(getUrlError);
-              }
-            }
-          );
+        const uploadedUrl = await uploadFile(selectedFile, 'profile-pictures', (progress) => {
+          setUploadProgress(progress);
         });
-        processedFotoURL = downloadURL;
+        processedFotoURL = uploadedUrl;
       } catch (error) {
         console.error("Error uploading image for persona:", error);
-        setIsUploading(false); // Reset uploading state on error
-        // Don't submit the form if image upload fails
-        return false; // Indicate submission failure
-      } finally {
-         // This will be set by parentIsSubmitting later
+        setIsUploading(false);
+        return false;
       }
     } else if (dataFromHookForm.fotoURL === 'PENDING_UPLOAD') {
-        processedFotoURL = initialData?.fotoURL || ''; 
+      processedFotoURL = initialData?.fotoURL || null; 
     } else if (dataFromHookForm.fotoURL === '') {
-        processedFotoURL = null;
+      processedFotoURL = null;
     }
 
     const finalDataForParent: PersonaFormData = {
       ...dataFromHookForm,
       fotoURL: processedFotoURL,
     };
-    
-    const success = await parentOnSubmit(finalDataForParent, initialData); // Pass initialData for comparison in service
-    
-    setIsUploading(false); // Reset uploading state after parent submit logic
-    if (success) {
-      setSelectedFile(null); 
-      if (!initialData) { // Create mode
-        reset(formDefaultValues);
-        setPreviewURL(null); // Clear preview on successful creation
-      } else { // Edit mode
-        reset(finalDataForParent); // Reset form with the newly saved data to clear dirty state
-        setPreviewURL(finalDataForParent.fotoURL); // Update preview to saved URL
-      }
-    }
-    return success;
+
+    const result = await parentOnSubmit(finalDataForParent, initialData);
+    return result;
   };
 
   const handleEsAdminChange = (checked: boolean) => {
@@ -341,10 +310,26 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
       resolvedCategoriaPrincipal = categoriaPrincipalValue;
   }
 
+  const renderImagePreview = () => {
+    if (!previewURL || !isValidImageUrl(previewURL)) return null;
+    
+    return (
+      <div className="my-2 flex flex-col items-center">
+        <NextImage 
+          src={previewURL} 
+          alt="Vista previa de foto" 
+          width={100} 
+          height={100} 
+          className="rounded-full object-cover border-2 border-primary/30 shadow-sm h-24 w-24" 
+          unoptimized={!!(isSvgPreview && previewURL && !previewURL.startsWith('blob:'))}
+        />
+      </div>
+    );
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleMainSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(handleMainSubmit)} className="space-y-8">
         <Accordion type="multiple" defaultValue={['item-info-basica']} className="w-full space-y-4">
           <AccordionItem value="item-info-basica" className="border-b-0 rounded-lg shadow-md bg-card">
             <AccordionTrigger className="p-6 hover:no-underline">
@@ -364,11 +349,7 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
                <CardTitle className="text-xl flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Foto de Perfil</CardTitle>
             </AccordionTrigger>
             <AccordionContent className="p-6 pt-0 space-y-4">
-                {previewURL && isValidImageUrl(previewURL) && (
-                  <div className="my-2 flex flex-col items-center">
-                    <NextImage src={previewURL} alt="Vista previa de foto" width={150} height={150} className="rounded-full object-cover border-2 border-primary shadow-sm h-36 w-36" unoptimized={isSvgPreview && previewURL && !previewURL.startsWith('blob:')} />
-                  </div>
-                )}
+                {renderImagePreview()}
                 <FormField
                     control={control}
                     name="fotoURL"
@@ -645,20 +626,29 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
           </AccordionItem>
         </Accordion>
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={handleCancelClick} disabled={parentIsSubmitting || isUploading}>
-              Cancelar
-            </Button>
-            <Button
-                type="submit"
-                disabled={ (!!initialData && !isDirty) || parentIsSubmitting || isUploading}
-                className="w-full md:w-auto text-lg py-3 px-6"
-            >
-                {(parentIsSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {parentIsSubmitting || isUploading
-                    ? (isUploading ? 'Subiendo imagen...' : (initialData ? 'Actualizando...' : 'Creando...'))
-                    : (initialData ? 'Actualizar Participante' : 'Crear Participante')}
-            </Button>
+        <div className="flex justify-end space-x-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleCancelClick}
+            size="default"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={parentIsSubmitting || isUploading}
+            size="default"
+          >
+            {parentIsSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              'Guardar'
+            )}
+          </Button>
         </div>
       </form>
       <UnsavedChangesModal
