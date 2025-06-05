@@ -14,6 +14,8 @@ import { Loader2, Tag as TagIcon, TagsIcon, Text } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { TemasService } from '@/lib/supabase/services/temasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
 
 interface AddTemaModalProps {
   open: boolean;
@@ -22,6 +24,8 @@ interface AddTemaModalProps {
 }
 
 const NINGUNA_CATEGORIA_VALUE = "_ninguna_categoria_";
+
+const temasService = new TemasService(supabase);
 
 export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddTemaModalProps) {
   const { user } = useAuth();
@@ -48,9 +52,6 @@ export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddT
     }
   }, [open, resetModalForm]);
 
-  // TODO: Migrate AddTemaModal.tsx to use the new Supabase service (TemasService) for CRUD operations
-  // const temasService = new TemasService(supabase);
-
   const onSubmitModal = async (data: AddTemaModalFormData) => {
     console.log('AddTemaModal: onSubmitModal called. Data:', data);
     if (!user) {
@@ -65,11 +66,13 @@ export default function AddTemaModal({ open, onOpenChange, onTemaCreated }: AddT
         dataForService.categoriaTema = null;
       }
 
-      // TODO: Implement the logic to create a tema using the new Supabase service (TemasService)
-      // const result = await temasService.create({
-      //   nombre: data.nombre,
-      //   descripcion: data.descripcion || null
-      // });
+      const result = await temasService.create({
+        nombre: data.nombre,
+        descripcion: data.descripcion || null,
+        esta_eliminado: false,
+        eliminado_por_uid: null,
+        eliminado_en: null
+      });
 
       if (result.error) {
         toast({

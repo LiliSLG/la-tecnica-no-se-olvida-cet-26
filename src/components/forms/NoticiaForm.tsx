@@ -66,7 +66,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Tema, TemaOption } from "@/lib/types";
-import { getAllTemasActivos } from "@/lib/supabase/services/temasService";
+import { TemasService } from "@/lib/supabase/services/temasService";
+import { NoticiasService } from "@/lib/supabase/services/noticiasService";
+import { supabase } from "@/lib/supabase/supabaseClient";
 import AddTemaModal from "./AddTemaModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -101,6 +103,9 @@ const isValidImageUrl = (url: string | null): boolean => {
     return false;
   }
 };
+
+const temasService = new TemasService(supabase);
+const noticiasService = new NoticiasService(supabase);
 
 export default function NoticiaForm({
   onSubmit: parentOnSubmit,
@@ -174,8 +179,14 @@ export default function NoticiaForm({
     async function fetchTemas() {
       setLoadingTemas(true);
       try {
-        const temasData: Tema[] = await getAllTemasActivos();
-        const opcionesLigera: TemaOption[] = temasData.map((t) => ({
+        const result = await temasService.getAllActivos();
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        if (!result.data) {
+          throw new Error("No se pudieron cargar los temas.");
+        }
+        const opcionesLigera: TemaOption[] = result.data.map((t) => ({
           id: t.id,
           nombre: t.nombre,
         }));
@@ -188,7 +199,7 @@ export default function NoticiaForm({
           }));
           setSelectedTemaObjects(inicialOpciones);
         }
-      } catch {
+      } catch (error) {
         toast({
           title: "Error",
           description: "No se pudieron cargar los temas.",
@@ -273,7 +284,7 @@ export default function NoticiaForm({
     };
   }, [selectedFile, currentImagenURL, previewURL]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     if (file) {
       setValue("imagenPrincipalURL", "PENDING_UPLOAD", {
@@ -281,6 +292,32 @@ export default function NoticiaForm({
       });
       setSelectedFile(file);
       setUploadProgress(0);
+      setIsUploading(true);
+      try {
+        const url = await uploadFile(file, "project-files", (progress) => {
+          setUploadProgress(progress);
+        });
+        setValue("imagenPrincipalURL", url, { shouldDirty: true });
+        setPreviewURL(url);
+        setIsSvgPreview(url.toLowerCase().endsWith(".svg"));
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo subir la imagen.",
+          variant: "destructive",
+        });
+        setValue("imagenPrincipalURL", initialData?.imagenPrincipalURL || null, {
+          shouldDirty: true,
+        });
+        setPreviewURL(initialData?.imagenPrincipalURL || null);
+        setIsSvgPreview(
+          initialData?.imagenPrincipalURL?.toLowerCase().endsWith(".svg") || false
+        );
+      } finally {
+        setIsUploading(false);
+        setSelectedFile(null);
+      }
     } else {
       setSelectedFile(null);
       if (watch("imagenPrincipalURL") === "PENDING_UPLOAD") {
@@ -293,11 +330,27 @@ export default function NoticiaForm({
     }
   };
 
-  const handleRemoveImage = () => {
-    setSelectedFile(null);
+  const handleRemoveImage = async () => {
+    const currentUrl = watch("imagenPrincipalURL");
+    if (currentUrl && currentUrl !== "PENDING_UPLOAD") {
+      try {
+        // Extract the file path from the URL
+        const urlParts = currentUrl.split("/");
+        const filePath = urlParts.slice(urlParts.indexOf("project-files")).join("/");
+        await deleteFile(filePath);
+      } catch (error) {
+        console.error("Error deleting file:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la imagen anterior.",
+          variant: "destructive",
+        });
+      }
+    }
     setValue("imagenPrincipalURL", null, { shouldDirty: true });
-    setUploadProgress(0);
-    toast({ title: "Imagen Quitada" });
+    setPreviewURL(null);
+    setIsSvgPreview(false);
+    setSelectedFile(null);
   };
 
   const handleTemaCreatedFromModal = (newTema: Tema) => {
@@ -332,7 +385,7 @@ export default function NoticiaForm({
         // Subida de imagen a Supabase Storage
         processedImagenURL = await uploadFile(
           selectedFile,
-          "noticias_imagenes",
+          "project-files",
           (percent) => setUploadProgress(percent)
         );
       } catch {

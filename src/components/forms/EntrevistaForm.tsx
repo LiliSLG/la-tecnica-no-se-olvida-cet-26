@@ -55,6 +55,9 @@ import {
 } from "lucide-react";
 import NextImage from "next/image";
 import { supabase } from "@/lib/supabase/supabaseClient";
+import { EntrevistasService } from "@/lib/supabase/services/entrevistasService";
+import { TemasService } from "@/lib/supabase/services/temasService";
+import { uploadFile } from "@/lib/supabase/supabaseStorage";
 
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
@@ -72,7 +75,6 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getAllTemasActivos } from "@/lib/supabase/services/temasService";
 import type { Tema, TemaOption } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -86,7 +88,6 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "../ui/badge";
 import AddTemaModal from "./AddTemaModal";
-import { uploadFile } from "@/lib/supabase/supabaseStorage";
 
 interface EntrevistaFormProps {
   onSubmit: (data: EntrevistaFormData) => Promise<boolean>;
@@ -104,6 +105,9 @@ const isValidUrl = (url: string | null): boolean => {
     return false;
   }
 };
+
+const entrevistasService = new EntrevistasService(supabase);
+const temasService = new TemasService(supabase);
 
 export default function EntrevistaForm({
   onSubmit: parentOnSubmit,
@@ -201,8 +205,14 @@ export default function EntrevistaForm({
     async function fetchTemas() {
       setLoadingTemas(true);
       try {
-        const temasData = await getAllTemasActivos();
-        setAllActiveTemas(temasData);
+        const result = await temasService.getAllActivos();
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        if (!result.data) {
+          throw new Error("No se pudieron cargar los temas.");
+        }
+        setAllActiveTemas(result.data);
 
         // Si initialData tiene temas, marcarlos como seleccionados
         if (initialData?.temas) {
@@ -304,23 +314,31 @@ export default function EntrevistaForm({
   }, [selectedMiniaturaFile, currentMiniaturaURL, previewMiniaturaURL]);
 
   // ─── Manejadores de archivos ─────────────────────────────────────────────────
-  const handleMiniaturaFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      setValue("imagenMiniaturaURL", "PENDING_UPLOAD_MINIATURA", {
-        shouldDirty: true,
+  const handleMiniaturaFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedMiniaturaFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewMiniaturaURL(url);
+
+    setIsUploadingMiniatura(true);
+    try {
+      const uniqueFileName = `interviews/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const uploadedUrl = await uploadFile(file, 'interviews', (progress) => {
+        setUploadMiniaturaProgress(progress);
       });
-      setSelectedMiniaturaFile(file);
+      setValue('imagenMiniaturaURL', uploadedUrl);
+    } catch (error) {
+      console.error("Error uploading miniatura:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo subir la miniatura.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingMiniatura(false);
       setUploadMiniaturaProgress(0);
-    } else {
-      setSelectedMiniaturaFile(null);
-      if (watch("imagenMiniaturaURL") === "PENDING_UPLOAD_MINIATURA") {
-        setValue("imagenMiniaturaURL", initialData?.imagenMiniaturaURL || "", {
-          shouldDirty: true,
-        });
-      }
     }
   };
 
@@ -331,25 +349,28 @@ export default function EntrevistaForm({
     toast({ title: "Miniatura Quitada" });
   };
 
-  const handleTranscripcionFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      setValue("transcripcionFileURL", "PENDING_UPLOAD_TRANSCRIPCION", {
-        shouldDirty: true,
+  const handleTranscripcionFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedTranscripcionFile(file);
+    setIsUploadingTranscripcion(true);
+    try {
+      const uniqueFileName = `interviews/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const uploadedUrl = await uploadFile(file, 'interviews', (progress) => {
+        setUploadTranscripcionProgress(progress);
       });
-      setSelectedTranscripcionFile(file);
+      setValue('transcripcionFileURL', uploadedUrl);
+    } catch (error) {
+      console.error("Error uploading transcripcion:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo subir la transcripción.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingTranscripcion(false);
       setUploadTranscripcionProgress(0);
-    } else {
-      setSelectedTranscripcionFile(null);
-      if (watch("transcripcionFileURL") === "PENDING_UPLOAD_TRANSCRIPCION") {
-        setValue(
-          "transcripcionFileURL",
-          initialData?.transcripcionFileURL || "",
-          { shouldDirty: true }
-        );
-      }
     }
   };
 
@@ -394,7 +415,7 @@ export default function EntrevistaForm({
       try {
         finalData.imagenMiniaturaURL = await uploadFile(
           selectedMiniaturaFile,
-          "miniaturas",
+          "interviews",
           setUploadMiniaturaProgress
         );
 
@@ -413,7 +434,7 @@ export default function EntrevistaForm({
       try {
         finalData.transcripcionFileURL = await uploadFile(
           selectedTranscripcionFile,
-          "transcripciones",
+          "interviews",
           setUploadTranscripcionProgress
         );
       } catch {

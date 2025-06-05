@@ -70,21 +70,11 @@ export default function AddOrganizacionModal({ open, onOpenChange, onOrganizacio
     setIsSubmittingModal(true);
 
     try {
-      const dataForService = {
-        nombre: data.nombreOficial,
-        tipo: data.tipo,
-        nombreFantasia: data.nombreFantasia || null,
-        emailContacto: data.emailContacto || null,
-        sitioWeb: data.sitioWeb || null,
-        // The service will handle audit fields, etc.
-      };
-
-      // Use the new service
       const result = await organizacionesService.create({
-        nombre: dataForService.nombre,
+        nombre: data.nombreOficial,
         descripcion: null,
         logo_url: null,
-        sitio_web: dataForService.sitioWeb,
+        sitio_web: data.sitioWeb || null,
         esta_eliminada: false,
         eliminado_por_uid: null,
         eliminado_en: null
