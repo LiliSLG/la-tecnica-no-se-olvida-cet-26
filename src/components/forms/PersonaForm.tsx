@@ -8,7 +8,7 @@ import {
   type PersonaFormData,
   adminSelectableCategoriasPrincipalesPersona,
   categoriasPrincipalesPersonaLabels,
-  allCapacidadesPlataformaOptions, // Changed from capacidadesPlataformaOptions
+  allCapacidadesPlataformaOptions,
   capacidadesPlataformaLabels,
   visibilidadPerfilOptions,
   visibilidadPerfilLabels,
@@ -16,8 +16,11 @@ import {
   estadoSituacionLaboralLabels,
   type CategoriaPrincipalPersona,
   type EstadoSituacionLaboral,
+  type VisibilidadPerfil,
 } from '@/lib/schemas/personaSchema';
-import type { Persona, CapacidadPlataforma, VisibilidadPerfil } from '@/lib/types';
+import type { Persona, CapacidadPlataforma } from '@/lib/types';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,13 +62,7 @@ const isValidImageUrl = (url: string | null): boolean => {
 
 const projectRelatedCapacities: CapacidadPlataforma[] = ['es_autor', 'es_tutor', 'es_colaborador'];
 
-// TODO: Update VisibilidadPerfil type to match database schema
-// Current type includes 'solo_registrados' but database only has:
-// - 'publico'
-// - 'solo_registrados_plataforma'
-// - 'privado'
-// - 'solo_admins_y_propio'
-type VisibilidadPerfil = 'publico' | 'solo_registrados_plataforma' | 'privado' | 'solo_admins_y_propio';
+const personasService = new PersonasService(supabase);
 
 export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isSubmitting: parentIsSubmitting }: PersonaFormProps) {
   const { toast } = useToast();
@@ -209,7 +206,6 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
     if (selectedFile) {
       setIsUploading(true);
       try {
-        const uniqueFileName = `fotos_perfil/${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
         const uploadedUrl = await uploadFile(selectedFile, 'profile-pictures', (progress) => {
           setUploadProgress(progress);
         });
@@ -280,14 +276,14 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
   };
 
   const triggerSubmitAndNavigate = async () => {
-    const isValid = await trigger(); 
+    const isValid = await trigger();
     if (isValid) {
-      const success = await form.handleSubmit(handleMainSubmit)(); 
-      if (success && navigationAction) {
-        navigationAction(); 
+      const submitResult = await form.handleSubmit(handleMainSubmit)();
+      if (submitResult === true && navigationAction) {
+        navigationAction();
       }
     } else {
-       toast({ title: "Error de Validación", description: "Por favor, corrige los errores en el formulario.", variant: "destructive" });
+      toast({ title: "Error de Validación", description: "Por favor, corrige los errores en el formulario.", variant: "destructive" });
     }
     setIsUnsavedChangesModalOpen(false);
   };
@@ -594,7 +590,15 @@ export default function PersonaForm({ onSubmit: parentOnSubmit, initialData, isS
                         <FormField control={control} name={`linksProfesionales.${index}.tipo`} render={({ field: linkField }) => ( <FormItem> <FormLabel>Tipo de Enlace</FormLabel> <FormControl><Input {...linkField} value={linkField.value || ''} placeholder="Ej: LinkedIn, Portfolio"/></FormControl> <FormMessage /> </FormItem> )}/>
                         <FormField control={control} name={`linksProfesionales.${index}.url`} render={({ field: linkField }) => ( <FormItem> <FormLabel>URL del Enlace</FormLabel> <FormControl><Input type="url" {...linkField} value={linkField.value || ''} placeholder="https://..."/></FormControl> <FormMessage /> </FormItem> )}/>
                         </div>
-                        <Button type="button" variant="destructive" size="xs" onClick={() => removeLink(index)}> <Trash2 className="mr-1 h-3.5 w-3.5" /> Eliminar Link </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLink(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                     </Card>
                     ))}
                     {errors.linksProfesionales && typeof errors.linksProfesionales === 'object' && 'message' in errors.linksProfesionales && !Array.isArray(errors.linksProfesionales) && (

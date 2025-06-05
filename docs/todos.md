@@ -93,6 +93,45 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] Verificar que todos los servicios existentes sigan el patrón `BaseService` y las convenciones del proyecto.
 - [ ] Implementar los métodos CRUD básicos y los métodos relacionales necesarios si aún no existen o requieren adaptación.
 
+### `personasService.ts`
+- [ ] **Implementar Métodos Faltantes:**
+    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Persona[]>>` - Para obtener múltiples personas por sus IDs
+    - [ ] `search(term: string): Promise<ServiceResult<Persona[]>>` - Para búsqueda de personas
+- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
+    - [ ] Map `foto_url` to `fotoURL`
+    - [ ] Map `categoria_principal` to `categoriaPrincipal`
+    - [ ] Map `es_admin` to `esAdmin`
+    - [ ] Map `esta_eliminado` to `activo`
+    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+    - [ ] Map `eliminado_en` to `eliminadoEn`
+    - [ ] Map `created_at` to `creadoEn`
+    - [ ] Map `updated_at` to `actualizadoEn`
+
+### `organizacionesService.ts`
+- [ ] **Implementar Métodos Faltantes:**
+    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Organizacion[]>>` - Para obtener múltiples organizaciones por sus IDs
+    - [ ] `search(term: string): Promise<ServiceResult<Organizacion[]>>` - Para búsqueda de organizaciones
+- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
+    - [ ] Map `nombre` to `nombreOficial`
+    - [ ] Map `logo_url` to `logoURL`
+    - [ ] Map `sitio_web` to `sitioWeb`
+    - [ ] Map `esta_eliminada` to `estaEliminada`
+    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+    - [ ] Map `eliminado_en` to `eliminadoEn`
+    - [ ] Map `created_at` to `creadoEn`
+    - [ ] Map `updated_at` to `actualizadoEn`
+
+### `temasService.ts`
+- [ ] **Implementar Métodos Faltantes:**
+    - [ ] `getByIds(ids: string[]): Promise<ServiceResult<Tema[]>>` - Para obtener múltiples temas por sus IDs
+    - [ ] `getAllActivos(): Promise<ServiceResult<Tema[]>>` - Para obtener todos los temas activos
+- [ ] **Update type conversion in `getById` to properly map database fields to domain model:**
+    - [ ] Map `esta_eliminado` to `estaEliminado`
+    - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+    - [ ] Map `eliminado_en` to `eliminadoEn`
+    - [ ] Map `created_at` to `creadoEn`
+    - [ ] Map `updated_at` to `actualizadoEn`
+
 ---
 
 ## ③ Migración de Formularios a Supabase Services y Storage
@@ -118,6 +157,7 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
     - [ ] Manejar campos específicos de `personas` (ver Schema): `es_ex_alumno_cet`, `links_profesionales`, `ofrece_colaboracion_como`, etc.
     - [ ] Manejo de foto de perfil (subida, previsualización).
     - [ ] Considerar si "ingresado_por" y "modificado_por" se gestionan automáticamente (e.g., con Edge Functions o desde el servicio usando el usuario autenticado).
+    - [ ] Revisar y refactorizar el flujo de envío del formulario en `PersonaForm.tsx` para manejar correctamente los resultados de envío y errores.
 
 **`AddTemaModal.tsx` / `TemaForm.tsx` (unificar si es posible):**
 - (Aplicar Checklist Genérico)
@@ -127,6 +167,7 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 
 **`AddOrganizacionModal.tsx` / `OrganizacionForm.tsx` (unificar si es posible):**
 - (Aplicar Checklist Genérico)
+- [ ] Confirm correct Supabase storage folder for organization logos in STORAGE_CONFIG (currently using "organization-logos" as placeholder)
 - [ ] Particularidades:
     - [ ] Validación de email y sitio web.
     - [ ] Manejo del campo tipo de organización.
@@ -199,5 +240,51 @@ Este documento organiza las tareas pendientes para la migración a Supabase y el
 - [ ] `AdminOrganizacionList.tsx` (Usa `organizacionesService.getAll` (admin version), `organizacionesService.delete` (logical), `organizacionesService.restore`)
 - [ ] `AdminTemaList.tsx` (Usa `temasService.getAll` (admin version), `temasService.delete` (logical), `temasService.restore`)
 - [ ] `AdminEntrevistaList.tsx` (Usa `entrevistasService.getAll` (admin version), `entrevistasService.delete` (logical), `entrevistasService.restore`)
+
+---
+
+## TODOs
+
+## Service Methods
+
+### PersonasService
+- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Persona[]>>` method to retrieve multiple persons by their IDs
+- [ ] Add `search(term: string): Promise<ServiceResult<Persona[]>>` method to search persons
+- [ ] Update type conversion in `getById` to properly map database fields to domain model:
+  - [ ] Map `foto_url` to `fotoURL`
+  - [ ] Map `categoria_principal` to `categoriaPrincipal`
+  - [ ] Map `es_admin` to `esAdmin`
+  - [ ] Map `esta_eliminado` to `activo`
+  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+  - [ ] Map `eliminado_en` to `eliminadoEn`
+  - [ ] Map `created_at` to `creadoEn`
+  - [ ] Map `updated_at` to `actualizadoEn`
+
+### OrganizacionesService
+- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Organizacion[]>>` method to retrieve multiple organizations by their IDs
+- [ ] Add `search(term: string): Promise<ServiceResult<Organizacion[]>>` method to search organizations
+- [ ] Update type conversion in `getById` to properly map database fields to domain model:
+  - [ ] Map `nombre` to `nombreOficial`
+  - [ ] Map `logo_url` to `logoURL`
+  - [ ] Map `sitio_web` to `sitioWeb`
+  - [ ] Map `esta_eliminada` to `estaEliminada`
+  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+  - [ ] Map `eliminado_en` to `eliminadoEn`
+  - [ ] Map `created_at` to `creadoEn`
+  - [ ] Map `updated_at` to `actualizadoEn`
+
+### TemasService
+- [ ] Add `getByIds(ids: string[]): Promise<ServiceResult<Tema[]>>` method to retrieve multiple themes by their IDs
+- [ ] Add `getAllActivos(): Promise<ServiceResult<Tema[]>>` method to retrieve all active themes
+- [ ] Update type conversion in `getById` to properly map database fields to domain model:
+  - [ ] Map `esta_eliminado` to `estaEliminado`
+  - [ ] Map `eliminado_por_uid` to `eliminadoPorUid`
+  - [ ] Map `eliminado_en` to `eliminadoEn`
+  - [ ] Map `created_at` to `creadoEn`
+  - [ ] Map `updated_at` to `actualizadoEn`
+
+## Type Definitions
+- [ ] Export `RolInstitucional` type from `@/lib/types`
+- [ ] Export `ServiceResult` type from `@/lib/supabase/services/baseService`
 
 ---

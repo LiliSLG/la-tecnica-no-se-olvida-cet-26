@@ -65,20 +65,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  searchPersonas,
-  getPersonasByIds,
-  createPersonaPlaceholder,
-} from '@/lib/supabase/services/personasService';
-import {
-  searchOrganizacionesByName,
-  getOrganizacionesByIds,
-  addOrganizacion,
-} from '@/lib/supabase/services/organizacionesService';
-import {
-  getAllTemasActivos as getAllTemasActivosService,
-  getTemasByIds as getTemasByIdsService,
-} from '@/lib/supabase/services/temasService';
+import { PersonasService } from '@/lib/supabase/services/personasService';
+import { OrganizacionesService } from '@/lib/supabase/services/organizacionesService';
+import { TemasService } from '@/lib/supabase/services/temasService';
+import { supabase } from '@/lib/supabase/supabaseClient';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +103,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import type { ServiceResult } from "@/lib/supabase/services/baseService";
+
+const personasService = new PersonasService(supabase);
+const organizacionesService = new OrganizacionesService(supabase);
+const temasService = new TemasService(supabase);
 
 const opcionesCategoriaAutor: Array<{
   value: CategoriaPrincipalPersona;
@@ -410,6 +405,7 @@ export default function ProjectForm({
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const formDefaultValues: ProjectFormData = {
     titulo: "",
@@ -515,8 +511,10 @@ export default function ProjectForm({
     const fetchTemasForSelector = async () => {
       setLoadingTemas(true);
       try {
-        const temas = await getAllTemasActivosService();
-        setAllActiveTemas(temas);
+        const result = await temasService.getAll();
+        if (result.data) {
+          setAllActiveTemas(result.data.filter((t: Tema) => !t.esta_eliminado));
+        }
       } catch (error) {
         toast({
           title: "Error",
@@ -532,7 +530,7 @@ export default function ProjectForm({
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData); // Reset form with initial data (already converted by EditProjectContent)
+      reset(initialData);
 
       const populatePersonSelection = async (
         ids: string[] | undefined | null,
@@ -541,17 +539,22 @@ export default function ProjectForm({
       ) => {
         if (ids && ids.length > 0) {
           try {
-            const personas = await getPersonasByIds(ids);
-            setter(
-              personas.map((p) => ({
-                id: p.id!,
-                nombre: p.nombre,
-                apellido: p.apellido,
-                email: p.email || undefined,
-                fotoURL: p.fotoURL || undefined,
-                isNewPlaceholder: false,
-              }))
-            );
+            const results = await Promise.all(ids.map(id => personasService.getById(id)));
+            const personas = results
+              .filter((result: ServiceResult<Persona>) => result.data)
+              .map((result: ServiceResult<Persona>) => {
+                const data = result.data as unknown as Persona;
+                return {
+                  id: data.id!,
+                  nombre: data.nombre,
+                  apellido: data.apellido,
+                  email: data.email || undefined,
+                  fotoURL: data.fotoURL || undefined,
+                  isNewPlaceholder: false,
+                } as FormAuthor;
+              });
+            
+            setter(personas);
             setValue(rhfFieldName, ids, { shouldDirty: false });
           } catch (err) {
             console.error(`Error fetching initial ${rhfFieldName}:`, err);
@@ -586,17 +589,22 @@ export default function ProjectForm({
           initialData.idsOrganizacionesTutoria.length > 0
         ) {
           try {
-            const orgs = await getOrganizacionesByIds(
-              initialData.idsOrganizacionesTutoria
+            const results = await Promise.all(
+              initialData.idsOrganizacionesTutoria.map(id => organizacionesService.getById(id))
             );
-            setSelectedOrganizaciones(
-              orgs.map((o) => ({
-                id: o.id!,
-                nombreOficial: o.nombreOficial,
-                tipo: o.tipo,
-                isNewPlaceholder: false,
-              }))
-            );
+            const orgs = results
+              .filter((result: ServiceResult<Organizacion>) => result.data)
+              .map((result: ServiceResult<Organizacion>) => {
+                const data = result.data as unknown as Organizacion;
+                return {
+                  id: data.id!,
+                  nombreOficial: data.nombreOficial,
+                  tipo: data.tipo,
+                  isNewPlaceholder: false,
+                } as FormOrganizacion;
+              });
+
+            setSelectedOrganizaciones(orgs);
             setValue(
               "idsOrganizacionesTutoria",
               initialData.idsOrganizacionesTutoria,
@@ -625,13 +633,23 @@ export default function ProjectForm({
         setSelectedTemaObjects(initialTemaObjects);
         setValue("idsTemas", initialData.idsTemas, { shouldDirty: false });
       } else if (initialData.idsTemas) {
-        // If allActiveTemas is not yet loaded, we still need to set the IDs in RHF
         setValue("idsTemas", initialData.idsTemas, { shouldDirty: false });
-        // And try to fetch them to display names
         if (initialData.idsTemas.length > 0) {
-          getTemasByIdsService(initialData.idsTemas).then(
-            setSelectedTemaObjects
-          );
+          Promise.all(initialData.idsTemas.map(id => temasService.getById(id)))
+            .then((results: ServiceResult<Tema>[]) => {
+              const temas = results
+                .filter((result: ServiceResult<Tema>) => result.data)
+                .map((result: ServiceResult<Tema>) => {
+                  const data = result.data as unknown as Tema;
+                  return {
+                    id: data.id!,
+                    nombre: data.nombre,
+                    descripcion: data.descripcion,
+                    esta_eliminado: data.esta_eliminado,
+                  } as Tema;
+                });
+              setSelectedTemaObjects(temas);
+            });
         } else {
           setSelectedTemaObjects([]);
         }
@@ -656,7 +674,7 @@ export default function ProjectForm({
       setCollaboratorListChanged(false);
       setOrganizacionListChanged(false);
     }
-  }, [initialData, reset, setValue, allActiveTemas]); // allActiveTemas is a dependency for setting tema objects
+  }, [initialData, reset, setValue, allActiveTemas]);
 
   const addPersonToList = useCallback(
     (
@@ -896,16 +914,16 @@ export default function ProjectForm({
     if (initialData) {
       // Resetting selected items states based on initialData
       const initialAuthorIds = initialData.idsAutores || [];
-      getPersonasByIds(initialAuthorIds).then(setSelectedProjectAuthors);
+      personasService.getByIds(initialAuthorIds).then(setSelectedProjectAuthors);
 
       const initialTutorIds = initialData.idsTutoresPersonas || [];
-      getPersonasByIds(initialTutorIds).then(setSelectedProjectTutors);
+      personasService.getByIds(initialTutorIds).then(setSelectedProjectTutors);
 
       const initialCollabIds = initialData.idsColaboradores || [];
-      getPersonasByIds(initialCollabIds).then(setSelectedProjectCollaborators);
+      personasService.getByIds(initialCollabIds).then(setSelectedProjectCollaborators);
 
       const initialOrgIds = initialData.idsOrganizacionesTutoria || [];
-      getOrganizacionesByIds(initialOrgIds).then(setSelectedOrganizaciones);
+      organizacionesService.getByIds(initialOrgIds).then(setSelectedOrganizaciones);
 
       const initialTemaIds = initialData.idsTemas || [];
       if (initialTemaIds.length > 0 && allActiveTemas.length > 0) {
@@ -913,7 +931,7 @@ export default function ProjectForm({
           allActiveTemas.filter((t) => initialTemaIds.includes(t.id!))
         );
       } else if (initialTemaIds.length > 0) {
-        getTemasByIdsService(initialTemaIds).then(setSelectedTemaObjects);
+        temasService.getByIds(initialTemaIds).then(setSelectedTemaObjects);
       } else {
         setSelectedTemaObjects([]);
       }
@@ -1225,7 +1243,7 @@ export default function ProjectForm({
                 title="Autores del Proyecto"
                 itemIdentifier="autores"
                 selectedItems={selectedProjectAuthors}
-                searchFunction={searchPersonas}
+                searchFunction={personasService.search}
                 onItemSelect={(author: FormAuthor) =>
                   addPersonToList(
                     author,
@@ -1261,7 +1279,7 @@ export default function ProjectForm({
                 title="Tutores (Personas)"
                 itemIdentifier="tutores"
                 selectedItems={selectedProjectTutors}
-                searchFunction={searchPersonas}
+                searchFunction={personasService.search}
                 onItemSelect={(tutor: FormAuthor) =>
                   addPersonToList(
                     tutor,
@@ -1297,7 +1315,7 @@ export default function ProjectForm({
                 title="Colaboradores (Personas)"
                 itemIdentifier="colaboradores"
                 selectedItems={selectedProjectCollaborators}
-                searchFunction={searchPersonas}
+                searchFunction={personasService.search}
                 onItemSelect={(collab: FormAuthor) =>
                   addPersonToList(
                     collab,
@@ -1333,7 +1351,7 @@ export default function ProjectForm({
                 title="Organizaciones Tutoras"
                 itemIdentifier="organizaciones"
                 selectedItems={selectedOrganizaciones}
-                searchFunction={searchOrganizacionesByName}
+                searchFunction={organizacionesService.search}
                 onItemSelect={(org: FormOrganizacion) =>
                   addOrganizacionToListInternal(
                     org,
