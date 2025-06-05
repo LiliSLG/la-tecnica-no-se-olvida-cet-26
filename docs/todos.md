@@ -1,502 +1,203 @@
-## proyectosService.ts
+# TODO List: Migración y Desarrollo "La técnica no se olvida"
 
-- [ ] Implement the following methods if needed:
-    - permanentlyDelete(id: string): Promise<ServiceResult<void>>
-    - getProjectWithRelations(id: string): Promise<ServiceResult<ProyectoWithRelations | null>>
-    - updateProjectWithRelations(id: string, data: UpdateProyectoWithRelations): Promise<ServiceResult<ProyectoWithRelations | null>>
-    - getProjectStats(id: string): Promise<ServiceResult<ProjectStats | null>>
-    - getProjectTimeline(id: string): Promise<ServiceResult<ProjectTimeline | null>>
-    - getProjectContributors(id: string): Promise<ServiceResult<ProjectContributors | null>>
-    - getProjectOrganizations(id: string): Promise<ServiceResult<ProjectOrganizations | null>>
-    - getProjectTopics(id: string): Promise<ServiceResult<ProjectTopics | null>>
-    - getProjectFiles(id: string): Promise<ServiceResult<ProjectFiles | null>>
-    - getProjectComments(id: string): Promise<ServiceResult<ProjectComments | null>>
-    - getProjectLikes(id: string): Promise<ServiceResult<ProjectLikes | null>>
-    - getProjectShares(id: string): Promise<ServiceResult<ProjectShares | null>>
-    - getProjectViews(id: string): Promise<ServiceResult<ProjectViews | null>>
-    - getProjectAnalytics(id: string): Promise<ServiceResult<ProjectAnalytics | null>>
-    - getProjectReports(id: string): Promise<ServiceResult<ProjectReports | null>>
-    - getProjectAuditLog(id: string): Promise<ServiceResult<ProjectAuditLog | null>>
-    - getProjectPermissions(id: string): Promise<ServiceResult<ProjectPermissions | null>>
-    - getProjectSettings(id: string): Promise<ServiceResult<ProjectSettings | null>>
-    - getProjectNotifications(id: string): Promise<ServiceResult<ProjectNotifications | null>>
-    - getProjectIntegrations(id: string): Promise<ServiceResult<ProjectIntegrations | null>>
-    - getProjectWebhooks(id: string): Promise<ServiceResult<ProjectWebhooks | null>>
-    - getProjectAPIKeys(id: string): Promise<ServiceResult<ProjectAPIKeys | null>>
-    - getProjectSecrets(id: string): Promise<ServiceResult<ProjectSecrets | null>>
-    - getProjectEnvironments(id: string): Promise<ServiceResult<ProjectEnvironments | null>>
-    - getProjectDeployments(id: string): Promise<ServiceResult<ProjectDeployments | null>>
-    - getProjectBuilds(id: string): Promise<ServiceResult<ProjectBuilds | null>>
-    - getProjectTests(id: string): Promise<ServiceResult<ProjectTests | null>>
-    - getProjectCoverage(id: string): Promise<ServiceResult<ProjectCoverage | null>>
-    - getProjectDependencies(id: string): Promise<ServiceResult<ProjectDependencies | null>>
-    - getProjectVulnerabilities(id: string): Promise<ServiceResult<ProjectVulnerabilities | null>>
-    - getProjectLicenses(id: string): Promise<ServiceResult<ProjectLicenses | null>>
-    - getProjectDocumentation(id: string): Promise<ServiceResult<ProjectDocumentation | null>>
-    - getProjectWiki(id: string): Promise<ServiceResult<ProjectWiki | null>>
-    - getProjectIssues(id: string): Promise<ServiceResult<ProjectIssues | null>>
-    - getProjectPullRequests(id: string): Promise<ServiceResult<ProjectPullRequests | null>>
-    - getProjectReleases(id: string): Promise<ServiceResult<ProjectReleases | null>>
-    - getProjectTags(id: string): Promise<ServiceResult<ProjectTags | null>>
-    - getProjectBranches(id: string): Promise<ServiceResult<ProjectBranches | null>>
-    - getProjectCommits(id: string): Promise<ServiceResult<ProjectCommits | null>>
+Este documento organiza las tareas pendientes para la migración a Supabase y el desarrollo continuo de la plataforma.
 
-## AddPersonaModal.tsx
-- [ ] Migrate persona creation to Supabase service (personasService) and use Supabase Storage for image uploads
-- [ ] Replace all usage of firebase storage and createPersonaPlaceholder with Supabase equivalents
-- [ ] Migrate Firebase Storage upload to Supabase Storage
-- [ ] Replace createPersonaPlaceholder with PersonasService.create
-- [ ] Update form types to match Supabase schema
-- [ ] Fix type issues with CategoriaPrincipalPersona enum
-- [ ] Update form validation to match new schema
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update file upload progress tracking for Supabase
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
+**Principios Clave de Migración/Desarrollo:**
+*   **Consistencia:** Seguir el patrón `BaseService` y las convenciones definidas en `blueprint.md > /lib/supabase/ Structure and Service Pattern`.
+*   **Schema Primero:** Asegurar que el schema de la base de datos (`database.types.ts`) refleje correctamente las necesidades antes de implementar servicios y UI.
+*   **Servicios como Única Fuente de Verdad:** No acceder directamente a Supabase (`supabaseClient.from(...)`) desde los componentes. Usar siempre los servicios.
+*   **Tipado Estricto:** Aprovechar TypeScript para garantizar la integridad de los datos entre la UI, los servicios y la base de datos.
 
-## TemaForm.tsx
-- [ ] Migrate to use TemasService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for tema metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for tema relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for tema status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for tema categories
-- [ ] Update form field placeholders to match Supabase schema
+---
 
-## ProjectForm.tsx
-- [ ] Migrate ProjectForm.tsx to use the new Supabase service (ProyectosService) for CRUD operations 
+## ⓪ Configuración de Entorno
+- [ ] Crear archivo `.env.local` con las variables:
+  - `NEXT_PUBLIC_SUPABASE_URL`: URL de tu proyecto Supabase.
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Clave anónima de tu proyecto Supabase.
 
-## AddTemaModal.tsx
-- [ ] Migrate to use TemasService from Supabase
-- [ ] Update form types to match Supabase schema
-- [ ] Implement proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
+---
 
-## AddOrganizacionModal.tsx
-- [ ] Migrate AddOrganizacionModal.tsx to use the new Supabase service (OrganizacionesService) for CRUD operations 
+## ① Actualizaciones de Schema de Base de Datos (Supabase)
 
-# Migration TODOs
+### Tabla `personas`
+- [ ] Añadir los siguientes campos faltantes (revisar tipos de datos y si alguno puede ser `JSONB` o `TEXT[]`):
+  - [ ] `apellido` (TEXT, NOT NULL)
+  - [ ] `es_ex_alumno_cet` (BOOLEAN, DEFAULT FALSE)
+  - [ ] `ano_egreso_cet` (INTEGER, NULLABLE)
+  - [ ] `ano_cursada_actual_cet` (INTEGER, NULLABLE)
+  - [ ] `titulo_profesional` (TEXT, NULLABLE)
+  - [ ] `descripcion_personal_o_profesional` (TEXT, NULLABLE)
+  - [ ] `areas_de_interes_o_expertise` (TEXT[], NULLABLE)
+  - [ ] `disponible_para_proyectos` (BOOLEAN, DEFAULT FALSE)
+  - [ ] `titulacion_obtenida_cet` (TEXT, NULLABLE)
+  - [ ] `proyecto_final_cet_id` (UUID, NULLABLE, FOREIGN KEY a `proyectos.id` si aplica)
+  - [ ] `buscando_oportunidades` (BOOLEAN, DEFAULT FALSE)
+  - [ ] `estado_situacion_laboral` (TEXT, NULLABLE) <!-- Considerar un ENUM o tabla relacionada si hay valores fijos -->
+  - [ ] `historia_de_exito_o_resumen_trayectoria` (TEXT, NULLABLE)
+  - [ ] `empresa_o_institucion_actual` (TEXT, NULLABLE)
+  - [ ] `cargo_actual` (TEXT, NULLABLE)
+  - [ ] `ofrece_colaboracion_como` (TEXT[], NULLABLE)
+  - [ ] `telefono_contacto` (TEXT, NULLABLE)
+  - [ ] `links_profesionales` (JSONB, NULLABLE) <!-- Ej: [{platform: 'linkedin', url: '...'}, ...] -->
+  - [ ] `ubicacion_residencial` (JSONB, NULLABLE) <!-- Ej: {ciudad: '...', provincia: '...'} o usar PostGIS si se necesita geo-búsqueda -->
+  - [ ] `visibilidad_perfil` (TEXT, DEFAULT 'publico') <!-- Considerar ENUM: publico, privado, solo_cet -->
+  - [ ] `ingresado_por` (UUID, NULLABLE, FOREIGN KEY a `auth.users.id` o `personas.id`)
+  - [ ] `modificado_por` (UUID, NULLABLE, FOREIGN KEY a `auth.users.id` o `personas.id`)
 
-## Forms Migration
+### Tabla `entrevistas`
+- [ ] Añadir/verificar los siguientes campos (revisar tipos de datos):
+  - [ ] `intervieweeName` (TEXT, NOT NULL) <!-- ¿O es un FK a `personas`? Si es así, `persona_id` -->
+  - [ ] `summary` (TEXT, NULLABLE)
+  - [ ] `type` (TEXT, NOT NULL) <!-- Considerar ENUM: audio, video, transcripcion -->
+  - [ ] `mediaUrl` (TEXT, NULLABLE) <!-- URL al archivo en Supabase Storage o link externo -->
+  - [ ] `ambitoSaber` (TEXT, NULLABLE)
+  - [ ] `fecha` (DATE o TIMESTAMP WITH TIME ZONE, NULLABLE)
+  - [ ] `duracion` (INTERVAL o INTEGER en segundos/minutos, NULLABLE)
+  - [ ] `lugar` (TEXT, NULLABLE)
+  - [ ] `participantes` (UUID[], NULLABLE) <!-- Array de IDs de `personas` -->
+  - [ ] `temas` (UUID[], NULLABLE) <!-- Array de IDs de `temas` -->
+  - [ ] `organizaciones` (UUID[], NULLABLE) <!-- Array de IDs de `organizaciones` -->
+  - [ ] `archivos` (JSONB[], NULLABLE) <!-- Array de objetos {nombre: string, url: string, tipo: string} para archivos asociados -->
+  - [ ] `notas` (TEXT, NULLABLE)
+  - [ ] `transcripcion_path` (TEXT, NULLABLE) <!-- Path al archivo de transcripción en Supabase Storage -->
+  - [ ] `esta_publicada` (BOOLEAN, DEFAULT FALSE)
 
-### AddOrganizacionModal.tsx
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to handle all fields
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for email and website fields
-- [ ] Add proper handling for organization type field
+---
 
-### ProjectForm.tsx
-- [ ] Replace remaining Firebase-style functions with Supabase equivalents
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to handle all fields
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update file upload handling to use Supabase Storage
-- [ ] Update relationship handling to use Supabase relations
-- [ ] Add proper handling for project status transitions
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for project metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for project attachments
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for project relationships
+## ② Capa de Servicios (`/lib/supabase/services/`)
 
-### TemaForm.tsx
-- [ ] Migrate to use TemasService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for tema metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for tema relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for tema status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for tema categories
-- [ ] Update form field placeholders to match Supabase schema
+### `proyectosService.ts`
+- [ ] **Revisión Crítica de Métodos:** La lista actual es exhaustiva pero potencialmente excesiva para un servicio genérico. Implementar primero los métodos CRUD básicos y aquellos esenciales para las relaciones principales. Añadir métodos más específicos (`getProjectStats`, `getProjectTimeline`, etc.) *solo cuando sean requeridos por la UI y representen una lógica de datos reutilizable*. Muchos de estos podrían ser cálculos o composiciones hechas en el frontend o en Edge Functions específicas si son complejos.
+- [ ] **Implementar Métodos Esenciales (si no existen o necesitan refactor):**
+    - [ ] `create(data: CreateProyecto): Promise<ServiceResult<Proyecto>>`
+    - [ ] `getById(id: string): Promise<ServiceResult<Proyecto | null>>`
+    - [ ] `getAll(params?: any): Promise<ServiceResult<Proyecto[]>>` (con filtros, paginación)
+    - [ ] `update(id: string, data: UpdateProyecto): Promise<ServiceResult<Proyecto | null>>`
+    - [ ] `delete(id: string): Promise<ServiceResult<void>>` (logical delete)
+    - [ ] `permanentlyDelete(id: string): Promise<ServiceResult<void>>`
+- [ ] **Implementar Métodos Relacionales Clave (ejemplos, añadir según necesidad):**
+    - [ ] `getProjectWithRelations(id: string): Promise<ServiceResult<ProyectoWithRelations | null>>` (incluye autores, temas, organizaciones, etc.)
+    - [ ] `updateProjectWithRelations(id: string, data: UpdateProyectoWithRelations): Promise<ServiceResult<ProyectoWithRelations | null>>` (para manejar la actualización de M:N y otras relaciones complejas en una transacción o secuencia controlada)
+    - [ ] `getProjectContributors(id: string): Promise<ServiceResult<Persona[] | null>>`
+    - [ ] `getProjectOrganizations(id: string): Promise<ServiceResult<Organizacion[] | null>>`
+    - [ ] `getProjectTopics(id: string): Promise<ServiceResult<Tema[] | null>>`
+    - [ ] `getProjectFiles(id: string): Promise<ServiceResult<ProjectFile[] | null>>` (si los archivos se gestionan como entidades relacionadas)
+- [ ] **Evaluar y posponer/descartar el resto de la lista original** (e.g., `getProjectLikes`, `getProjectAuditLog`, `getProjectAPIKeys`, etc.) hasta que haya una necesidad clara en la UI. Algunos podrían ser características futuras separadas.
 
-### NoticiaForm.tsx
-- [ ] Migrate to use NoticiasService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for noticia metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for noticia relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for noticia status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for noticia categories
-- [ ] Update form field placeholders to match Supabase schema
-- [ ] Add proper handling for image uploads
-- [ ] Update image preview handling
-- [ ] Add proper handling for external URLs
-- [ ] Update tema selection handling
-- [ ] Add proper handling for publication dates
-- [ ] Update form field validation for dates
-- [ ] Add proper handling for featured status
-- [ ] Update form field validation for featured status
-- [ ] Add proper handling for publication status
-- [ ] Update form field validation for publication status
+### `noticiasService.ts`
+- [ ] Migrar completamente a la nueva arquitectura `BaseService`.
+- [ ] Asegurar que todos los métodos son consistentes con el nuevo patrón.
+- [ ] Actualizar todas las importaciones y usos en la aplicación para que apunten a `@/lib/supabase/services/noticiasService`.
 
-### EntrevistaForm.tsx
-- [ ] Migrate to use EntrevistasService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for entrevista metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for entrevista relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for entrevista status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for entrevista categories
-- [ ] Update form field placeholders to match Supabase schema
-- [ ] Add proper handling for thumbnail uploads
-- [ ] Update thumbnail preview handling
-- [ ] Add proper handling for transcription file uploads
-- [ ] Update transcription file handling
-- [ ] Add proper handling for video URLs
-- [ ] Update video platform handling
-- [ ] Add proper handling for recording dates
-- [ ] Update form field validation for dates
-- [ ] Add proper handling for publication status
-- [ ] Update form field validation for publication status
-- [ ] Add proper handling for keywords
-- [ ] Update form field validation for keywords
-- [ ] Add proper handling for information sources
-- [ ] Update form field validation for information sources
-- [ ] Add proper handling for collectors
-- [ ] Update form field validation for collectors
+### Otros Servicios (`entrevistasService`, `organizacionesService`, `temasService`, `personasService`, `relationshipService`)
+- [ ] Verificar que todos los servicios existentes sigan el patrón `BaseService` y las convenciones del proyecto.
+- [ ] Implementar los métodos CRUD básicos y los métodos relacionales necesarios si aún no existen o requieren adaptación.
 
-### OrganizacionForm.tsx
-- [ ] Migrate to use OrganizacionesService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for organizacion metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for organizacion relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for organizacion status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for organizacion types
-- [ ] Update form field placeholders to match Supabase schema
-- [ ] Add proper handling for logo uploads
-- [ ] Update logo preview handling
-- [ ] Add proper handling for SVG files
-- [ ] Update form field validation for URLs
-- [ ] Add proper handling for contact information
-- [ ] Update form field validation for contact information
-- [ ] Add proper handling for location data
-- [ ] Update form field validation for location data
-- [ ] Add proper handling for website URLs
-- [ ] Update form field validation for website URLs
-- [ ] Add proper handling for email addresses
-- [ ] Update form field validation for email addresses
-- [ ] Add proper handling for phone numbers
-- [ ] Update form field validation for phone numbers
+---
 
-### PersonaForm.tsx
-- [ ] Migrate to use PersonasService from Supabase
-- [ ] Update form types to match Supabase schema exactly
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form validation to match new schema
-- [ ] Add proper type definitions for form data
-- [ ] Update form submission logic to use new service
-- [ ] Add proper error messages for Supabase operations
-- [ ] Update form reset logic to match new schema
-- [ ] Add proper loading states for Supabase operations
-- [ ] Update form field types to match Supabase schema
-- [ ] Add proper handling for optional fields
-- [ ] Add proper validation for all fields
-- [ ] Update form state management to match Supabase schema
-- [ ] Add proper handling for persona metadata
-- [ ] Update form field validation to match Supabase constraints
-- [ ] Add proper handling for persona relationships
-- [ ] Update form field dependencies to match Supabase schema
-- [ ] Add proper handling for persona status transitions
-- [ ] Update form field labels to match Supabase schema
-- [ ] Add proper handling for persona categories
-- [ ] Update form field placeholders to match Supabase schema
-- [ ] Add proper handling for profile photo uploads
-- [ ] Update photo preview handling
-- [ ] Add proper handling for SVG files
-- [ ] Update form field validation for URLs
-- [ ] Add proper handling for contact information
-- [ ] Update form field validation for contact information
-- [ ] Add proper handling for location data
-- [ ] Update form field validation for location data
-- [ ] Add proper handling for professional links
-- [ ] Update form field validation for professional links
-- [ ] Add proper handling for platform capabilities
-- [ ] Update form field validation for platform capabilities
-- [ ] Add proper handling for profile visibility
-- [ ] Update form field validation for profile visibility
-- [ ] Add proper handling for employment status
-- [ ] Update form field validation for employment status
-- [ ] Add proper handling for CET information
-- [ ] Update form field validation for CET information
-- [ ] Add proper handling for professional interests
-- [ ] Update form field validation for professional interests
-- [ ] Add proper handling for collaboration offers 
+## ③ Migración de Formularios a Supabase Services y Storage
 
-## Service Migration
+**Checklist Genérico para Migración de Formularios:**
+*   [ ] Usar el servicio Supabase correspondiente (ej. `personasService.create`, `temasService.update`).
+*   [ ] Actualizar los tipos de datos del formulario (`Yup` schema, `zod` schema, o tipos de estado de React Hook Form) para que coincidan *exactamente* con el schema de Supabase (`database.types.ts`).
+*   [ ] Implementar subida de archivos/imágenes a **Supabase Storage** usando `supabaseStorage.ts` y actualizar el progreso de subida.
+*   [ ] Reemplazar cualquier lógica de Firebase Storage/Firestore.
+*   [ ] Actualizar la validación del formulario para que coincida con las restricciones del schema de Supabase (longitudes, tipos, campos obligatorios).
+*   [ ] Implementar manejo de errores robusto específico para operaciones de Supabase (mostrar mensajes de error al usuario).
+*   [ ] Implementar estados de carga (`isLoading`) durante las operaciones asíncronas.
+*   [ ] Actualizar la lógica de reseteo del formulario.
+*   [ ] Manejar correctamente campos opcionales y relaciones (ej. selectores para temas, autores, etc.).
+*   [ ] Actualizar etiquetas y placeholders si es necesario.
 
-### CreateProjectContent.tsx
-- [ ] Update import from `@/lib/supabase/proyectosService` to `@/lib/supabase/services/proyectosService`
-- [ ] Update `addProject` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
+### Formularios Específicos (Aplicar Checklist Genérico y atender particularidades):
 
-### EditProjectContent.tsx
-- [ ] Update import from `@/lib/supabase/proyectosService` to `@/lib/supabase/services/proyectosService`
-- [ ] Update `getProjectById` and `updateProject` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
+**`AddPersonaModal.tsx` / `PersonaForm.tsx` (unificar si es posible o tratar por separado si son muy distintos):**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Corregir problemas de tipo con el enum `CategoriaPrincipalPersona` (asegurar que coincida con los valores permitidos en DB o usar una tabla relacionada).
+    - [ ] Manejar campos específicos de `personas` (ver Schema): `es_ex_alumno_cet`, `links_profesionales`, `ofrece_colaboracion_como`, etc.
+    - [ ] Manejo de foto de perfil (subida, previsualización).
+    - [ ] Considerar si "ingresado_por" y "modificado_por" se gestionan automáticamente (e.g., con Edge Functions o desde el servicio usando el usuario autenticado).
 
-### EgresadosEstudiantesContent.tsx
-- [ ] Update import from `@/lib/supabase/personasService` to `@/lib/supabase/services/personasService`
-- [ ] Update `getPublicEgresadosYEstudiantes` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**`AddTemaModal.tsx` / `TemaForm.tsx` (unificar si es posible):**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Manejo de metadatos del tema.
+    - [ ] Manejo de relaciones del tema (ej. subtemas, temas relacionados).
 
-### HistoriaOralListContent.tsx
-- [ ] Update imports from old paths to new `/services/` paths
-- [ ] Update `getPublicadasEntrevistas` usage to match new service interface
-- [ ] Update `getPersonaById` usage to match new service interface
-- [ ] Update `getAllTemasActivos` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**`AddOrganizacionModal.tsx` / `OrganizacionForm.tsx` (unificar si es posible):**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Validación de email y sitio web.
+    - [ ] Manejo del campo tipo de organización.
+    - [ ] Subida de logo (incluyendo SVGs) y previsualización.
+    - [ ] Manejo de información de contacto y ubicación.
 
-### JobBoardContent.tsx
-- [ ] Update import from `@/lib/supabase/temasService` to `@/lib/supabase/services/temasService`
-- [ ] Update `getAllTemasActivos` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**`ProjectForm.tsx`:**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Manejo de múltiples archivos adjuntos.
+    - [ ] Manejo de relaciones (autores, tutores, temas, organizaciones colaboradoras) usando selectores múltiples o componentes dedicados.
+    - [ ] Transiciones de estado del proyecto.
+    - [ ] Migrar lógica restante de Firebase.
 
-### NoticiaDetailContent.tsx
-- [ ] Update import from `@/lib/supabase/noticiasService` to `@/lib/supabase/services/noticiasService`
-- [ ] Update `getNoticiaById` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**`NoticiaForm.tsx`:**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Confirmar/crear carpeta correcta en Supabase Storage para imágenes de noticias (actualmente "project-files" es un placeholder, sugerencia: "noticias-images").
+    - [ ] Previsualización de imágenes.
+    - [ ] Manejo de URLs externas (si aplica).
+    - [ ] Selección de temas.
+    - [ ] Manejo de fechas de publicación.
+    - [ ] Estado de "destacado" y "publicado".
 
-### NoticiasListContent.tsx
-- [ ] Update import from `@/lib/supabase/noticiasService` to `@/lib/supabase/services/noticiasService`
-- [ ] Update `getPublicadasNoticias` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**`EntrevistaForm.tsx`:**
+- (Aplicar Checklist Genérico)
+- [ ] Particularidades:
+    - [ ] Subida de thumbnail y previsualización.
+    - [ ] Subida de archivo de transcripción.
+    - [ ] Manejo de URLs de video (YouTube, Vimeo, etc.) y archivos de audio/video directos.
+    - [ ] Selección de plataforma de video.
+    - [ ] Fecha de grabación.
+    - [ ] Selección de entrevistados, participantes, temas, organizaciones.
+    - [ ] Keywords (podría ser `TEXT[]` o una tabla de tags).
+    - [ ] Fuentes de información y recolectores.
 
-### PersonaDetailContent.tsx
-- [ ] Update import from `@/lib/supabase/personasService` to `@/lib/supabase/services/personasService`
-- [ ] Update `getPersonaById` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+---
 
-### ProjectDetailContent.tsx
-- [ ] Update import from `@/lib/supabase/proyectosService` to `@/lib/supabase/services/proyectosService`
-- [ ] Update `getProjectById` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+## ④ Migración de Componentes y Páginas (Consumo de Servicios)
 
-### TutorsNetworkContent.tsx
-- [ ] Update imports from old paths to new `/services/` paths
-- [ ] Update `getPublicTutoresYColaboradores` usage to match new service interface
-- [ ] Update `getPublicOrganizaciones` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching logic to use new service methods
+**Checklist Genérico para Migración de Componentes/Páginas:**
+*   [ ] Actualizar importaciones de servicios para que apunten a la nueva ruta (`@/lib/supabase/services/XyzService`).
+*   [ ] Adaptar el uso de los métodos del servicio a la nueva interfaz (ej. `personasService.getAll()` en lugar de `getPublicEgresadosYEstudiantes()`, si la funcionalidad es la misma pero con un nombre más genérico y parámetros).
+*   [ ] Implementar manejo de errores adecuado para las llamadas al servicio.
+*   [ ] Asegurar que los datos se obtienen y muestran correctamente.
 
-### Admin Pages
-#### organizaciones-gestion/editar/[id]/page.tsx
-- [ ] Update import from `@/lib/supabase/organizacionesService` to `@/lib/supabase/services/organizacionesService`
-- [ ] Update `getOrganizacionById` and `updateOrganizacion` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
+### Componentes/Páginas Públicas (Aplicar Checklist Genérico):
+- [ ] `CreateProjectContent.tsx` (Usa `proyectosService.create`)
+- [ ] `EditProjectContent.tsx` (Usa `proyectosService.getById`, `proyectosService.update`)
+- [ ] `EgresadosEstudiantesContent.tsx` (Usa `personasService.getAll` con filtros apropiados)
+- [ ] `HistoriaOralListContent.tsx` (Usa `entrevistasService.getAll`, `personasService.getById`, `temasService.getAll`)
+- [ ] `JobBoardContent.tsx` (Usa `temasService.getAll`, y futuramente un `ofertasLaboralesService`)
+- [ ] `NoticiaDetailContent.tsx` (Usa `noticiasService.getById`)
+- [ ] `NoticiasListContent.tsx` (Usa `noticiasService.getAll` con filtros de "publicadas")
+- [ ] `PersonaDetailContent.tsx` (Usa `personasService.getById`)
+- [ ] `ProjectDetailContent.tsx` (Usa `proyectosService.getProjectWithRelations` o similar)
+- [ ] `TutorsNetworkContent.tsx` (Usa `personasService.getAll` y `organizacionesService.getAll` con filtros apropiados)
 
-#### gestion-temas/nueva/page.tsx
-- [ ] Update import from `@/lib/supabase/temasService` to `@/lib/supabase/services/temasService`
-- [ ] Update `addTema` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
+### Páginas de Administración (Aplicar Checklist Genérico):
+- [ ] `admin/organizaciones-gestion/editar/[id]/page.tsx` (Usa `organizacionesService.getById`, `organizacionesService.update`)
+- [ ] `admin/gestion-temas/nueva/page.tsx` (Usa `temasService.create`)
+- [ ] `admin/gestion-temas/editar/[id]/page.tsx` (Usa `temasService.getById`, `temasService.update`)
+- [ ] `admin/gestion-noticias/nueva/page.tsx` (Usa `noticiasService.create`)
+- [ ] `admin/gestion-noticias/editar/[id]/page.tsx` (Usa `noticiasService.getById`, `noticiasService.update`)
+- [ ] `admin/gestion-entrevistas/nueva/page.tsx` (Usa `entrevistasService.create`)
+- [ ] `admin/gestion-entrevistas/editar/[id]/page.tsx` (Usa `entrevistasService.getById`, `entrevistasService.update`)
 
-#### gestion-temas/editar/[id]/page.tsx
-- [ ] Update import from `@/lib/supabase/temasService` to `@/lib/supabase/services/temasService`
-- [ ] Update `getTemaById` and `updateTema` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
+### Componentes de Administración (Aplicar Checklist Genérico):
+- [ ] `AdminNoticiaList.tsx` (Usa `noticiasService.getAll` (admin version), `noticiasService.delete` (logical), `noticiasService.restore`)
+- [ ] `AdminOrganizacionList.tsx` (Usa `organizacionesService.getAll` (admin version), `organizacionesService.delete` (logical), `organizacionesService.restore`)
+- [ ] `AdminTemaList.tsx` (Usa `temasService.getAll` (admin version), `temasService.delete` (logical), `temasService.restore`)
+- [ ] `AdminEntrevistaList.tsx` (Usa `entrevistasService.getAll` (admin version), `entrevistasService.delete` (logical), `entrevistasService.restore`)
 
-#### gestion-noticias/editar/[id]/page.tsx
-- [ ] Update import from `@/lib/supabase/noticiasService` to `@/lib/supabase/services/noticiasService`
-- [ ] Update `getNoticiaById` and `updateNoticia` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
-
-#### gestion-noticias/nueva/page.tsx
-- [ ] Update import from `@/lib/supabase/noticiasService` to `@/lib/supabase/services/noticiasService`
-- [ ] Update `addNoticia` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
-
-#### gestion-entrevistas/editar/[id]/page.tsx
-- [ ] Update import from `@/lib/supabase/entrevistasService` to `@/lib/supabase/services/entrevistasService`
-- [ ] Update `getEntrevistaById` and `updateEntrevista` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
-
-#### gestion-entrevistas/nueva/page.tsx
-- [ ] Update import from `@/lib/supabase/entrevistasService` to `@/lib/supabase/services/entrevistasService`
-- [ ] Update `addEntrevista` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update form submission logic to use new service methods
-
-### Admin Components
-#### AdminNoticiaList.tsx
-- [ ] Update import from `@/lib/supabase/noticiasService` to `@/lib/supabase/services/noticiasService`
-- [ ] Update `getAllNoticiasForAdmin`, `logicalDeleteNoticia`, and `restoreNoticia` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching and manipulation logic to use new service methods
-
-#### AdminOrganizacionList.tsx
-- [ ] Update import from `@/lib/supabase/organizacionesService` to `@/lib/supabase/services/organizacionesService`
-- [ ] Update `getAllOrganizacionesForAdmin`, `logicalDeleteOrganizacion`, and `restoreOrganizacion` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching and manipulation logic to use new service methods
-
-#### AdminTemaList.tsx
-- [ ] Update import from `@/lib/supabase/temasService` to `@/lib/supabase/services/temasService`
-- [ ] Update `getAllTemasForAdmin`, `logicalDeleteTema`, and `restoreTema` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching and manipulation logic to use new service methods
-
-#### AdminEntrevistaList.tsx
-- [ ] Update import from `@/lib/supabase/entrevistasService` to `@/lib/supabase/services/entrevistasService`
-- [ ] Update `getAllEntrevistasForAdmin`, `logicalDeleteEntrevista`, and `restoreEntrevista` usage to match new service interface
-- [ ] Add proper error handling for Supabase operations
-- [ ] Update data fetching and manipulation logic to use new service methods
-
-## Database Schema Updates
-
-### personas table
-- [ ] Add missing fields to personas table:
-  - [ ] apellido (string)
-  - [ ] es_ex_alumno_cet (boolean)
-  - [ ] ano_egreso_cet (number)
-  - [ ] ano_cursada_actual_cet (number)
-  - [ ] titulo_profesional (string)
-  - [ ] descripcion_personal_o_profesional (string)
-  - [ ] areas_de_interes_o_expertise (string[])
-  - [ ] disponible_para_proyectos (boolean)
-  - [ ] titulacion_obtenida_cet (string)
-  - [ ] proyecto_final_cet_id (string)
-  - [ ] buscando_oportunidades (boolean)
-  - [ ] estado_situacion_laboral (string)
-  - [ ] historia_de_exito_o_resumen_trayectoria (string)
-  - [ ] empresa_o_institucion_actual (string)
-  - [ ] cargo_actual (string)
-  - [ ] ofrece_colaboracion_como (string[])
-  - [ ] telefono_contacto (string)
-  - [ ] links_profesionales (jsonb)
-  - [ ] ubicacion_residencial (jsonb)
-  - [ ] visibilidad_perfil (string)
-  - [ ] ingresado_por (string)
-  - [ ] modificado_por (string)
-
-### Entrevistas Table
-- [ ] Add missing fields to `entrevistas` table:
-  - `intervieweeName`: string
-  - `summary`: string | null
-  - `type`: string
-  - `mediaUrl`: string | null
-  - `ambitoSaber`: string | null
-  - `fecha`: string | null
-  - `duracion`: number | null
-  - `lugar`: string | null
-  - `participantes`: string[]
-  - `temas`: string[]
-  - `organizaciones`: string[]
-  - `archivos`: string[]
-  - `notas`: string | null
-  - `transcripcion`: string | null
-  - `esta_publicada`: boolean
-
-# TODOs
-
-## Environment Setup
-- [ ] Create `.env.local` file with the following variables:
-  - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-
-## Services Migration
-- [ ] Migrate NoticiasService to new BaseService architecture and ensure all methods are consistent with the new pattern. Update all usages to import from '@/lib/supabase/services/noticiasService'.
+---

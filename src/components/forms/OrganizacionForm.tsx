@@ -45,6 +45,8 @@ import NextImage from "next/image"; // Renamed to avoid conflict with lucide-rea
 
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { OrganizacionesService } from "@/lib/supabase/services/organizacionesService";
+import { supabase } from "@/lib/supabase/supabaseClient";
 
 interface OrganizacionFormProps {
   onSubmit: (data: OrganizacionFormData) => Promise<void>;
@@ -61,6 +63,8 @@ const isValidImageUrl = (url: string | null): boolean => {
     return false;
   }
 };
+
+const organizacionesService = new OrganizacionesService(supabase);
 
 export default function OrganizacionForm({
   onSubmit,
@@ -175,15 +179,15 @@ export default function OrganizacionForm({
     setUploadProgress(0);
 
     try {
-      // folder = "miniaturas" (o el que quieras dentro de "entrevistas")
       const publicUrl = await uploadFile(
         selectedFile,
-        "miniaturas",
+        "organization-logos",
         (percent) => {
           setUploadProgress(percent);
         }
       );
       setUploadedUrl(publicUrl);
+      setValue("logoURL", publicUrl, { shouldDirty: true });
       toast({ title: "Imagen subida", description: "Se subió correctamente." });
     } catch (err: any) {
       toast({
@@ -194,37 +198,6 @@ export default function OrganizacionForm({
     } finally {
       setIsUploading(false);
     }
-
-    return (
-      <div>
-        <input type="file" accept="image/*" onChange={handleFileChange} />
-        <Button
-          type="button"
-          onClick={handleUploadImage}
-          disabled={isUploading}
-          className="w-full mt-2"
-        >
-          <UploadCloud className="mr-2 h-4 w-4" />
-          {isUploading
-            ? `Subiendo (${uploadProgress}%)`
-            : "Subir Imagen Seleccionada"}
-        </Button>
-
-        {uploadedUrl && (
-          <div className="mt-4">
-            <p>URL pública:</p>
-            <a
-              href={uploadedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline"
-            >
-              {uploadedUrl}
-            </a>
-          </div>
-        )}
-      </div>
-    );
   };
 
   const handleRemoveLogo = () => {
