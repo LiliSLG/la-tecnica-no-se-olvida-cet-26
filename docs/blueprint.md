@@ -61,7 +61,7 @@
 
 - The application utilizes a **fully relational model** implemented in PostgreSQL, managed via Supabase.
 - **Tables** defined for:  
-  personas, proyectos, organizaciones, temas, noticias, entrevistas, etc.
+  personas, proyectos, organizaciones, temas, noticias, historias_orales, etc.
 - **Relationships** (one-to-many, many-to-many) established via foreign keys and junction tables:  
   Example: proyecto_autores junction table for M:N relationship between proyectos and personas acting as authors.
 - **Data types:** PostgreSQL types used include:  
@@ -184,6 +184,11 @@ await personasService.delete(id);
 - 🔄 Forms and Sections: In progress (see `/docs/todos.md`).
 
 ## Service Architecture
+- All services now follow the updated BaseService pattern.
+- No services override base method signatures (getById, getAll, create, update, delete).
+- For mapped data, services provide parallel methods (e.g., getByIdMapped, getAllMapped).
+- Error handling is fully standardized using createSuccess and createError from service.ts.
+- Services are now safe to consume in the new frontend.
 
 ### BaseService
 The `BaseService` class provides a foundation for all services in the application. It handles:
@@ -232,57 +237,6 @@ Usage:
 - `error` is null when operation succeeds
 - Provides consistent error handling across the application
 
-## Forms Migration Status
-
-### Migrated Forms
-- [x] PersonaForm
-- [x] ProyectoForm
-- [x] NoticiaForm
-- [x] EntrevistaForm
-- [x] OrganizacionForm
-- [x] TemaForm
-
-### Pending Forms
-- [ ] CursoForm
-
-## Admin Pages Migration Status
-
-### Migrated Pages
-- [x] gestion-personas/editar/[id]
-- [x] gestion-personas/nueva
-- [x] gestion-proyectos/editar/[id]
-- [x] gestion-proyectos/nueva
-- [x] gestion-noticias/editar/[id]
-- [x] gestion-noticias/nueva
-- [x] gestion-entrevistas/editar/[id]
-- [x] gestion-entrevistas/nueva
-- [x] gestion-temas/editar/[id]
-- [x] gestion-temas/nueva
-- [x] organizaciones-gestion/editar/[id]
-- [x] organizaciones-gestion/nueva
-
-### Pending Pages
-- [ ] gestion-cursos/editar/[id]
-- [ ] gestion-cursos/nueva
-
-## Section Components Migration Status
-
-### Migrated Sections
-- [x] PersonaDetailContent
-- [x] ProjectDetailContent
-- [x] ProjectIntroContent
-- [x] ProjectListContent
-- [x] NoticiasListContent
-- [x] NoticiaDetailContent
-- [x] EgresadosEstudiantesContent
-- [x] HistoriaOralListContent
-- [x] JobBoardContent
-- [x] TutorsNetworkContent
-- [x] CoursesContent
-
-### Pending Sections
-- [ ] CourseDetailContent
-- [ ] CourseListContent
 
 ## Authentication
 

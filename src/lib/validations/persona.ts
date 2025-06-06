@@ -1,0 +1,46 @@
+import { z } from "zod";
+
+export const personaSchema = z.object({
+  id: z.string().optional(),
+  nombre: z.string().min(1, "El nombre es requerido"),
+  apellido: z.string().min(1, "El apellido es requerido"),
+  email: z.string().email("Email inválido").nullable(),
+  activo: z.boolean().default(true),
+  tituloProfesional: z.string().nullable(),
+  descripcionPersonalOProfesional: z.string().nullable(),
+  categoria: z.string().optional(),
+  proyectoFinalCETId: z.string().nullable(),
+  situacionLaboral: z.string().optional(),
+  pais: z.string().optional(),
+  ciudad: z.string().optional(),
+  provincia: z.string().optional(),
+  direccion: z.string().optional(),
+  codigoPostal: z.string().optional(),
+  fotoPerfil: z.string().nullable(),
+  linksProfesionales: z.array(z.object({
+    plataforma: z.string(),
+    url: z.string().url("URL inválida")
+  })).default([]),
+  areasDeInteresOExpertise: z.array(z.string()).default([]),
+  ofreceColaboracionComo: z.array(z.string()).default([]),
+  capacidadesPlataforma: z.array(z.string()).default([]),
+  esAdmin: z.boolean().default(false),
+  disponibleParaProyectos: z.boolean().default(false),
+  esExAlumnoCET: z.boolean().default(false),
+  anoCursadaActualCET: z.number().nullable(),
+  anoEgresoCET: z.number().nullable(),
+  titulacionObtenidaCET: z.string().nullable(),
+  buscandoOportunidades: z.boolean().default(false),
+  historiaDeExitoOResumenTrayectoria: z.string().nullable(),
+  empresaOInstitucionActual: z.string().nullable(),
+  cargoActual: z.string().nullable(),
+  telefonoContacto: z.string().nullable(),
+  visibilidadPerfil: z.string().default("public"),
+  estaEliminada: z.boolean().default(false),
+  eliminadoPorUid: z.string().nullable(),
+  eliminadoEn: z.string().nullable(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export type PersonaFormData = z.infer<typeof personaSchema>; 

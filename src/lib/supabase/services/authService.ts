@@ -120,18 +120,41 @@ export class AuthService {
 
       // Create user profile
       const persona: Omit<Persona, 'id'> = {
-        nombre: userData.nombre || '',
-        email,
-        foto_url: null,
+        nombre: userData?.nombre ?? "",
+        apellido: "",
+        email: userData?.email ?? "",
+        foto_url:  null,
         biografia: null,
-        categoria_principal: null,
-        capacidades_plataforma: null,
+        categoria_principal: "ninguno_asignado",
+        capacidades_plataforma: [],
         es_admin: false,
         esta_eliminada: false,
         eliminado_por_uid: null,
         eliminado_en: null,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+      
+        // Campos adicionales requeridos:
+        activo: true,
+        titulo_profesional: "",
+        descripcion_personal_o_profesional: "",
+        areas_de_interes_o_expertise: [],
+        estado_situacion_laboral: "no_especificado",
+        empresa_o_institucion_actual: "",
+        cargo_actual: "",
+        buscando_oportunidades: false,
+        disponible_para_proyectos: false,
+        ofrece_colaboracion_como: [],
+        telefono_contacto: "",
+        links_profesionales: [],
+        ubicacion_residencial: { ciudad: "", provincia: "rio_negro" },
+        es_ex_alumno_cet: false,
+        ano_cursada_actual_cet: null,
+        ano_egreso_cet: null,
+        titulacion_obtenida_cet: "",
+        proyecto_final_cet_id: null,
+        historia_de_exito_o_resumen_trayectoria: "",
+        visibilidad_perfil: "privado"
       };
 
       const result = await this.personasService.create(persona);

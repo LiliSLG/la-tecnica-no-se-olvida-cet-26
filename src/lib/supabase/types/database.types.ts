@@ -13,12 +13,41 @@ export interface Database {
         Row: {
           id: string
           nombre: string
+          apellido: string
           email: string | null
-          foto_url: string | null
           biografia: string | null
+          foto_url: string | null
           categoria_principal: string | null
           capacidades_plataforma: string[] | null
+          activo: boolean
           es_admin: boolean
+          titulo_profesional: string | null
+          descripcion_personal_o_profesional: string | null
+          areas_de_interes_o_expertise: string[]
+          disponible_para_proyectos: boolean
+          es_ex_alumno_cet: boolean
+          ano_cursada_actual_cet: number | null
+          ano_egreso_cet: number | null
+          titulacion_obtenida_cet: string | null
+          proyecto_final_cet_id: string | null
+          buscando_oportunidades: boolean
+          estado_situacion_laboral: string
+          historia_de_exito_o_resumen_trayectoria: string | null
+          empresa_o_institucion_actual: string | null
+          cargo_actual: string | null
+          ofrece_colaboracion_como: string[]
+          telefono_contacto: string | null
+          links_profesionales: Array<{
+            platform: string
+            url: string
+          }>
+          ubicacion_residencial: {
+            ciudad: string
+            provincia: string
+            direccion?: string
+            codigo_postal?: string
+          }
+          visibilidad_perfil: string
           created_at: string
           updated_at: string
           esta_eliminada: boolean
@@ -28,12 +57,40 @@ export interface Database {
         Insert: {
           id?: string
           nombre: string
+          apellido: string
           email?: string | null
           foto_url?: string | null
-          biografia?: string | null
-          categoria_principal?: string | null
-          capacidades_plataforma?: string[] | null
+          categoria_principal?: string
+          capacidades_plataforma?: string[]
+          activo?: boolean
           es_admin?: boolean
+          titulo_profesional?: string | null
+          descripcion_personal_o_profesional?: string | null
+          areas_de_interes_o_expertise?: string[]
+          disponible_para_proyectos?: boolean
+          es_ex_alumno_cet?: boolean
+          ano_cursada_actual_cet?: number | null
+          ano_egreso_cet?: number | null
+          titulacion_obtenida_cet?: string | null
+          proyecto_final_cet_id?: string | null
+          buscando_oportunidades?: boolean
+          estado_situacion_laboral?: string
+          historia_de_exito_o_resumen_trayectoria?: string | null
+          empresa_o_institucion_actual?: string | null
+          cargo_actual?: string | null
+          ofrece_colaboracion_como?: string[]
+          telefono_contacto?: string | null
+          links_profesionales?: Array<{
+            platform: string
+            url: string
+          }>
+          ubicacion_residencial?: {
+            ciudad: string
+            provincia: string
+            direccion?: string
+            codigo_postal?: string
+          }
+          visibilidad_perfil?: string
           created_at?: string
           updated_at?: string
           esta_eliminada?: boolean
@@ -43,12 +100,40 @@ export interface Database {
         Update: {
           id?: string
           nombre?: string
+          apellido?: string
           email?: string | null
           foto_url?: string | null
-          biografia?: string | null
-          categoria_principal?: string | null
-          capacidades_plataforma?: string[] | null
+          categoria_principal?: string
+          capacidades_plataforma?: string[]
+          activo?: boolean
           es_admin?: boolean
+          titulo_profesional?: string | null
+          descripcion_personal_o_profesional?: string | null
+          areas_de_interes_o_expertise?: string[]
+          disponible_para_proyectos?: boolean
+          es_ex_alumno_cet?: boolean
+          ano_cursada_actual_cet?: number | null
+          ano_egreso_cet?: number | null
+          titulacion_obtenida_cet?: string | null
+          proyecto_final_cet_id?: string | null
+          buscando_oportunidades?: boolean
+          estado_situacion_laboral?: string
+          historia_de_exito_o_resumen_trayectoria?: string | null
+          empresa_o_institucion_actual?: string | null
+          cargo_actual?: string | null
+          ofrece_colaboracion_como?: string[]
+          telefono_contacto?: string | null
+          links_profesionales?: Array<{
+            platform: string
+            url: string
+          }>
+          ubicacion_residencial?: {
+            ciudad: string
+            provincia: string
+            direccion?: string
+            codigo_postal?: string
+          }
+          visibilidad_perfil?: string
           created_at?: string
           updated_at?: string
           esta_eliminada?: boolean

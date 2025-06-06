@@ -18,12 +18,40 @@ type UpdatePersona = Database['public']['Tables']['personas']['Update'];
 export interface MappedPersona {
   id: string;
   nombre: string;
+  apellido: string;
   email: string | null;
   fotoUrl: string | null;
-  biografia: string | null;
-  categoriaPrincipal: string | null;
-  capacidadesPlataforma: string[] | null;
+  categoriaPrincipal: string;
+  capacidadesPlataforma: string[];
+  activo: boolean;
   esAdmin: boolean;
+  tituloProfesional: string | null;
+  descripcionPersonalOProfesional: string | null;
+  areasDeInteresOExpertise: string[];
+  disponibleParaProyectos: boolean;
+  esExAlumnoCET: boolean;
+  anoCursadaActualCET: number | null;
+  anoEgresoCET: number | null;
+  titulacionObtenidaCET: string | null;
+  proyectoFinalCETId: string | null;
+  buscandoOportunidades: boolean;
+  estadoSituacionLaboral: string;
+  historiaDeExitoOResumenTrayectoria: string | null;
+  empresaOInstitucionActual: string | null;
+  cargoActual: string | null;
+  ofreceColaboracionComo: string[];
+  telefonoContacto: string | null;
+  linksProfesionales: Array<{
+    platform: string;
+    url: string;
+  }>;
+  ubicacionResidencial: {
+    ciudad: string;
+    provincia: string;
+    direccion?: string;
+    codigoPostal?: string;
+  };
+  visibilidadPerfil: string;
   estaEliminada: boolean;
   eliminadoPorUid: string | null;
   eliminadoEn: string | null;
@@ -54,17 +82,42 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     return {
       id: persona.id,
       nombre: persona.nombre,
+      apellido: persona.apellido,
       email: persona.email,
       fotoUrl: persona.foto_url,
-      biografia: persona.biografia,
-      categoriaPrincipal: persona.categoria_principal,
-      capacidadesPlataforma: persona.capacidades_plataforma,
-      esAdmin: persona.es_admin,
-      estaEliminada: persona.esta_eliminada,
+      categoriaPrincipal: persona.categoria_principal || "otro",
+      capacidadesPlataforma: persona.capacidades_plataforma || [],
+      activo: persona.activo ?? true,
+      esAdmin: persona.es_admin ?? false,
+      tituloProfesional: persona.titulo_profesional,
+      descripcionPersonalOProfesional: persona.descripcion_personal_o_profesional,
+      areasDeInteresOExpertise: persona.areas_de_interes_o_expertise || [],
+      disponibleParaProyectos: persona.disponible_para_proyectos ?? false,
+      esExAlumnoCET: persona.es_ex_alumno_cet ?? false,
+      anoCursadaActualCET: persona.ano_cursada_actual_cet,
+      anoEgresoCET: persona.ano_egreso_cet,
+      titulacionObtenidaCET: persona.titulacion_obtenida_cet,
+      proyectoFinalCETId: persona.proyecto_final_cet_id,
+      buscandoOportunidades: persona.buscando_oportunidades ?? false,
+      estadoSituacionLaboral: persona.estado_situacion_laboral || "no_especificado",
+      historiaDeExitoOResumenTrayectoria: persona.historia_de_exito_o_resumen_trayectoria,
+      empresaOInstitucionActual: persona.empresa_o_institucion_actual,
+      cargoActual: persona.cargo_actual,
+      ofreceColaboracionComo: persona.ofrece_colaboracion_como || [],
+      telefonoContacto: persona.telefono_contacto,
+      linksProfesionales: persona.links_profesionales || [],
+      ubicacionResidencial: {
+        ciudad: persona.ubicacion_residencial?.ciudad || "",
+        provincia: persona.ubicacion_residencial?.provincia || "rio_negro",
+        direccion: persona.ubicacion_residencial?.direccion,
+        codigoPostal: persona.ubicacion_residencial?.codigo_postal,
+      },
+      visibilidadPerfil: persona.visibilidad_perfil || "publico",
+      estaEliminada: persona.esta_eliminada ?? false,
       eliminadoPorUid: persona.eliminado_por_uid,
       eliminadoEn: persona.eliminado_en,
       createdAt: persona.created_at,
-      updatedAt: persona.updated_at
+      updatedAt: persona.updated_at,
     };
   }
 
@@ -82,17 +135,37 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     return {
       id: data.id,
       nombre: data.nombre,
+      apellido: data.apellido,
       email: data.email,
       foto_url: data.fotoUrl,
-      biografia: data.biografia,
       categoria_principal: data.categoriaPrincipal,
       capacidades_plataforma: data.capacidadesPlataforma,
+      activo: data.activo,
       es_admin: data.esAdmin,
+      titulo_profesional: data.tituloProfesional,
+      descripcion_personal_o_profesional: data.descripcionPersonalOProfesional,
+      areas_de_interes_o_expertise: data.areasDeInteresOExpertise,
+      disponible_para_proyectos: data.disponibleParaProyectos,
+      es_ex_alumno_cet: data.esExAlumnoCET,
+      ano_cursada_actual_cet: data.anoCursadaActualCET,
+      ano_egreso_cet: data.anoEgresoCET,
+      titulacion_obtenida_cet: data.titulacionObtenidaCET,
+      proyecto_final_cet_id: data.proyectoFinalCETId,
+      buscando_oportunidades: data.buscandoOportunidades,
+      estado_situacion_laboral: data.estadoSituacionLaboral,
+      historia_de_exito_o_resumen_trayectoria: data.historiaDeExitoOResumenTrayectoria,
+      empresa_o_institucion_actual: data.empresaOInstitucionActual,
+      cargo_actual: data.cargoActual,
+      ofrece_colaboracion_como: data.ofreceColaboracionComo,
+      telefono_contacto: data.telefonoContacto,
+      links_profesionales: data.linksProfesionales,
+      ubicacion_residencial: data.ubicacionResidencial,
+      visibilidad_perfil: data.visibilidadPerfil,
       esta_eliminada: data.estaEliminada,
       eliminado_por_uid: data.eliminadoPorUid,
       eliminado_en: data.eliminadoEn,
       created_at: data.createdAt,
-      updated_at: data.updatedAt
+      updated_at: data.updatedAt,
     };
   }
 
@@ -405,3 +478,7 @@ export const getPublicTutoresYColaboradores = (options?: QueryOptions) =>
   personasService.getPublicTutoresYColaboradoresMapped(options);
 export const getPublicPersonas = (options?: QueryOptions) => 
   personasService.getPublicMapped(options);
+
+// Export the singleton instance
+export { personasService };
+export default personasService;
