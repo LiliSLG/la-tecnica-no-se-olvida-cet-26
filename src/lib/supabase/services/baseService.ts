@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { ServiceResult, QueryOptions } from '@/lib/supabase/types/service';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
+import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 import { CacheableService, CacheableServiceConfig } from './cacheableService';
@@ -37,6 +37,11 @@ export type EntityType =
   | 'historia_oral'
   | 'oferta_laboral';
 
+/**
+ * Base service class that provides common functionality for all services
+ * @template T The type of the entity
+ * @template TableName The name of the table in the database
+ */
 export abstract class BaseService<
   T extends { id: string },
   TableName extends keyof Database['public']['Tables']
@@ -67,19 +72,9 @@ export abstract class BaseService<
     );
   }
 
-  protected createSuccessResult<T>(data: T): ServiceResult<T> {
-    return createSuccessResult(data);
-  }
-
-  protected createErrorResult<T>(error: any): ServiceResult<T> {
-    return createErrorResult({
-      name: 'ServiceError',
-      message: error instanceof Error ? error.message : 'An unexpected error occurred',
-      code: 'DB_ERROR',
-      details: error
-    });
-  }
-
+  /**
+   * Creates a new entity in the database
+   */
   public async create(data: Omit<T, 'id'>): Promise<ServiceResult<T | null>> {
     try {
       const { data: result, error } = await this.supabase
@@ -89,7 +84,7 @@ export abstract class BaseService<
         .single();
 
       if (error) throw error;
-      if (!result) return createSuccessResult(null);
+      if (!result) return createSuccessResult<T | null>(null);
 
       // Cache the new entity
       await this.setInCache(result.id, result);
@@ -98,10 +93,18 @@ export abstract class BaseService<
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<T | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Updates an existing entity in the database
+   */
   public async update(id: string, data: Partial<T>): Promise<ServiceResult<T | null>> {
     try {
       const { data: result, error } = await this.supabase
@@ -112,7 +115,7 @@ export abstract class BaseService<
         .single();
 
       if (error) throw error;
-      if (!result) return createSuccessResult(null);
+      if (!result) return createSuccessResult<T | null>(null);
 
       // Update cache
       await this.setInCache(id, result as T);
@@ -121,10 +124,18 @@ export abstract class BaseService<
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<T | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Deletes an entity from the database
+   */
   public async delete(id: string): Promise<ServiceResult<boolean>> {
     try {
       const { error } = await this.supabase
@@ -139,15 +150,25 @@ export abstract class BaseService<
 
       return createSuccessResult(true);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<boolean>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Retrieves an entity by its ID
+   */
   public async getById(id: string): Promise<ServiceResult<T | null>> {
     try {
       // Try to get from cache first
-      const cached = await this.getFromCache(id);
-      if (cached) return createSuccessResult(cached);
+      const cachedResult = await this.getFromCache(id);
+      if (cachedResult.success && cachedResult.data) {
+        return createSuccessResult(cachedResult.data);
+      }
 
       const { data: result, error } = await this.supabase
         .from(this.tableName)
@@ -156,44 +177,91 @@ export abstract class BaseService<
         .single();
 
       if (error) throw error;
-      if (!result) return createSuccessResult(null);
+      if (!result) return createSuccessResult<T | null>(null);
 
       // Cache the result
       await this.setInCache(id, result as T);
 
       return createSuccessResult(result as T);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<T | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  public async getAll(): Promise<ServiceResult<T[] | null>> {
+  /**
+   * Retrieves all entities with optional filtering and pagination
+   */
+  public async getAll(options?: QueryOptions): Promise<ServiceResult<T[] | null>> {
     try {
-      // Try to get from cache first
-      const cached = await this.getListFromCache();
-      if (cached) return createSuccessResult(cached);
+      // Try to get from cache first if not bypassing cache
+      if (!options?.bypassCache) {
+        const cachedResult = await this.getListFromCache();
+        if (cachedResult.success && cachedResult.data) {
+          return createSuccessResult(cachedResult.data);
+        }
+      }
 
-      const { data: results, error } = await this.supabase
+      let query = this.supabase
         .from(this.tableName)
         .select();
 
-      if (error) throw error;
-      if (!results) return createSuccessResult(null);
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
 
-      // Cache the results
-      await this.setListInCache(results as T[]);
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await query;
+
+      if (error) throw error;
+      if (!results) return createSuccessResult<T[] | null>(null);
+
+      // Cache the results if not bypassing cache
+      if (!options?.bypassCache) {
+        await this.setListInCache(results as T[]);
+      }
 
       return createSuccessResult(results as T[]);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<T[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Checks if an entity exists by its ID
+   */
   public async exists(id: string): Promise<ServiceResult<boolean>> {
     try {
       // Try to get from cache first
-      const cached = await this.getFromCache(id);
-      if (cached) return createSuccessResult(true);
+      const cachedResult = await this.getFromCache(id);
+      if (cachedResult.success && cachedResult.data) {
+        return createSuccessResult(true);
+      }
 
       const { data, error } = await this.supabase
         .from(this.tableName)
@@ -204,33 +272,78 @@ export abstract class BaseService<
       if (error) throw error;
       return createSuccessResult(!!data);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<boolean>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  public async query(query: string): Promise<ServiceResult<T[] | null>> {
+  /**
+   * Searches entities using text search
+   */
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<T[] | null>> {
     try {
-      // Try to get from cache first
-      const cached = await this.getQueryFromCache(query);
-      if (cached) return createSuccessResult(cached);
+      // Try to get from cache first if not bypassing cache
+      if (!options?.bypassCache) {
+        const cachedResult = await this.getQueryFromCache(query);
+        if (cachedResult.success && cachedResult.data) {
+          return createSuccessResult(cachedResult.data);
+        }
+      }
 
-      const { data: results, error } = await this.supabase
+      let searchQuery = this.supabase
         .from(this.tableName)
         .select()
         .textSearch('search_vector', query);
 
-      if (error) throw error;
-      if (!results) return createSuccessResult(null);
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          searchQuery = searchQuery.eq(key, value);
+        });
+      }
 
-      // Cache the results
-      await this.setQueryInCache(query, results as T[]);
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        searchQuery = searchQuery.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        searchQuery = searchQuery.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await searchQuery;
+
+      if (error) throw error;
+      if (!results) return createSuccessResult<T[] | null>(null);
+
+      // Cache the results if not bypassing cache
+      if (!options?.bypassCache) {
+        await this.setQueryInCache(query, results as T[]);
+      }
 
       return createSuccessResult(results as T[]);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<T[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Gets related entities through a junction table
+   */
   protected async getRelatedEntities<R>(
     sourceId: string,
     sourceTable: string,
@@ -240,7 +353,7 @@ export abstract class BaseService<
   ): Promise<ServiceResult<R[] | null>> {
     try {
       if (!sourceId) {
-        return this.createErrorResult({
+        return createErrorResult<R[] | null>({
           name: 'ServiceError',
           message: 'Source ID is required',
           code: 'VALIDATION_ERROR',
@@ -274,15 +387,22 @@ export abstract class BaseService<
       const { data, error } = await query;
 
       if (error) throw error;
-      if (!data) return createSuccessResult(null);
+      if (!data) return createSuccessResult<R[] | null>(null);
 
-      // Cast the data to R[] since we know the structure matches
       return createSuccessResult(data as unknown as R[]);
     } catch (error) {
-      return this.createErrorResult(error);
+      return createErrorResult<R[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
+  /**
+   * Gets default fields for a table
+   */
   protected getDefaultFields(table: string): string {
     const fieldMap: Record<string, string> = {
       personas: 'nombre, email, foto_url, biografia, categoria_principal',
@@ -296,6 +416,9 @@ export abstract class BaseService<
     return fieldMap[table] || '*';
   }
 
+  /**
+   * Gets all entities with pagination
+   */
   protected async getAllWithPagination(options?: QueryOptions): Promise<ServiceResult<T[] | null>> {
     try {
       let query = this.supabase
@@ -326,22 +449,28 @@ export abstract class BaseService<
       const { data, error } = await query;
 
       if (error) throw error;
-      if (!data) return createSuccessResult(null);
+      if (!data) return createSuccessResult<T[] | null>(null);
 
       if (
         !data ||
         (Array.isArray(data) && data.some((item) => "message" in item))
       ) {
-        return createErrorResult(
-          new Error("Unexpected data format from Supabase")
-        );
+        return createErrorResult<T[] | null>({
+          name: 'ServiceError',
+          message: 'Unexpected data format from Supabase',
+          code: 'DB_ERROR',
+          details: data
+        });
       }
 
       return createSuccessResult(data as unknown as T[]);
-
-      
     } catch (error) {
-      return createErrorResult(error as Error);
+      return createErrorResult<T[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

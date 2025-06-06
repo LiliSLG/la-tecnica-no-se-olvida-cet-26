@@ -318,3 +318,39 @@
 
 - [x] Optimize HistoriasOralesService
 
+## Database Schema Updates
+
+### Historia Oral Schema
+The current historia_oral table needs to be extended to support additional fields used in the form:
+
+```sql
+ALTER TABLE historia_oral
+ADD COLUMN palabras_clave_saber text[],
+ADD COLUMN fuentes_informacion text[],
+ADD COLUMN recopilado_por_uids text[],
+ADD COLUMN video_propio_url text,
+ADD COLUMN plataforma_video_propio text,
+ADD COLUMN url_video_externo text,
+ADD COLUMN plataforma_video_externo text,
+ADD COLUMN fuente_video_externo text,
+ADD COLUMN ambito_saber text,
+ADD COLUMN transcripcion_texto_completo text,
+ADD COLUMN transcripcion_file_url text,
+ADD COLUMN imagen_miniatura_url text,
+ADD COLUMN duracion_media_minutos integer,
+ADD COLUMN esta_publicada boolean DEFAULT false;
+
+-- Add indexes for common queries
+CREATE INDEX idx_historia_oral_palabras_clave ON historia_oral USING GIN (palabras_clave_saber);
+CREATE INDEX idx_historia_oral_recopilado_por ON historia_oral USING GIN (recopilado_por_uids);
+CREATE INDEX idx_historia_oral_esta_publicada ON historia_oral (esta_publicada);
+```
+
+This update will:
+1. Add support for keywords and information sources
+2. Add fields for video content (both self-hosted and external)
+3. Add transcription support
+4. Add thumbnail and duration tracking
+5. Add publication status
+6. Add appropriate indexes for performance
+

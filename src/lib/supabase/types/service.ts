@@ -5,17 +5,32 @@ import { ServiceError } from '@/lib/supabase/errors/types';
 export interface ServiceResult<T> {
   success: boolean;
   data: T | null;
-  error?: ServiceError;
+  error?: {
+    name: string;
+    message: string;
+    code?: string;
+    details?: any;
+  };
 }
 
+/**
+ * Options for querying data from the database
+ */
 export interface QueryOptions {
-  useCache?: boolean;
-  bypassCache?: boolean;
+  /** Page number for pagination (1-based) */
   page?: number;
+  /** Number of items per page */
   pageSize?: number;
+  /** Field to sort by */
   sortBy?: string;
+  /** Sort direction */
   sortOrder?: 'asc' | 'desc';
+  /** Whether to include soft-deleted records */
+  includeDeleted?: boolean;
+  /** Additional filters to apply */
   filters?: Record<string, any>;
+  /** Whether to bypass cache */
+  bypassCache?: boolean;
 }
 
 export interface BaseServiceConfig {
@@ -41,17 +56,18 @@ export interface BaseEntity {
   actualizadoEn: string | null;
 }
 
-export function createSuccessResult<T>(data: T): ServiceResult<T> {
-  return {
-    success: true,
-    data,
-  };
-}
+export const createSuccessResult = <T>(data: T | null): ServiceResult<T> => ({
+  success: true,
+  data
+});
 
-export function createErrorResult<T>(error: ServiceError): ServiceResult<T> {
-  return {
-    success: false,
-    data: null,
-    error,
-  };
-}
+export const createErrorResult = <T>(error: {
+  name: string;
+  message: string;
+  code?: string;
+  details?: any;
+}): ServiceResult<T> => ({
+  success: false,
+  data: null,
+  error
+});

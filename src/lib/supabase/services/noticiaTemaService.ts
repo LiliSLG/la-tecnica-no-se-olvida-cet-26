@@ -4,9 +4,12 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type NoticiaTema = Database['public']['Tables']['noticia_tema']['Row'] & { id: string };
 type CreateNoticiaTema = Database['public']['Tables']['noticia_tema']['Insert'];
+type Tema = Database['public']['Tables']['temas']['Row'];
+type Noticia = Database['public']['Tables']['noticias']['Row'];
 
 export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'> {
   constructor(supabase: SupabaseClient<Database>) {
@@ -32,9 +35,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
   async addTemaToNoticia(noticiaId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both noticiaId and temaId are required', 'relationship', { noticiaId, temaId })
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Both noticiaId and temaId are required',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId, temaId }
+        });
       }
 
       // Check if noticia exists
@@ -45,9 +51,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .single();
 
       if (noticiaError || !noticia) {
-        return this.createErrorResult(
-          mapValidationError('Noticia not found', 'noticiaId', noticiaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Noticia not found',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId }
+        });
       }
 
       // Check if tema exists
@@ -58,9 +67,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .single();
 
       if (temaError || !tema) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Tema not found',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
       // Check if relationship already exists
@@ -76,9 +88,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
       }
 
       if (existing) {
-        return this.createErrorResult(
-          mapValidationError('Relationship already exists', 'relationship', { noticiaId, temaId })
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Relationship already exists',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId, temaId }
+        });
       }
 
       const { error } = await this.supabase
@@ -89,18 +104,26 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTemaToNoticia', noticiaId, temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async removeTemaFromNoticia(noticiaId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!noticiaId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both noticiaId and temaId are required', 'relationship', { noticiaId, temaId })
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Both noticiaId and temaId are required',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId, temaId }
+        });
       }
 
       // Check if relationship exists
@@ -113,9 +136,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
 
       if (existingError) {
         if (existingError.code === 'PGRST116') {
-          return this.createErrorResult(
-            mapValidationError('Relationship does not exist', 'relationship', { noticiaId, temaId })
-          );
+          return createError({
+            name: 'ValidationError',
+            message: 'Relationship does not exist',
+            code: 'VALIDATION_ERROR',
+            details: { noticiaId, temaId }
+          });
         }
         throw existingError;
       }
@@ -127,18 +153,26 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .eq('tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTemaFromNoticia', noticiaId, temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getTemasByNoticia(noticiaId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][]>> {
+  async getTemasByNoticia(noticiaId: string): Promise<ServiceResult<Tema[] | null>> {
     try {
       if (!noticiaId) {
-        return this.createErrorResult(
-          mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Noticia ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId }
+        });
       }
 
       // Check if noticia exists
@@ -149,9 +183,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .single();
 
       if (noticiaError || !noticia) {
-        return this.createErrorResult(
-          mapValidationError('Noticia not found', 'noticiaId', noticiaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Noticia not found',
+          code: 'VALIDATION_ERROR',
+          details: { noticiaId }
+        });
       }
 
       const { data, error } = await this.supabase
@@ -163,18 +200,26 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .eq('noticia_tema.noticia_id', noticiaId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data as Tema[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getTemasByNoticia', noticiaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getNoticiasByTema(temaId: string): Promise<ServiceResult<Database['public']['Tables']['noticias']['Row'][]>> {
+  async getNoticiasByTema(temaId: string): Promise<ServiceResult<Noticia[] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Tema ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
       // Check if tema exists
@@ -185,9 +230,12 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .single();
 
       if (temaError || !tema) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Tema not found',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
       const { data, error } = await this.supabase
@@ -199,9 +247,14 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
         .eq('noticia_tema.tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data as Noticia[]);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getNoticiasByTema', temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

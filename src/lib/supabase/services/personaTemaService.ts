@@ -4,120 +4,128 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { CacheableServiceConfig } from './cacheableService';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type PersonaTema = Database['public']['Tables']['persona_tema']['Row'] & { id: string };
 type CreatePersonaTema = Database['public']['Tables']['persona_tema']['Insert'];
+type UpdatePersonaTema = Database['public']['Tables']['persona_tema']['Update'];
 
 export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'> {
-  constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'persona_tema', {
-      entityType: 'persona',
-      ttl: 3600, // 1 hour
-      enableCache: true,
-    });
+  constructor(
+    supabase: SupabaseClient<Database>,
+    tableName: 'persona_tema' = 'persona_tema',
+    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'persona', enableCache: true }
+  ) {
+    super(supabase, tableName, cacheConfig);
   }
 
   protected validateCreateInput(data: CreatePersonaTema): ValidationError | null {
     if (!data.persona_id) {
-      return mapValidationError('Persona ID is required', 'persona_id', data.persona_id);
+      return mapValidationError('El ID de la persona es requerido', 'persona_id', data.persona_id);
     }
-
     if (!data.tema_id) {
-      return mapValidationError('Tema ID is required', 'tema_id', data.tema_id);
+      return mapValidationError('El ID del tema es requerido', 'tema_id', data.tema_id);
     }
-
     return null;
   }
 
-  async addTemaToPersona(personaId: string, temaId: string): Promise<ServiceResult<void>> {
+  protected validateUpdateInput(data: UpdatePersonaTema): ValidationError | null {
+    if (data.persona_id === '') {
+      return mapValidationError('El ID de la persona no puede estar vacío', 'persona_id', data.persona_id);
+    }
+    if (data.tema_id === '') {
+      return mapValidationError('El ID del tema no puede estar vacío', 'tema_id', data.tema_id);
+    }
+    return null;
+  }
+
+  async addTemaToPersona(
+    personaId: string,
+    temaId: string
+  ): Promise<ServiceResult<PersonaTema | null>> {
     try {
-      if (!personaId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
-        );
+      if (!personaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Person ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { personaId }
+        });
       }
 
-      // Check if persona exists
-      const { data: persona, error: personaError } = await this.supabase
-        .from('personas')
-        .select('id')
-        .eq('id', personaId)
-        .single();
-
-      if (personaError || !persona) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found', 'personaId', personaId)
-        );
+      if (!temaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Theme ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
-      // Check if tema exists
-      const { data: tema, error: temaError } = await this.supabase
-        .from('temas')
-        .select('id')
-        .eq('id', temaId)
-        .single();
-
-      if (temaError || !tema) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
-      }
-
-      // Check if relationship already exists
-      const { data: existing, error: existingError } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('persona_id', personaId)
-        .eq('tema_id', temaId)
-        .single();
-
-      if (existingError && existingError.code !== 'PGRST116') {
-        throw existingError;
-      }
-
-      if (existing) {
-        return this.createErrorResult(
-          mapValidationError('Relationship already exists', 'relationship', { personaId, temaId })
-        );
-      }
-
-      const { error } = await this.supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .insert({
           persona_id: personaId,
           tema_id: temaId
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
-      return this.createSuccessResult(undefined);
+      if (error) {
+        if (error.code === '23505') {
+          return createError({
+            name: 'ValidationError',
+            message: 'This theme is already associated with this person',
+            code: 'VALIDATION_ERROR',
+            details: { personaId, temaId }
+          });
+        }
+        throw error;
+      }
+
+      if (!data) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Failed to add theme to person',
+          code: 'DB_ERROR',
+          details: { personaId, temaId }
+        });
+      }
+
+      await this.setInCache(data.id, data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTemaToPersona', personaId, temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async removeTemaFromPersona(personaId: string, temaId: string): Promise<ServiceResult<void>> {
+  async removeTemaFromPersona(
+    personaId: string,
+    temaId: string
+  ): Promise<ServiceResult<boolean>> {
     try {
-      if (!personaId || !temaId) {
-        return this.createErrorResult(
-          mapValidationError('Both personaId and temaId are required', 'relationship', { personaId, temaId })
-        );
+      if (!personaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Person ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { personaId }
+        });
       }
 
-      // Check if relationship exists
-      const { data: existing, error: existingError } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('persona_id', personaId)
-        .eq('tema_id', temaId)
-        .single();
-
-      if (existingError) {
-        if (existingError.code === 'PGRST116') {
-          return this.createErrorResult(
-            mapValidationError('Relationship does not exist', 'relationship', { personaId, temaId })
-          );
-        }
-        throw existingError;
+      if (!temaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Theme ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
       const { error } = await this.supabase
@@ -127,81 +135,141 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
         .eq('tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+
+      await this.invalidateCache(`${personaId}-${temaId}`);
+      return createSuccess(true);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTemaFromPersona', personaId, temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getTemasByPersona(personaId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][]>> {
+  async getTemasByPersona(
+    personaId: string
+  ): Promise<ServiceResult<PersonaTema[] | null>> {
     try {
       if (!personaId) {
-        return this.createErrorResult(
-          mapValidationError('Persona ID is required', 'personaId', personaId)
-        );
-      }
-
-      // Check if persona exists
-      const { data: persona, error: personaError } = await this.supabase
-        .from('personas')
-        .select('id')
-        .eq('id', personaId)
-        .single();
-
-      if (personaError || !persona) {
-        return this.createErrorResult(
-          mapValidationError('Persona not found', 'personaId', personaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Person ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { personaId }
+        });
       }
 
       const { data, error } = await this.supabase
-        .from('temas')
-        .select(`
-          *,
-          persona_tema!inner(persona_id)
-        `)
-        .eq('persona_tema.persona_id', personaId);
+        .from(this.tableName)
+        .select('*')
+        .eq('persona_id', personaId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      if (!data) return createSuccess(null);
+
+      for (const item of data) {
+        await this.setInCache(item.id, item);
+      }
+
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getTemasByPersona', personaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getPersonasByTema(temaId: string): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][]>> {
+  async getPersonasByTema(
+    temaId: string
+  ): Promise<ServiceResult<PersonaTema[] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
-      }
-
-      // Check if tema exists
-      const { data: tema, error: temaError } = await this.supabase
-        .from('temas')
-        .select('id')
-        .eq('id', temaId)
-        .single();
-
-      if (temaError || !tema) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'temaId', temaId)
-        );
+        return createError({
+          name: 'ValidationError',
+          message: 'Theme ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
       }
 
       const { data, error } = await this.supabase
-        .from('personas')
-        .select(`
-          *,
-          persona_tema!inner(tema_id)
-        `)
-        .eq('persona_tema.tema_id', temaId);
+        .from(this.tableName)
+        .select('*')
+        .eq('tema_id', temaId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      if (!data) return createSuccess(null);
+
+      for (const item of data) {
+        await this.setInCache(item.id, item);
+      }
+
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPersonasByTema', temaId }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async getPersonaTema(
+    personaId: string,
+    temaId: string
+  ): Promise<ServiceResult<PersonaTema | null>> {
+    try {
+      if (!personaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Person ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { personaId }
+        });
+      }
+
+      if (!temaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Theme ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
+      }
+
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('persona_id', personaId)
+        .eq('tema_id', temaId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      if (!data) return createSuccess(null);
+
+      await this.setInCache(data.id, data);
+      return createSuccess(data);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

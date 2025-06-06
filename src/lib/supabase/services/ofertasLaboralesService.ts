@@ -1,189 +1,272 @@
-import { ServiceResult } from '../types/service';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/supabase/types/database.types';
+import { BaseService } from '@/lib/supabase/services/baseService';
+import { ServiceResult, QueryOptions } from '@/lib/supabase/types/service';
+import { ValidationError } from '@/lib/supabase/errors/types';
+import { mapValidationError } from '@/lib/supabase/errors/utils';
+import { CacheableServiceConfig } from '@/lib/supabase/services/cacheableService';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '@/lib/supabase/types/serviceResult';
+import { supabase } from '@/lib/supabase/supabaseClient';
 
-// Mock data for development
-const MOCK_OFERTAS = [
-  {
-    id: '1',
-    titulo: 'Desarrollador Frontend Senior',
-    descripcion: 'Buscamos un desarrollador frontend con experiencia en React y TypeScript',
-    empresa: 'TechCorp',
-    ubicacion: 'Remoto',
-    tipo_contrato: 'tiempo_completo',
-    salario_min: 50000,
-    salario_max: 70000,
-    requisitos: ['React', 'TypeScript', '5+ años de experiencia'],
-    beneficios: ['Seguro médico', 'Gimnasio', 'Horario flexible'],
-    estado: 'activo',
-    esta_eliminado: false,
-    eliminado_por_uid: null,
-    eliminado_en: null,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    titulo: 'Desarrollador Backend',
-    descripcion: 'Buscamos un desarrollador backend con experiencia en Node.js y PostgreSQL',
-    empresa: 'DataSystems',
-    ubicacion: 'Híbrido',
-    tipo_contrato: 'tiempo_completo',
-    salario_min: 45000,
-    salario_max: 65000,
-    requisitos: ['Node.js', 'PostgreSQL', '3+ años de experiencia'],
-    beneficios: ['Seguro médico', 'Bonos anuales', 'Capacitación'],
-    estado: 'activo',
-    esta_eliminado: false,
-    eliminado_por_uid: null,
-    eliminado_en: null,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  }
-];
+type OfertaLaboral = Database['public']['Tables']['ofertas_laborales']['Row'];
+type CreateOfertaLaboral = Database['public']['Tables']['ofertas_laborales']['Insert'];
+type UpdateOfertaLaboral = Database['public']['Tables']['ofertas_laborales']['Update'];
 
-interface OfertaLaboral {
+/**
+ * Mapped version of OfertaLaboral for domain use
+ */
+export interface MappedOfertaLaboral {
   id: string;
   titulo: string;
   descripcion: string | null;
-  empresa: string;
-  ubicacion: string;
-  tipo_contrato: string;
-  salario_min: number;
-  salario_max: number;
-  requisitos: string[];
-  beneficios: string[];
+  empresa: string | null;
+  ubicacion: string | null;
   estado: string;
-  esta_eliminado: boolean;
-  eliminado_por_uid: string | null;
-  eliminado_en: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MappedOfertaLaboral {
-  id: string;
-  titulo: string;
-  descripcion: string | null;
-  empresa: string;
-  ubicacion: string;
-  tipoContrato: string;
-  salarioMin: number;
-  salarioMax: number;
-  requisitos: string[];
-  beneficios: string[];
-  estado: string;
-  activo: boolean;
+  estaEliminada: boolean;
   eliminadoPorUid: string | null;
   eliminadoEn: string | null;
-  creadoEn: string;
-  actualizadoEn: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export class OfertasLaboralesService {
-  private ofertas: OfertaLaboral[];
-
-  constructor() {
-    this.ofertas = MOCK_OFERTAS;
+/**
+ * Service for managing job offers
+ */
+export class OfertasLaboralesService extends BaseService<OfertaLaboral, 'ofertas_laborales'> {
+  constructor(
+    supabase: SupabaseClient<Database>,
+    tableName: 'ofertas_laborales' = 'ofertas_laborales',
+    cacheConfig: CacheableServiceConfig = { 
+      ttl: 300, 
+      entityType: 'ofertas_laborales' as any,
+      enableCache: true 
+    }
+  ) {
+    super(supabase, tableName, cacheConfig);
   }
 
-  private mapOfertaToDomain(oferta: OfertaLaboral): MappedOfertaLaboral {
+  /**
+   * Maps a database row to a domain model
+   */
+  private mapOfertaLaboralToDomain(oferta: OfertaLaboral): MappedOfertaLaboral {
     return {
       id: oferta.id,
       titulo: oferta.titulo,
       descripcion: oferta.descripcion,
       empresa: oferta.empresa,
       ubicacion: oferta.ubicacion,
-      tipoContrato: oferta.tipo_contrato,
-      salarioMin: oferta.salario_min,
-      salarioMax: oferta.salario_max,
-      requisitos: oferta.requisitos,
-      beneficios: oferta.beneficios,
       estado: oferta.estado,
-      activo: !oferta.esta_eliminado,
+      estaEliminada: oferta.esta_eliminada,
       eliminadoPorUid: oferta.eliminado_por_uid,
       eliminadoEn: oferta.eliminado_en,
-      creadoEn: oferta.created_at,
-      actualizadoEn: oferta.updated_at
+      createdAt: oferta.created_at,
+      updatedAt: oferta.updated_at
     };
   }
 
-  private mapOfertasToDomain(ofertas: OfertaLaboral[]): MappedOfertaLaboral[] {
-    return ofertas.map(oferta => this.mapOfertaToDomain(oferta));
+  /**
+   * Maps an array of database rows to domain models
+   */
+  private mapOfertasLaboralesToDomain(ofertas: OfertaLaboral[]): MappedOfertaLaboral[] {
+    return ofertas.map(oferta => this.mapOfertaLaboralToDomain(oferta));
   }
 
-  async getById(id: string): Promise<ServiceResult<MappedOfertaLaboral | null>> {
+  /**
+   * Maps a domain model to a database row
+   */
+  private mapDomainToOfertaLaboral(data: Partial<MappedOfertaLaboral>): Partial<OfertaLaboral> {
+    return {
+      id: data.id,
+      titulo: data.titulo,
+      descripcion: data.descripcion,
+      empresa: data.empresa,
+      ubicacion: data.ubicacion,
+      estado: data.estado,
+      esta_eliminada: data.estaEliminada,
+      eliminado_por_uid: data.eliminadoPorUid,
+      eliminado_en: data.eliminadoEn,
+      created_at: data.createdAt,
+      updated_at: data.updatedAt
+    };
+  }
+
+  /**
+   * Validates input data for creating a job offer
+   */
+  protected validateCreateInput(data: Partial<OfertaLaboral>): ValidationError | null {
+    if (!data.titulo) {
+      return mapValidationError('Título is required', 'titulo', data.titulo);
+    }
+    if (!data.estado) {
+      return mapValidationError('Estado is required', 'estado', data.estado);
+    }
+    return null;
+  }
+
+  /**
+   * Gets a job offer by ID with domain mapping
+   */
+  async getByIdMapped(id: string): Promise<ServiceResult<MappedOfertaLaboral | null>> {
     try {
-      const oferta = this.ofertas.find(o => o.id === id);
-      if (!oferta) {
-        return createSuccessResult(null);
+      const result = await super.getById(id);
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: result.error?.message || 'Failed to get oferta laboral',
+          code: result.error?.code || 'DB_ERROR',
+          details: result.error
+        });
       }
-      return createSuccessResult(this.mapOfertaToDomain(oferta));
+      return createSuccess(this.mapOfertaLaboralToDomain(result.data));
     } catch (error) {
-      return createErrorResult({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al obtener la oferta laboral',
-        code: 'DB_ERROR',
-        details: error
-      });
+      return createError(this.handleError(error, { operation: 'getByIdMapped' }));
     }
   }
 
-  async getByIds(ids: string[]): Promise<ServiceResult<MappedOfertaLaboral[]>> {
+  /**
+   * Gets all job offers with domain mapping
+   */
+  async getAllMapped(options?: QueryOptions): Promise<ServiceResult<MappedOfertaLaboral[]>> {
     try {
-      if (!ids.length) {
-        return createSuccessResult([]);
+      const result = await super.getAll(options);
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: result.error?.message || 'Failed to get ofertas laborales',
+          code: result.error?.code || 'DB_ERROR',
+          details: result.error
+        });
+      }
+      return createSuccess(this.mapOfertasLaboralesToDomain(result.data));
+    } catch (error) {
+      return createError(this.handleError(error, { operation: 'getAllMapped' }));
+    }
+  }
+
+  /**
+   * Searches job offers with domain mapping
+   */
+  async searchMapped(query: string, options?: QueryOptions): Promise<ServiceResult<MappedOfertaLaboral[]>> {
+    try {
+      const result = await super.search(query, options);
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: result.error?.message || 'Failed to search ofertas laborales',
+          code: result.error?.code || 'DB_ERROR',
+          details: result.error
+        });
+      }
+      return createSuccess(this.mapOfertasLaboralesToDomain(result.data));
+    } catch (error) {
+      return createError(this.handleError(error, { operation: 'searchMapped' }));
+    }
+  }
+
+  /**
+   * Creates a new job offer with domain mapping
+   */
+  async createMapped(data: Omit<MappedOfertaLaboral, 'id'>): Promise<ServiceResult<MappedOfertaLaboral | null>> {
+    try {
+      const dbData = this.mapDomainToOfertaLaboral(data);
+      const result = await super.create(dbData as Omit<OfertaLaboral, 'id'>);
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: result.error?.message || 'Failed to create oferta laboral',
+          code: result.error?.code || 'DB_ERROR',
+          details: result.error
+        });
+      }
+      return createSuccess(this.mapOfertaLaboralToDomain(result.data));
+    } catch (error) {
+      return createError(this.handleError(error, { operation: 'createMapped' }));
+    }
+  }
+
+  /**
+   * Updates a job offer with domain mapping
+   */
+  async updateMapped(id: string, data: Partial<MappedOfertaLaboral>): Promise<ServiceResult<MappedOfertaLaboral | null>> {
+    try {
+      const dbData = this.mapDomainToOfertaLaboral(data);
+      const result = await super.update(id, dbData);
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: result.error?.message || 'Failed to update oferta laboral',
+          code: result.error?.code || 'DB_ERROR',
+          details: result.error
+        });
+      }
+      return createSuccess(this.mapOfertaLaboralToDomain(result.data));
+    } catch (error) {
+      return createError(this.handleError(error, { operation: 'updateMapped' }));
+    }
+  }
+
+  /**
+   * Gets multiple job offers by IDs with domain mapping
+   */
+  async getByIdsMapped(ids: string[]): Promise<ServiceResult<MappedOfertaLaboral[]>> {
+    try {
+      if (!ids.length) return createSuccess([]);
+
+      const cachedResults = await Promise.all(ids.map(async (id) => {
+        const cached = await this.getFromCache(id);
+        return cached.success && cached.data ? cached.data : null;
+      }));
+      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+
+      if (missingIds.length === 0) {
+        return createSuccess(this.mapOfertasLaboralesToDomain(cachedResults.filter(Boolean) as OfertaLaboral[]));
       }
 
-      const ofertas = this.ofertas.filter(o => ids.includes(o.id));
-      return createSuccessResult(this.mapOfertasToDomain(ofertas));
-    } catch (error) {
-      return createErrorResult({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al obtener las ofertas laborales',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .in('id', missingIds);
 
-  async getPublic(): Promise<ServiceResult<MappedOfertaLaboral[]>> {
-    try {
-      const ofertas = this.ofertas.filter(o => !o.esta_eliminado);
-      return createSuccessResult(this.mapOfertasToDomain(ofertas));
-    } catch (error) {
-      return createErrorResult({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al obtener las ofertas laborales públicas',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
+      if (error) throw error;
+      if (!data) return createSuccess([]);
 
-  async search(term: string): Promise<ServiceResult<MappedOfertaLaboral[]>> {
-    try {
-      if (!term.trim()) {
-        return createSuccessResult([]);
+      for (const oferta of data) {
+        await this.setInCache(oferta.id, oferta);
       }
 
-      const searchTerm = term.toLowerCase().trim();
-      const ofertas = this.ofertas.filter(o => 
-        !o.esta_eliminado && (
-          o.titulo.toLowerCase().includes(searchTerm) ||
-          (o.descripcion?.toLowerCase().includes(searchTerm) ?? false) ||
-          o.empresa.toLowerCase().includes(searchTerm) ||
-          o.ubicacion.toLowerCase().includes(searchTerm)
-        )
-      );
-
-      return createSuccessResult(this.mapOfertasToDomain(ofertas));
+      const allResults = [...cachedResults.filter(Boolean), ...data];
+      return createSuccess(this.mapOfertasLaboralesToDomain(allResults));
     } catch (error) {
-      return createErrorResult({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al buscar ofertas laborales',
-        code: 'DB_ERROR',
-        details: error
-      });
+      return createError(this.handleError(error, { operation: 'getByIdsMapped' }));
     }
   }
-} 
+
+  /**
+   * Gets all public job offers with domain mapping
+   */
+  async getPublicMapped(): Promise<ServiceResult<MappedOfertaLaboral[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('esta_eliminada', false)
+        .eq('estado', 'publicada')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return createSuccess([]);
+
+      return createSuccess(this.mapOfertasLaboralesToDomain(data));
+    } catch (error) {
+      return createError(this.handleError(error, { operation: 'getPublicMapped' }));
+    }
+  }
+}
+
+// Service instance
+const ofertasLaboralesService = new OfertasLaboralesService(supabase);
+
+// Exported functions
+export const getOfertaLaboralById = (id: string) => ofertasLaboralesService.getByIdMapped(id);
+export const getOfertasLaboralesByIds = (ids: string[]) => ofertasLaboralesService.getByIdsMapped(ids);
+export const getPublicOfertasLaborales = () => ofertasLaboralesService.getPublicMapped(); 

@@ -4,6 +4,7 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type ProyectoTema = Database['public']['Tables']['proyecto_tema']['Row'] & { id: string };
 type CreateProyectoTema = Database['public']['Tables']['proyecto_tema']['Insert'];
@@ -32,7 +33,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
   async addTemaToProyecto(proyectoId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!proyectoId || !temaId) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Both proyectoId and temaId are required', 'relationship', { proyectoId, temaId })
         );
       }
@@ -45,7 +46,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .single();
 
       if (proyectoError || !proyecto) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
         );
       }
@@ -58,7 +59,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .single();
 
       if (temaError || !tema) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Tema not found', 'temaId', temaId)
         );
       }
@@ -76,7 +77,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
       }
 
       if (existing) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Relationship already exists', 'relationship', { proyectoId, temaId })
         );
       }
@@ -89,16 +90,16 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addTemaToProyecto', proyectoId, temaId }));
+      return createError(this.handleError(error, { operation: 'addTemaToProyecto', proyectoId, temaId }));
     }
   }
 
   async removeTemaFromProyecto(proyectoId: string, temaId: string): Promise<ServiceResult<void>> {
     try {
       if (!proyectoId || !temaId) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Both proyectoId and temaId are required', 'relationship', { proyectoId, temaId })
         );
       }
@@ -113,7 +114,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
 
       if (existingError) {
         if (existingError.code === 'PGRST116') {
-          return this.createErrorResult(
+          return createError(
             mapValidationError('Relationship does not exist', 'relationship', { proyectoId, temaId })
           );
         }
@@ -127,16 +128,16 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .eq('tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeTemaFromProyecto', proyectoId, temaId }));
+      return createError(this.handleError(error, { operation: 'removeTemaFromProyecto', proyectoId, temaId }));
     }
   }
 
   async getTemasByProyecto(proyectoId: string): Promise<ServiceResult<Database['public']['Tables']['temas']['Row'][]>> {
     try {
       if (!proyectoId) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
         );
       }
@@ -149,7 +150,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .single();
 
       if (proyectoError || !proyecto) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Proyecto not found', 'proyectoId', proyectoId)
         );
       }
@@ -163,16 +164,16 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .eq('proyecto_tema.proyecto_id', proyectoId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getTemasByProyecto', proyectoId }));
+      return createError(this.handleError(error, { operation: 'getTemasByProyecto', proyectoId }));
     }
   }
 
   async getProyectosByTema(temaId: string): Promise<ServiceResult<Database['public']['Tables']['proyectos']['Row'][] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Tema ID is required', 'temaId', temaId)
         );
       }
@@ -185,7 +186,7 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .single();
 
       if (temaError || !tema) {
-        return this.createErrorResult(
+        return createError(
           mapValidationError('Tema not found', 'temaId', temaId)
         );
       }
@@ -199,9 +200,9 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
         .eq('proyecto_tema.tema_id', temaId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getProyectosByTema', temaId }));
+      return createError(this.handleError(error, { operation: 'getProyectosByTema', temaId }));
     }
   }
 } 

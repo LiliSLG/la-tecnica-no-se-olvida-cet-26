@@ -4,6 +4,7 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type EntrevistaOrganizacionRol = Database['public']['Tables']['entrevista_organizacion_rol']['Row'] & { id: string };
 type CreateEntrevistaOrganizacionRol = Database['public']['Tables']['entrevista_organizacion_rol']['Insert'];
@@ -43,15 +44,21 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
   async addOrganizacionToEntrevista(entrevistaId: string, organizacionId: string, rol: ValidRole): Promise<ServiceResult<void>> {
     try {
       if (!entrevistaId || !organizacionId || !rol) {
-        return this.createErrorResult(
-          mapValidationError('All fields are required', 'relationship', { entrevistaId, organizacionId, rol })
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'All fields are required',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId, organizacionId, rol }
+        });
       }
 
       if (!VALID_ROLES.includes(rol)) {
-        return this.createErrorResult(
-          mapValidationError(`Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`, 'rol', rol)
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`,
+          code: 'VALIDATION_ERROR',
+          details: { rol }
+        });
       }
 
       // Check if entrevista exists
@@ -62,9 +69,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .single();
 
       if (entrevistaError || !entrevista) {
-        return this.createErrorResult(
-          mapValidationError('Entrevista not found', 'entrevistaId', entrevistaId)
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'Entrevista not found',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId }
+        });
       }
 
       // Check if organizacion exists
@@ -75,9 +85,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .single();
 
       if (organizacionError || !organizacion) {
-        return this.createErrorResult(
-          mapValidationError('Organizacion not found', 'organizacionId', organizacionId)
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'Organizacion not found',
+          code: 'VALIDATION_ERROR',
+          details: { organizacionId }
+        });
       }
 
       // Check if relationship already exists
@@ -93,9 +106,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
       }
 
       if (existing) {
-        return this.createErrorResult(
-          mapValidationError('Relationship already exists', 'relationship', { entrevistaId, organizacionId })
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'Relationship already exists',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId, organizacionId }
+        });
       }
 
       const { error } = await this.supabase
@@ -107,18 +123,26 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         });
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addOrganizacionToEntrevista', entrevistaId, organizacionId, rol }));
+      return createError<void>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async removeOrganizacionFromEntrevista(entrevistaId: string, organizacionId: string): Promise<ServiceResult<void>> {
     try {
       if (!entrevistaId || !organizacionId) {
-        return this.createErrorResult(
-          mapValidationError('Both entrevistaId and organizacionId are required', 'relationship', { entrevistaId, organizacionId })
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'Both entrevistaId and organizacionId are required',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId, organizacionId }
+        });
       }
 
       // Check if relationship exists
@@ -131,9 +155,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
 
       if (existingError) {
         if (existingError.code === 'PGRST116') {
-          return this.createErrorResult(
-            mapValidationError('Relationship does not exist', 'relationship', { entrevistaId, organizacionId })
-          );
+          return createError<void>({
+            name: 'ValidationError',
+            message: 'Relationship does not exist',
+            code: 'VALIDATION_ERROR',
+            details: { entrevistaId, organizacionId }
+          });
         }
         throw existingError;
       }
@@ -145,24 +172,35 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .eq('organizacion_id', organizacionId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'removeOrganizacionFromEntrevista', entrevistaId, organizacionId }));
+      return createError<void>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async updateOrganizacionRol(entrevistaId: string, organizacionId: string, newRol: ValidRole): Promise<ServiceResult<void>> {
     try {
       if (!entrevistaId || !organizacionId || !newRol) {
-        return this.createErrorResult(
-          mapValidationError('All fields are required', 'relationship', { entrevistaId, organizacionId, newRol })
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: 'All fields are required',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId, organizacionId, newRol }
+        });
       }
 
       if (!VALID_ROLES.includes(newRol)) {
-        return this.createErrorResult(
-          mapValidationError(`Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`, 'rol', newRol)
-        );
+        return createError<void>({
+          name: 'ValidationError',
+          message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`,
+          code: 'VALIDATION_ERROR',
+          details: { rol: newRol }
+        });
       }
 
       // Check if relationship exists
@@ -175,9 +213,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
 
       if (existingError) {
         if (existingError.code === 'PGRST116') {
-          return this.createErrorResult(
-            mapValidationError('Relationship does not exist', 'relationship', { entrevistaId, organizacionId })
-          );
+          return createError<void>({
+            name: 'ValidationError',
+            message: 'Relationship does not exist',
+            code: 'VALIDATION_ERROR',
+            details: { entrevistaId, organizacionId }
+          });
         }
         throw existingError;
       }
@@ -189,18 +230,26 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .eq('organizacion_id', organizacionId);
 
       if (error) throw error;
-      return this.createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'updateOrganizacionRol', entrevistaId, organizacionId, newRol }));
+      return createError<void>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getOrganizacionesByEntrevista(entrevistaId: string): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][]>> {
+  async getOrganizacionesByEntrevista(entrevistaId: string): Promise<ServiceResult<Database['public']['Tables']['organizaciones']['Row'][] | null>> {
     try {
       if (!entrevistaId) {
-        return this.createErrorResult(
-          mapValidationError('Entrevista ID is required', 'entrevistaId', entrevistaId)
-        );
+        return createError<Database['public']['Tables']['organizaciones']['Row'][] | null>({
+          name: 'ValidationError',
+          message: 'Entrevista ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId }
+        });
       }
 
       // Check if entrevista exists
@@ -211,9 +260,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .single();
 
       if (entrevistaError || !entrevista) {
-        return this.createErrorResult(
-          mapValidationError('Entrevista not found', 'entrevistaId', entrevistaId)
-        );
+        return createError<Database['public']['Tables']['organizaciones']['Row'][] | null>({
+          name: 'ValidationError',
+          message: 'Entrevista not found',
+          code: 'VALIDATION_ERROR',
+          details: { entrevistaId }
+        });
       }
 
       const { data, error } = await this.supabase
@@ -225,18 +277,26 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .eq('entrevista_organizacion_rol.entrevista_id', entrevistaId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data || null);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getOrganizacionesByEntrevista', entrevistaId }));
+      return createError<Database['public']['Tables']['organizaciones']['Row'][] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getEntrevistasByOrganizacion(organizacionId: string): Promise<ServiceResult<Database['public']['Tables']['entrevistas']['Row'][]>> {
+  async getEntrevistasByOrganizacion(organizacionId: string): Promise<ServiceResult<Database['public']['Tables']['entrevistas']['Row'][] | null>> {
     try {
       if (!organizacionId) {
-        return this.createErrorResult(
-          mapValidationError('Organizacion ID is required', 'organizacionId', organizacionId)
-        );
+        return createError<Database['public']['Tables']['entrevistas']['Row'][] | null>({
+          name: 'ValidationError',
+          message: 'Organizacion ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { organizacionId }
+        });
       }
 
       // Check if organizacion exists
@@ -247,9 +307,12 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .single();
 
       if (organizacionError || !organizacion) {
-        return this.createErrorResult(
-          mapValidationError('Organizacion not found', 'organizacionId', organizacionId)
-        );
+        return createError<Database['public']['Tables']['entrevistas']['Row'][] | null>({
+          name: 'ValidationError',
+          message: 'Organizacion not found',
+          code: 'VALIDATION_ERROR',
+          details: { organizacionId }
+        });
       }
 
       const { data, error } = await this.supabase
@@ -261,9 +324,14 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
         .eq('entrevista_organizacion_rol.organizacion_id', organizacionId);
 
       if (error) throw error;
-      return this.createSuccessResult(data);
+      return createSuccess(data || null);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getEntrevistasByOrganizacion', organizacionId }));
+      return createError<Database['public']['Tables']['entrevistas']['Row'][] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

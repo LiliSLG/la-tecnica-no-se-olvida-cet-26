@@ -1,5 +1,6 @@
 import { Redis } from 'ioredis';
-import { ServiceResult } from '@/types/service';
+import { ServiceResult } from '@/lib/supabase/types/service';
+import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
 import { REDIS_KEYS } from './config';
 import {
   RedisKey,
@@ -10,9 +11,14 @@ import {
   CacheInvalidationOptions,
 } from './types';
 
+/**
+ * Service for managing Redis cache operations
+ */
 export class CacheService {
   private static instance: CacheService;
-  private redis: Redis;
+  private readonly redis: Redis;
+  private readonly defaultTtl: number;
+  private readonly prefix: string;
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
@@ -20,92 +26,149 @@ export class CacheService {
     memoryUsage: 0,
   };
 
-  private constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  private constructor(redis: Redis, options: CacheOptions = {}) {
+    this.redis = redis;
+    this.defaultTtl = options.ttl || 3600; // Default 1 hour
+    this.prefix = options.prefix || 'cache:';
   }
 
   public static getInstance(): CacheService {
     if (!CacheService.instance) {
-      CacheService.instance = new CacheService();
+      CacheService.instance = new CacheService(new Redis(process.env.REDIS_URL || 'redis://localhost:6379'));
     }
     return CacheService.instance;
   }
 
-  private generateKey(key: RedisKey, options?: CacheOptions): RedisKey {
-    const prefix = options?.prefix || REDIS_KEYS.PREFIX;
-    return `${prefix}${key}`;
+  private getKey(key: string): string {
+    return `${this.prefix}${key}`;
   }
 
-  async get<T>(key: string): Promise<ServiceResult<T>> {
+  /**
+   * Gets a value from cache
+   * @template T The type of the cached value
+   * @param key The cache key
+   * @returns A ServiceResult containing the cached value or null if not found
+   */
+  async get<T>(key: string): Promise<ServiceResult<T | null>> {
     try {
-      const data = await this.redis.get(key);
-      if (!data) {
-        return { data: null };
+      const value = await this.redis.get(this.getKey(key));
+      if (!value) {
+        this.stats.misses++;
+        return createSuccessResult<T | null>(null);
       }
-      return { data: JSON.parse(data) as T };
+      this.stats.hits++;
+      return createSuccessResult<T | null>(JSON.parse(value));
     } catch (error) {
-      console.error('Error getting from cache:', error);
-      return { error: { message: 'Error getting from cache' } };
+      return createErrorResult<T | null>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to get from cache',
+        code: 'CACHE_GET_ERROR',
+        details: error
+      });
     }
   }
 
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<ServiceResult<void>> {
+  /**
+   * Sets a value in cache
+   * @template T The type of the value to cache
+   * @param key The cache key
+   * @param value The value to cache
+   * @param ttl Time to live in seconds
+   * @returns A ServiceResult indicating success or failure
+   */
+  async set<T>(key: string, value: T, ttl?: number): Promise<ServiceResult<boolean>> {
     try {
-      const stringValue = JSON.stringify(value);
-      if (ttlSeconds) {
-        await this.redis.setex(key, ttlSeconds, stringValue);
-      } else {
-        await this.redis.set(key, stringValue);
+      const serialized = JSON.stringify(value);
+      await this.redis.set(this.getKey(key), serialized, 'EX', ttl || this.defaultTtl);
+      this.stats.keys++;
+      return createSuccessResult(true);
+    } catch (error) {
+      return createErrorResult<boolean>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to set in cache',
+        code: 'CACHE_SET_ERROR',
+        details: error
+      });
+    }
+  }
+
+  /**
+   * Deletes a value from cache
+   * @param key The cache key
+   * @returns A ServiceResult indicating success or failure
+   */
+  async delete(key: string): Promise<ServiceResult<boolean>> {
+    try {
+      await this.redis.del(this.getKey(key));
+      this.stats.keys = Math.max(0, this.stats.keys - 1);
+      return createSuccessResult(true);
+    } catch (error) {
+      return createErrorResult<boolean>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to delete from cache',
+        code: 'CACHE_DELETE_ERROR',
+        details: error
+      });
+    }
+  }
+
+  /**
+   * Clears all values from cache
+   * @returns A ServiceResult indicating success or failure
+   */
+  async clear(): Promise<ServiceResult<boolean>> {
+    try {
+      const keys = await this.redis.keys(`${this.prefix}*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+        this.stats.keys = 0;
       }
-      return { data: undefined };
+      return createSuccessResult(true);
     } catch (error) {
-      console.error('Error setting cache:', error);
-      return { error: { message: 'Error setting cache' } };
+      return createErrorResult<boolean>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to clear cache',
+        code: 'CACHE_CLEAR_ERROR',
+        details: error
+      });
     }
   }
 
-  async delete(key: string): Promise<ServiceResult<void>> {
+  /**
+   * Checks if a key exists in cache
+   * @param key The cache key
+   * @returns A ServiceResult containing a boolean indicating if the key exists
+   */
+  async exists(key: RedisKey): Promise<ServiceResult<boolean>> {
     try {
-      await this.redis.del(key);
-      return { data: undefined };
+      const fullKey = this.getKey(key.toString());
+      const exists = await this.redis.exists(fullKey);
+      return createSuccessResult(exists === 1);
     } catch (error) {
-      console.error('Error deleting from cache:', error);
-      return { error: { message: 'Error deleting from cache' } };
+      return createErrorResult<boolean>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to check cache existence',
+        code: 'CACHE_EXISTS_ERROR',
+        details: error
+      });
     }
   }
 
-  async clear(): Promise<ServiceResult<void>> {
-    try {
-      await this.redis.flushall();
-      return { data: undefined };
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-      return { error: { message: 'Error clearing cache' } };
-    }
-  }
-
-  public async exists(key: RedisKey, options?: CacheOptions): Promise<boolean> {
-    const fullKey = this.generateKey(key, options);
-    const client = this.redis;
-
-    try {
-      const exists = await client.exists(fullKey);
-      return exists === 1;
-    } catch (error) {
-      console.error('Cache exists error:', error);
-      return false;
-    }
-  }
-
-  public async invalidate(
+  /**
+   * Invalidates cache entries matching a pattern
+   * @param pattern The pattern to match
+   * @param options Invalidation options
+   * @returns A ServiceResult indicating success or failure
+   */
+  async invalidate(
     pattern: string,
-    options?: CacheInvalidationOptions
-  ): Promise<void> {
-    const client = this.redis;
-    const subscriber = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-
+    options: CacheInvalidationOptions = { strategy: 'immediate' }
+  ): Promise<ServiceResult<boolean>> {
     try {
-      switch (options?.strategy || 'immediate') {
+      const client = this.redis;
+      const subscriber = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+      switch (options.strategy) {
         case 'immediate':
           const keys = await client.keys(pattern);
           if (keys.length > 0) {
@@ -132,20 +195,40 @@ export class CacheService {
       }
 
       await this.updateStats();
+      return createSuccessResult(true);
     } catch (error) {
-      console.error('Cache invalidation error:', error);
+      return createErrorResult<boolean>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to invalidate cache',
+        code: 'CACHE_INVALIDATE_ERROR',
+        details: error
+      });
     }
   }
 
-  public async getStats(): Promise<CacheStats> {
-    await this.updateStats();
-    return { ...this.stats };
+  /**
+   * Gets cache statistics
+   * @returns A ServiceResult containing cache statistics
+   */
+  async getStats(): Promise<ServiceResult<CacheStats>> {
+    try {
+      const info = await this.redis.info();
+      const memoryUsage = this.parseMemoryUsage(info);
+      this.stats.memoryUsage = memoryUsage;
+      return createSuccessResult({ ...this.stats });
+    } catch (error) {
+      return createErrorResult<CacheStats>({
+        name: 'CacheError',
+        message: error instanceof Error ? error.message : 'Failed to get cache stats',
+        code: 'CACHE_STATS_ERROR',
+        details: error
+      });
+    }
   }
 
   private async updateStats(): Promise<void> {
-    const client = this.redis;
     try {
-      const info = await client.info('memory');
+      const info = await this.redis.info('memory');
       const memoryUsage = this.parseMemoryUsage(info);
       this.stats.memoryUsage = memoryUsage;
     } catch (error) {
@@ -164,4 +247,5 @@ export class CacheService {
   }
 }
 
+// Export a singleton instance
 export const cacheService = CacheService.getInstance(); 

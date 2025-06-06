@@ -1,41 +1,41 @@
 import { z } from "zod";
 
-const tipoNoticiaEnum = z.enum(['article', 'link']);
+const estadoProyectoEnum = z.enum(['draft', 'published', 'archived']);
 
 // Base schema that matches database structure
-export const noticiaSchema = z.object({
+export const proyectoSchema = z.object({
   id: z.string().optional(),
   titulo: z.string().min(5, "El título debe tener al menos 5 caracteres"),
-  contenido: z.string().nullable(),
-  tipo: tipoNoticiaEnum,
-  imagen_url: z.string().url("URL inválida").nullable(),
+  descripcion: z.string().nullable(),
+  archivo_principal_url: z.string().url("URL inválida").nullable(),
+  status: estadoProyectoEnum,
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
-  esta_eliminada: z.boolean().default(false),
+  esta_eliminado: z.boolean().default(false),
   eliminado_por_uid: z.string().nullable(),
   eliminado_en: z.string().nullable(),
 });
 
 // Form-specific schema with camelCase fields
-export const noticiaFormSchema = noticiaSchema.extend({
-  imagenUrl: z.string().url("URL inválida").nullable(),
+export const proyectoFormSchema = proyectoSchema.extend({
+  archivoPrincipalUrl: z.string().url("URL inválida").nullable(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
-  estaEliminada: z.boolean().default(false),
+  estaEliminado: z.boolean().default(false),
   eliminadoPorUid: z.string().nullable(),
   eliminadoEn: z.string().nullable(),
 }).transform(data => ({
-  // Transform to MappedNoticia format
+  // Transform to MappedProyecto format
   id: data.id,
   titulo: data.titulo,
-  contenido: data.contenido,
-  tipo: data.tipo,
-  imagenUrl: data.imagen_url || data.imagenUrl,
+  descripcion: data.descripcion,
+  archivoPrincipalUrl: data.archivo_principal_url || data.archivoPrincipalUrl,
+  status: data.status,
   createdAt: data.created_at || data.createdAt,
   updatedAt: data.updated_at || data.updatedAt,
-  estaEliminada: data.esta_eliminada || data.estaEliminada,
+  estaEliminado: data.esta_eliminado || data.estaEliminado,
   eliminadoPorUid: data.eliminado_por_uid || data.eliminadoPorUid,
   eliminadoEn: data.eliminado_en || data.eliminadoEn,
 }));
 
-export type NoticiaFormData = z.infer<typeof noticiaFormSchema>; 
+export type ProyectoFormData = z.infer<typeof proyectoFormSchema>; 

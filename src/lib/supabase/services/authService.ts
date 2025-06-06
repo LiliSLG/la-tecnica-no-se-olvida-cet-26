@@ -4,22 +4,28 @@ import { PersonasService } from './personasService';
 import { Database } from '../types/database.types';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// TODO: If PersonasService mapping changes, update this helper accordingly
+function mapPersonaToDomain(persona: Database['public']['Tables']['personas']['Row']) {
+  return {
+    id: persona.id,
+    nombre: persona.nombre,
+    email: persona.email,
+    fotoURL: persona.foto_url,
+    biografia: persona.biografia,
+    categoriaPrincipal: persona.categoria_principal,
+    capacidadesPlataforma: persona.capacidades_plataforma,
+    esAdmin: persona.es_admin,
+    activo: !persona.esta_eliminada,
+    eliminadoPorUid: persona.eliminado_por_uid,
+    eliminadoEn: persona.eliminado_en,
+    creadoEn: persona.created_at,
+    actualizadoEn: persona.updated_at
+  };
+}
+
+type MappedPersona = ReturnType<typeof mapPersonaToDomain>;
+
 type Persona = Database['public']['Tables']['personas']['Row'];
-type MappedPersona = {
-  id: string;
-  nombre: string;
-  email: string | null;
-  fotoURL: string | null;
-  biografia: string | null;
-  categoriaPrincipal: string | null;
-  capacidadesPlataforma: string[] | null;
-  esAdmin: boolean;
-  activo: boolean;
-  eliminadoPorUid: string | null;
-  eliminadoEn: string | null;
-  creadoEn: string;
-  actualizadoEn: string;
-};
 
 export class AuthService {
   private personasService: PersonasService;
@@ -74,7 +80,7 @@ export class AuthService {
       }
 
       return createSuccessResult({
-        user: result.data,
+        user: mapPersonaToDomain(result.data),
         session: authData.session,
       });
     } catch (error) {
@@ -147,25 +153,8 @@ export class AuthService {
         });
       }
 
-      // Map the result to MappedPersona
-      const mappedPersona: MappedPersona = {
-        id: result.data.id,
-        nombre: result.data.nombre,
-        email: result.data.email,
-        fotoURL: result.data.foto_url,
-        biografia: result.data.biografia,
-        categoriaPrincipal: result.data.categoria_principal,
-        capacidadesPlataforma: result.data.capacidades_plataforma,
-        esAdmin: result.data.es_admin,
-        activo: !result.data.esta_eliminada,
-        eliminadoPorUid: result.data.eliminado_por_uid,
-        eliminadoEn: result.data.eliminado_en,
-        creadoEn: result.data.created_at,
-        actualizadoEn: result.data.updated_at
-      };
-
       return createSuccessResult({
-        user: mappedPersona,
+        user: mapPersonaToDomain(result.data),
         session: authData.session,
       });
     } catch (error) {
@@ -273,7 +262,7 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult(result.data);
+      return createSuccessResult(result.data ? mapPersonaToDomain(result.data) : null);
     } catch (error) {
       return createErrorResult({
         name: 'ServiceError',

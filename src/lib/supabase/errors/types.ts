@@ -1,9 +1,10 @@
 // src/lib/supabase/errors/types.ts
 export interface ValidationError extends Error {
   message: string;
-  field: string;
-  value: any;
-  code?: string;
+  name: string;
+  code: string;
+  source: string;
+  details?: any;
 }
 
 export interface ServiceError extends Error {

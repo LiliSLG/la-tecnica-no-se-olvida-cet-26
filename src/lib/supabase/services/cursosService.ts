@@ -1,5 +1,7 @@
-import { ServiceResult } from '../types/service';
+import { ServiceResult, QueryOptions } from '../types/service';
 import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
+// TODO: Replace with real Supabase integration when the cursos table is available
+// Track this in docs/todos.md
 
 // Mock data for development
 const MOCK_CURSOS = [
@@ -31,7 +33,7 @@ const MOCK_CURSOS = [
   }
 ];
 
-interface Curso {
+export interface Curso {
   id: string;
   titulo: string;
   descripcion: string | null;
@@ -45,7 +47,7 @@ interface Curso {
   updated_at: string;
 }
 
-interface MappedCurso {
+export interface MappedCurso {
   id: string;
   titulo: string;
   descripcion: string | null;
@@ -59,7 +61,7 @@ interface MappedCurso {
   actualizadoEn: string;
 }
 
-export class CursosService {
+export class CursosService /* extends BaseService<Curso, 'cursos'> */ {
   private cursos: Curso[];
 
   constructor() {
@@ -86,7 +88,8 @@ export class CursosService {
     return cursos.map(curso => this.mapCursoToDomain(curso));
   }
 
-  async getById(id: string): Promise<ServiceResult<MappedCurso | null>> {
+  // Mapped methods
+  async getByIdMapped(id: string): Promise<ServiceResult<MappedCurso | null>> {
     try {
       const curso = this.cursos.find(c => c.id === id);
       if (!curso) {
@@ -103,14 +106,9 @@ export class CursosService {
     }
   }
 
-  async getByIds(ids: string[]): Promise<ServiceResult<MappedCurso[]>> {
+  async getAllMapped(): Promise<ServiceResult<MappedCurso[]>> {
     try {
-      if (!ids.length) {
-        return createSuccessResult([]);
-      }
-
-      const cursos = this.cursos.filter(c => ids.includes(c.id));
-      return createSuccessResult(this.mapCursosToDomain(cursos));
+      return createSuccessResult(this.mapCursosToDomain(this.cursos));
     } catch (error) {
       return createErrorResult({
         name: 'ServiceError',
@@ -121,7 +119,30 @@ export class CursosService {
     }
   }
 
-  async getPublic(): Promise<ServiceResult<MappedCurso[]>> {
+  async searchMapped(term: string): Promise<ServiceResult<MappedCurso[]>> {
+    try {
+      if (!term.trim()) {
+        return createSuccessResult([]);
+      }
+      const searchTerm = term.toLowerCase().trim();
+      const cursos = this.cursos.filter(c =>
+        !c.esta_eliminado && (
+          c.titulo.toLowerCase().includes(searchTerm) ||
+          (c.descripcion?.toLowerCase().includes(searchTerm) ?? false)
+        )
+      );
+      return createSuccessResult(this.mapCursosToDomain(cursos));
+    } catch (error) {
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al buscar cursos',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async getPublicMapped(): Promise<ServiceResult<MappedCurso[]>> {
     try {
       const cursos = this.cursos.filter(c => !c.esta_eliminado);
       return createSuccessResult(this.mapCursosToDomain(cursos));
@@ -134,29 +155,10 @@ export class CursosService {
       });
     }
   }
+}
 
-  async search(term: string): Promise<ServiceResult<MappedCurso[]>> {
-    try {
-      if (!term.trim()) {
-        return createSuccessResult([]);
-      }
-
-      const searchTerm = term.toLowerCase().trim();
-      const cursos = this.cursos.filter(c => 
-        !c.esta_eliminado && (
-          c.titulo.toLowerCase().includes(searchTerm) ||
-          (c.descripcion?.toLowerCase().includes(searchTerm) ?? false)
-        )
-      );
-
-      return createSuccessResult(this.mapCursosToDomain(cursos));
-    } catch (error) {
-      return createErrorResult({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al buscar cursos',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
-} 
+export const cursosService = new CursosService();
+export const getCursoById = (id: string) => cursosService.getByIdMapped(id);
+export const getAllCursos = () => cursosService.getAllMapped();
+export const searchCursos = (term: string) => cursosService.searchMapped(term);
+export const getPublicCursos = () => cursosService.getPublicMapped(); 

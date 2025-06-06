@@ -1,15 +1,31 @@
+// TODO: Enable real Supabase integration when the historias_orales table is available
+// Track this in docs/todos.md
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
 import { ServiceResult, QueryOptions } from '../types/service';
 import { CacheableServiceConfig } from './cacheableService';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
-type HistoriaOral = Database['public']['Tables']['historias_orales']['Row'];
+// type HistoriaOral = Database['public']['Tables']['historias_orales']['Row'];
+// type CreateHistoriaOral = Database['public']['Tables']['historias_orales']['Insert'];
+// type UpdateHistoriaOral = Database['public']['Tables']['historias_orales']['Update'];
 
-type CreateHistoriaOral = Database['public']['Tables']['historias_orales']['Insert'];
-type UpdateHistoriaOral = Database['public']['Tables']['historias_orales']['Update'];
+// Mock type for now
+export interface HistoriaOral {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  archivo_principal_url: string | null;
+  estado: string;
+  esta_eliminada: boolean;
+  eliminado_por_uid: string | null;
+  eliminado_en: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-interface MappedHistoriaOral {
+export interface MappedHistoriaOral {
   id: string;
   titulo: string;
   descripcion: string | null;
@@ -22,13 +38,26 @@ interface MappedHistoriaOral {
   actualizadoEn: string;
 }
 
-export class HistoriasOralesService extends BaseService<HistoriaOral, 'historias_orales'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'historias_orales' = 'historias_orales',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'historia_oral' }
-  ) {
-    super(supabase, tableName, cacheConfig);
+const MOCK_HISTORIAS: HistoriaOral[] = [
+  {
+    id: '1',
+    titulo: 'Historia de la comunidad',
+    descripcion: 'Relato sobre la fundación de la comunidad',
+    archivo_principal_url: null,
+    estado: 'publicada',
+    esta_eliminada: false,
+    eliminado_por_uid: null,
+    eliminado_en: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  }
+];
+
+export class HistoriasOralesService /* extends BaseService<HistoriaOral, 'historias_orales'> */ {
+  private historias: HistoriaOral[];
+
+  constructor() {
+    this.historias = MOCK_HISTORIAS;
   }
 
   private mapHistoriaOralToDomain(historia: HistoriaOral): MappedHistoriaOral {
@@ -50,100 +79,73 @@ export class HistoriasOralesService extends BaseService<HistoriaOral, 'historias
     return historias.map(h => this.mapHistoriaOralToDomain(h));
   }
 
-  async getById(id: string): Promise<ServiceResult<MappedHistoriaOral | null>> {
+  // Mapped methods
+  async getByIdMapped(id: string): Promise<ServiceResult<MappedHistoriaOral | null>> {
     try {
-      const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(this.mapHistoriaOralToDomain(cached));
-
-      const { data: historia, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      if (!historia) return this.createSuccessResult(null);
-
-      await this.setInCache(id, historia);
-      return this.createSuccessResult(this.mapHistoriaOralToDomain(historia));
+      const historia = this.historias.find(h => h.id === id);
+      if (!historia) return createSuccess<MappedHistoriaOral | null>(null);
+      return createSuccess(this.mapHistoriaOralToDomain(historia));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+      return createError<MappedHistoriaOral | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener la historia oral',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getByIds(ids: string[]): Promise<ServiceResult<MappedHistoriaOral[]>> {
+  async getAllMapped(): Promise<ServiceResult<MappedHistoriaOral[] | null>> {
     try {
-      if (!ids.length) return this.createSuccessResult([]);
-
-      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]);
-
-      if (missingIds.length === 0) {
-        return this.createSuccessResult(this.mapHistoriasOralesToDomain(cachedResults.filter(Boolean) as HistoriaOral[]));
-      }
-
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .in('id', missingIds);
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const historia of data) {
-        await this.setInCache(historia.id, historia);
-      }
-
-      const allResults = [...cachedResults.filter(Boolean), ...data];
-      return this.createSuccessResult(this.mapHistoriasOralesToDomain(allResults));
+      return createSuccess(this.mapHistoriasOralesToDomain(this.historias));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+      return createError<MappedHistoriaOral[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener historias orales',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getPublic(): Promise<ServiceResult<MappedHistoriaOral[]>> {
+  async searchMapped(term: string): Promise<ServiceResult<MappedHistoriaOral[] | null>> {
     try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('esta_eliminada', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const historia of data) {
-        await this.setInCache(historia.id, historia);
-      }
-
-      return this.createSuccessResult(this.mapHistoriasOralesToDomain(data));
+      if (!term.trim()) return createSuccess<MappedHistoriaOral[] | null>([]);
+      const searchTerm = term.toLowerCase().trim();
+      const historias = this.historias.filter(h =>
+        !h.esta_eliminada && (
+          h.titulo.toLowerCase().includes(searchTerm) ||
+          (h.descripcion?.toLowerCase().includes(searchTerm) ?? false)
+        )
+      );
+      return createSuccess(this.mapHistoriasOralesToDomain(historias));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+      return createError<MappedHistoriaOral[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al buscar historias orales',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async search(term: string): Promise<ServiceResult<MappedHistoriaOral[]>> {
+  async getPublicMapped(): Promise<ServiceResult<MappedHistoriaOral[] | null>> {
     try {
-      if (!term.trim()) return this.createSuccessResult([]);
-
-      const searchPattern = `%${term.trim()}%`;
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .or(`titulo.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
-        .eq('esta_eliminada', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
-
-      for (const historia of data) {
-        await this.setInCache(historia.id, historia);
-      }
-
-      return this.createSuccessResult(this.mapHistoriasOralesToDomain(data));
+      const historias = this.historias.filter(h => !h.esta_eliminada);
+      return createSuccess(this.mapHistoriasOralesToDomain(historias));
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+      return createError<MappedHistoriaOral[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al obtener historias orales públicas',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
-} 
+}
+
+export const historiasOralesService = new HistoriasOralesService();
+export const getHistoriaOralById = (id: string) => historiasOralesService.getByIdMapped(id);
+export const getAllHistoriasOrales = () => historiasOralesService.getAllMapped();
+export const searchHistoriasOrales = (term: string) => historiasOralesService.searchMapped(term);
+export const getPublicHistoriasOrales = () => historiasOralesService.getPublicMapped(); 

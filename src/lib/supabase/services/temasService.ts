@@ -6,6 +6,7 @@ import { mapValidationError } from '../errors/utils';
 import { ValidationError } from '../errors/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CacheableServiceConfig } from './cacheableService';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type Tema = Database['public']['Tables']['temas']['Row'];
 
@@ -52,11 +53,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Tema[] | null>> {
     try {
       if (!personaId) {
-        return this.createErrorResult(
-          mapValidationError('Persona ID is required', 'personaId', personaId)
-        );
+        return createError(mapValidationError('Persona ID is required', 'personaId', personaId));
       }
-      return this.getRelatedEntities<Tema>(
+      return await this.getRelatedEntities<Tema>(
         personaId,
         'personas',
         'temas',
@@ -64,7 +63,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByPersona', personaId }));
+      return createError(this.handleError(error, { operation: 'getByPersona', personaId }));
     }
   }
 
@@ -74,11 +73,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Tema[] | null>> {
     try {
       if (!proyectoId) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId)
-        );
+        return createError(mapValidationError('Proyecto ID is required', 'proyectoId', proyectoId));
       }
-      return this.getRelatedEntities<Tema>(
+      return await this.getRelatedEntities<Tema>(
         proyectoId,
         'proyectos',
         'temas',
@@ -86,7 +83,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByProyecto', proyectoId }));
+      return createError(this.handleError(error, { operation: 'getByProyecto', proyectoId }));
     }
   }
 
@@ -96,11 +93,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Tema[] | null>> {
     try {
       if (!entrevistaId) {
-        return this.createErrorResult(
-          mapValidationError('Entrevista ID is required', 'entrevistaId', entrevistaId)
-        );
+        return createError(mapValidationError('Entrevista ID is required', 'entrevistaId', entrevistaId));
       }
-      return this.getRelatedEntities<Tema>(
+      return await this.getRelatedEntities<Tema>(
         entrevistaId,
         'entrevistas',
         'temas',
@@ -108,7 +103,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByEntrevista', entrevistaId }));
+      return createError(this.handleError(error, { operation: 'getByEntrevista', entrevistaId }));
     }
   }
 
@@ -118,11 +113,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Tema[] | null>> {
     try {
       if (!noticiaId) {
-        return this.createErrorResult(
-          mapValidationError('Noticia ID is required', 'noticiaId', noticiaId)
-        );
+        return createError(mapValidationError('Noticia ID is required', 'noticiaId', noticiaId));
       }
-      return this.getRelatedEntities<Tema>(
+      return await this.getRelatedEntities<Tema>(
         noticiaId,
         'noticias',
         'temas',
@@ -130,7 +123,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByNoticia', noticiaId }));
+      return createError(this.handleError(error, { operation: 'getByNoticia', noticiaId }));
     }
   }
 
@@ -140,11 +133,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Database['public']['Tables']['personas']['Row'][] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+        return createError(mapValidationError('Tema ID is required', 'temaId', temaId));
       }
-      return this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
+      return await this.getRelatedEntities<Database['public']['Tables']['personas']['Row']>(
         temaId,
         'temas',
         'personas',
@@ -152,7 +143,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPersonas', temaId }));
+      return createError(this.handleError(error, { operation: 'getPersonas', temaId }));
     }
   }
 
@@ -162,11 +153,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Database['public']['Tables']['proyectos']['Row'][] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+        return createError(mapValidationError('Tema ID is required', 'temaId', temaId));
       }
-      return this.getRelatedEntities<Database['public']['Tables']['proyectos']['Row']>(
+      return await this.getRelatedEntities<Database['public']['Tables']['proyectos']['Row']>(
         temaId,
         'temas',
         'proyectos',
@@ -174,7 +163,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getProyectos', temaId }));
+      return createError(this.handleError(error, { operation: 'getProyectos', temaId }));
     }
   }
 
@@ -184,11 +173,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Database['public']['Tables']['entrevistas']['Row'][] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+        return createError(mapValidationError('Tema ID is required', 'temaId', temaId));
       }
-      return this.getRelatedEntities<Database['public']['Tables']['entrevistas']['Row']>(
+      return await this.getRelatedEntities<Database['public']['Tables']['entrevistas']['Row']>(
         temaId,
         'temas',
         'entrevistas',
@@ -196,7 +183,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getEntrevistas', temaId }));
+      return createError(this.handleError(error, { operation: 'getEntrevistas', temaId }));
     }
   }
 
@@ -206,11 +193,9 @@ export class TemasService extends BaseService<Tema, 'temas'> {
   ): Promise<ServiceResult<Database['public']['Tables']['noticias']['Row'][] | null>> {
     try {
       if (!temaId) {
-        return this.createErrorResult(
-          mapValidationError('Tema ID is required', 'temaId', temaId)
-        );
+        return createError(mapValidationError('Tema ID is required', 'temaId', temaId));
       }
-      return this.getRelatedEntities<Database['public']['Tables']['noticias']['Row']>(
+      return await this.getRelatedEntities<Database['public']['Tables']['noticias']['Row']>(
         temaId,
         'temas',
         'noticias',
@@ -218,7 +203,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         options
       );
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getNoticias', temaId }));
+      return createError(this.handleError(error, { operation: 'getNoticias', temaId }));
     }
   }
 
@@ -233,23 +218,22 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         .order('nombre', { ascending: true });
 
       if (error) throw error;
-      if (!results) return this.createSuccessResult(null);
+      if (!results) return createSuccess(null);
 
-      // Cache individual results
       for (const result of results) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(results);
+      return createSuccess(results);
     } catch (error) {
-      return this.createErrorResult(error as Error);
+      return createError(this.handleError(error, { operation: 'getAllActivos' }));
     }
   }
 
   async getById(id: string): Promise<ServiceResult<Tema | null>> {
     try {
-      const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(cached);
+      const cachedResult = await this.getFromCache(id);
+      if (cachedResult.success && cachedResult.data) return createSuccess(cachedResult.data);
 
       const { data: tema, error } = await this.supabase
         .from(this.tableName)
@@ -258,24 +242,27 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         .single();
 
       if (error) throw error;
-      if (!tema) return this.createSuccessResult(null);
+      if (!tema) return createSuccess(null);
 
       await this.setInCache(id, tema);
-      return this.createSuccessResult(tema);
+      return createSuccess(tema);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+      return createError(this.handleError(error, { operation: 'getById' }));
     }
   }
 
   async getByIds(ids: string[]): Promise<ServiceResult<Tema[]>> {
     try {
-      if (!ids.length) return this.createSuccessResult([]);
+      if (!ids.length) return createSuccess([]);
 
-      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
+      const cachedResults = await Promise.all(ids.map(async (id) => {
+        const cached = await this.getFromCache(id);
+        return cached.success && cached.data ? cached.data : null;
+      }));
       const missingIds = ids.filter((id, index) => !cachedResults[index]);
 
       if (missingIds.length === 0) {
-        return this.createSuccessResult(cachedResults.filter(Boolean) as Tema[]);
+        return createSuccess(cachedResults.filter(Boolean) as Tema[]);
       }
 
       const { data, error } = await this.supabase
@@ -284,16 +271,16 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         .in('id', missingIds);
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const tema of data) {
         await this.setInCache(tema.id, tema);
       }
 
       const allResults = [...cachedResults.filter(Boolean), ...data];
-      return this.createSuccessResult(allResults);
+      return createSuccess(allResults);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+      return createError(this.handleError(error, { operation: 'getByIds' }));
     }
   }
 
@@ -306,21 +293,21 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         .order('nombre', { ascending: true });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const tema of data) {
         await this.setInCache(tema.id, tema);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+      return createError(this.handleError(error, { operation: 'getPublic' }));
     }
   }
 
   async search(query: string, options?: QueryOptions): Promise<ServiceResult<Tema[]>> {
     try {
-      if (!query.trim()) return this.createSuccessResult([]);
+      if (!query.trim()) return createSuccess([]);
 
       const searchPattern = `%${query.trim()}%`;
       const { data, error } = await this.supabase
@@ -331,15 +318,15 @@ export class TemasService extends BaseService<Tema, 'temas'> {
         .order('nombre', { ascending: true });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const tema of data) {
         await this.setInCache(tema.id, tema);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+      return createError(this.handleError(error, { operation: 'search' }));
     }
   }
 
@@ -347,7 +334,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
     try {
       const validationError = this.validateUpdateInput(data);
       if (validationError) {
-        return this.createErrorResult(validationError);
+        return createError(validationError);
       }
 
       const { data: updated, error } = await this.supabase
@@ -359,15 +346,13 @@ export class TemasService extends BaseService<Tema, 'temas'> {
 
       if (error) throw error;
       if (!updated) {
-        return this.createErrorResult(
-          mapValidationError('Tema not found', 'id', id)
-        );
+        return createError(mapValidationError('Tema not found', 'id', id));
       }
 
       await this.setInCache(id, updated);
-      return this.createSuccessResult(updated);
+      return createSuccess(updated);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+      return createError(this.handleError(error, { operation: 'update' }));
     }
   }
 
@@ -375,7 +360,7 @@ export class TemasService extends BaseService<Tema, 'temas'> {
     try {
       const validationError = this.validateCreateInput(data);
       if (validationError) {
-        return this.createErrorResult(validationError);
+        return createError(validationError);
       }
 
       const { data: created, error } = await this.supabase
@@ -386,15 +371,13 @@ export class TemasService extends BaseService<Tema, 'temas'> {
 
       if (error) throw error;
       if (!created) {
-        return this.createErrorResult(
-          mapValidationError('Failed to create tema', 'data', data)
-        );
+        return createError(mapValidationError('Failed to create tema', 'data', data));
       }
 
       await this.setInCache(created.id, created);
-      return this.createSuccessResult(created);
+      return createSuccess(created);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
+      return createError(this.handleError(error, { operation: 'create' }));
     }
   }
 } 

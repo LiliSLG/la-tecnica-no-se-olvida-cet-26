@@ -5,6 +5,7 @@ import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 import { CacheableServiceConfig } from './cacheableService';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 // Import relation services
 import { ProyectoTemaService } from './proyectoTemaService';
@@ -36,7 +37,7 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
   constructor(
     supabase: SupabaseClient<Database>,
     tableName: 'proyectos' = 'proyectos',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto' }
+    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto', enableCache: true }
   ) {
     super(supabase, tableName, cacheConfig);
     this.proyectoTemaService = new ProyectoTemaService(supabase);
@@ -65,8 +66,10 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
 
   async getById(id: string): Promise<ServiceResult<Proyecto | null>> {
     try {
-      const cached = await this.getFromCache(id);
-      if (cached) return this.createSuccessResult(cached);
+      const cachedResult = await this.getFromCache(id);
+      if (cachedResult.success && cachedResult.data) {
+        return createSuccess(cachedResult.data);
+      }
 
       const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
@@ -74,25 +77,39 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      if (!proyecto) return this.createSuccessResult(null);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      if (!proyecto) return createSuccess(null);
 
       await this.setInCache(id, proyecto);
-      return this.createSuccessResult(proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getById' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getByIds(ids: string[]): Promise<ServiceResult<Proyecto[]>> {
+  async getByIds(ids: string[]): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!ids.length) return this.createSuccessResult([]);
+      if (!ids.length) return createSuccess([]);
 
       const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+      const missingIds = ids.filter((id, index) => !cachedResults[index]?.success || !cachedResults[index]?.data);
 
       if (missingIds.length === 0) {
-        return this.createSuccessResult(cachedResults.filter(Boolean) as Proyecto[]);
+        const validResults = cachedResults
+          .filter(result => result.success && result.data)
+          .map(result => result.data as Proyecto);
+        return createSuccess(validResults);
       }
 
       const { data, error } = await this.supabase
@@ -101,20 +118,28 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .in('id', missingIds);
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const proyecto of data) {
         await this.setInCache(proyecto.id, proyecto);
       }
 
-      const allResults = [...cachedResults.filter(Boolean), ...data];
-      return this.createSuccessResult(allResults);
+      const validCachedResults = cachedResults
+        .filter(result => result.success && result.data)
+        .map(result => result.data as Proyecto);
+      const allResults = [...validCachedResults, ...data];
+      return createSuccess(allResults);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByIds' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async getPublic(): Promise<ServiceResult<Proyecto[]>> {
+  async getPublic(): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
@@ -123,21 +148,26 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess(null);
 
       for (const proyecto of data) {
         await this.setInCache(proyecto.id, proyecto);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPublic' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async search(term: string): Promise<ServiceResult<Proyecto[]>> {
+  async search(term: string): Promise<ServiceResult<Proyecto[] | null>> {
     try {
-      if (!term.trim()) return this.createSuccessResult([]);
+      if (!term.trim()) return createSuccess([]);
 
       const searchPattern = `%${term.trim()}%`;
       const { data, error } = await this.supabase
@@ -148,38 +178,33 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult([]);
+      if (!data) return createSuccess(null);
 
       for (const proyecto of data) {
         await this.setInCache(proyecto.id, proyecto);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'search' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   protected validateCreateInput(data: CreateProyecto): ValidationError | null {
     if (!data.titulo) {
-      return {
-        field: 'titulo',
-        message: 'El título es requerido',
-        value: data.titulo,
-        name: 'ValidationError'
-      };
+      return mapValidationError('El título es requerido', 'titulo', data.titulo);
     }
     return null;
   }
 
   protected validateUpdateInput(data: UpdateProyecto): ValidationError | null {
     if (data.titulo === '') {
-      return {
-        field: 'titulo',
-        message: 'El título no puede estar vacío',
-        value: data.titulo,
-        name: 'ValidationError'
-      };
+      return mapValidationError('El título no puede estar vacío', 'titulo', data.titulo);
     }
     return null;
   }
@@ -191,22 +216,27 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select()
+        .select('*')
         .eq('status', status)
         .eq('esta_eliminado', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByStatus' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -215,6 +245,15 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
+      if (!temaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Tema ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { temaId }
+        });
+      }
+
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*, proyecto_tema!inner(*)')
@@ -223,16 +262,21 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByTema' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -241,6 +285,15 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
+      if (!personaId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Persona ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { personaId }
+        });
+      }
+
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*, proyecto_persona_rol!inner(*)')
@@ -249,16 +302,21 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByPersona' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -267,6 +325,15 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
+      if (!organizacionId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Organizacion ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { organizacionId }
+        });
+      }
+
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*, proyecto_organizacion_rol!inner(*)')
@@ -275,16 +342,21 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getByOrganizacion' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -295,51 +367,80 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     organizacionIds: { id: string; rol: 'patrocinador' | 'colaborador' | 'investigador' | 'institucion' }[]
   ): Promise<ServiceResult<Proyecto | null>> {
     try {
-      // Validate project data
       const validationError = this.validateCreateInput(project);
       if (validationError) {
-        return this.createErrorResult(validationError);
+        return createError({
+          name: 'ValidationError',
+          message: validationError.message,
+          code: 'VALIDATION_ERROR',
+          details: validationError
+        });
       }
 
-      // Create project
-      const { data: newProject, error: projectError } = await this.supabase
+      const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .insert(project)
         .select()
         .single();
 
-      if (projectError) throw projectError;
-      if (!newProject) throw new Error('Failed to create project');
+      if (error) throw error;
+      if (!proyecto) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Failed to create project',
+          code: 'DB_ERROR',
+          details: { project }
+        });
+      }
 
-      // Add temas using ProyectoTemaService
+      // Add temas
       for (const temaId of temaIds) {
-        await this.proyectoTemaService.create({ proyecto_id: newProject.id, tema_id: temaId });
+        const temaResult = await this.proyectoTemaService.addTemaToProyecto(proyecto.id, temaId);
+        if (!temaResult.success) {
+          return createError({
+            name: 'ServiceError',
+            message: 'Failed to add tema to project',
+            code: 'DB_ERROR',
+            details: { temaId, error: temaResult.error }
+          });
+        }
       }
 
-      // Add personas using ProyectoPersonaRolService
-      for (const persona of personaIds) {
-        await this.proyectoPersonaRolService.create({
-          proyecto_id: newProject.id,
-          persona_id: persona.id,
-          rol: persona.rol
-        });
+      // Add personas
+      for (const { id, rol } of personaIds) {
+        const personaResult = await this.proyectoPersonaRolService.addPersonaToProyecto(proyecto.id, id, rol);
+        if (!personaResult.success) {
+          return createError({
+            name: 'ServiceError',
+            message: 'Failed to add persona to project',
+            code: 'DB_ERROR',
+            details: { personaId: id, rol, error: personaResult.error }
+          });
+        }
       }
 
-      // Add organizaciones using ProyectoOrganizacionRolService
-      for (const organizacion of organizacionIds) {
-        await this.proyectoOrganizacionRolService.create({
-          proyecto_id: newProject.id,
-          organizacion_id: organizacion.id,
-          rol: organizacion.rol
-        });
+      // Add organizaciones
+      for (const { id, rol } of organizacionIds) {
+        const organizacionResult = await this.proyectoOrganizacionRolService.addOrganizacionToProyecto(proyecto.id, id, rol);
+        if (!organizacionResult.success) {
+          return createError({
+            name: 'ServiceError',
+            message: 'Failed to add organizacion to project',
+            code: 'DB_ERROR',
+            details: { organizacionId: id, rol, error: organizacionResult.error }
+          });
+        }
       }
 
-      // Cache the new project
-      await this.setInCache(newProject.id, newProject);
-
-      return this.createSuccessResult(newProject);
+      await this.setInCache(proyecto.id, proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'addProject' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -348,6 +449,15 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     options?: QueryOptions
   ): Promise<ServiceResult<Proyecto[] | null>> {
     try {
+      if (!userId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'User ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { userId }
+        });
+      }
+
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*, proyecto_persona_rol!inner(*)')
@@ -356,16 +466,21 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getProjectsForUser' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
@@ -375,126 +490,228 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select()
-        .eq('status', 'published')
+        .select('*')
         .eq('esta_eliminado', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (!data) return createSuccess(null);
 
       // Cache results
       for (const result of data) {
         await this.setInCache(result.id, result);
       }
 
-      return this.createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'getPublicProjects' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async logicalDelete(id: string, userId: string): Promise<ServiceResult<Proyecto | null>> {
     try {
-      const { data, error } = await this.supabase
+      if (!userId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'User ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { userId }
+        });
+      }
+
+      const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .update({
           esta_eliminado: true,
-          eliminado_en: new Date().toISOString(),
-          eliminado_por_uid: userId
+          eliminado_por_uid: userId,
+          eliminado_en: new Date().toISOString()
         })
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Project not found',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
+      }
 
-      // No need to update cache on logical delete
+      if (!proyecto) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Project not found',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
 
-      return this.createSuccessResult(data);
+      await this.setInCache(id, proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'logicalDelete' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
   async restore(id: string, userId: string): Promise<ServiceResult<Proyecto | null>> {
     try {
-      const { data, error } = await this.supabase
+      if (!userId) {
+        return createError({
+          name: 'ValidationError',
+          message: 'User ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { userId }
+        });
+      }
+
+      const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .update({
           esta_eliminado: false,
-          eliminado_en: null,
-          eliminado_por_uid: null
+          eliminado_por_uid: null,
+          eliminado_en: null
         })
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
-      if (!data) return this.createSuccessResult(null);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Project not found',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
+      }
 
-      // Update cache
-      await this.setInCache(id, data);
+      if (!proyecto) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Project not found',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
 
-      return this.createSuccessResult(data);
+      await this.setInCache(id, proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'restore' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async update(id: string, data: UpdateProyecto): Promise<ServiceResult<Proyecto>> {
+  async update(id: string, data: UpdateProyecto): Promise<ServiceResult<Proyecto | null>> {
     try {
       const validationError = this.validateUpdateInput(data);
       if (validationError) {
-        return this.createErrorResult(validationError);
+        return createError({
+          name: 'ValidationError',
+          message: validationError.message,
+          code: 'VALIDATION_ERROR',
+          details: validationError
+        });
       }
 
-      const { data: updated, error } = await this.supabase
+      const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .update(data)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
-      if (!updated) {
-        return this.createErrorResult(
-          mapValidationError('Proyecto not found', 'id', id)
-        );
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Project not found',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
       }
 
-      await this.setInCache(id, updated);
-      return this.createSuccessResult(updated);
+      if (!proyecto) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Project not found',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
+
+      await this.setInCache(id, proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'update' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 
-  async create(data: CreateProyecto): Promise<ServiceResult<Proyecto>> {
+  async create(data: CreateProyecto): Promise<ServiceResult<Proyecto | null>> {
     try {
       const validationError = this.validateCreateInput(data);
       if (validationError) {
-        return this.createErrorResult(validationError);
+        return createError({
+          name: 'ValidationError',
+          message: validationError.message,
+          code: 'VALIDATION_ERROR',
+          details: validationError
+        });
       }
 
-      const { data: created, error } = await this.supabase
+      const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .insert(data)
         .select()
         .single();
 
       if (error) throw error;
-      if (!created) {
-        return this.createErrorResult(
-          mapValidationError('Failed to create proyecto', 'data', data)
-        );
+      if (!proyecto) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Failed to create project',
+          code: 'DB_ERROR',
+          details: { data }
+        });
       }
 
-      await this.setInCache(created.id, created);
-      return this.createSuccessResult(created);
+      await this.setInCache(proyecto.id, proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return this.createErrorResult(this.handleError(error, { operation: 'create' }));
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
     }
   }
 } 

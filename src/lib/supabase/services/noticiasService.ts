@@ -1,9 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { BaseService } from './baseService';
-import { ServiceResult, QueryOptions, createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
-import { ValidationError } from '@/lib/supabase/errors/types';
-import { mapValidationError } from '@/lib/supabase/errors/utils';
+import { ServiceResult, QueryOptions } from '../types/service';
+import { ValidationError } from '../errors/types';
+import { mapValidationError } from '../errors/utils';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 import { CacheableServiceConfig } from './cacheableService';
 
 type Noticia = Database['public']['Tables']['noticias']['Row'];
@@ -87,8 +88,10 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
 
   async getById(id: string): Promise<ServiceResult<Noticia | null>> {
     try {
-      const cached = await this.getFromCache(id);
-      if (cached) return createSuccessResult(cached);
+      const cachedResult = await this.getFromCache(id);
+      if (cachedResult.success && cachedResult.data) {
+        return createSuccess(cachedResult.data);
+      }
 
       const { data: noticia, error } = await this.supabase
         .from(this.tableName)
@@ -96,13 +99,19 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      if (!noticia) return createSuccessResult(null);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      if (!noticia) return createSuccess(null);
 
       await this.setInCache(id, noticia);
-      return createSuccessResult(noticia);
+      return createSuccess(noticia);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al obtener la noticia',
         code: 'DB_ERROR',
@@ -111,15 +120,18 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
     }
   }
 
-  async getByIds(ids: string[]): Promise<ServiceResult<Noticia[]>> {
+  async getByIds(ids: string[]): Promise<ServiceResult<Noticia[] | null>> {
     try {
-      if (!ids.length) return createSuccessResult([]);
+      if (!ids.length) return createSuccess([]);
 
       const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]);
+      const missingIds = ids.filter((id, index) => !cachedResults[index]?.success || !cachedResults[index]?.data);
 
       if (missingIds.length === 0) {
-        return createSuccessResult(cachedResults.filter(Boolean) as Noticia[]);
+        const validResults = cachedResults
+          .filter(result => result.success && result.data)
+          .map(result => result.data as Noticia);
+        return createSuccess(validResults);
       }
 
       const { data, error } = await this.supabase
@@ -128,16 +140,19 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .in('id', missingIds);
 
       if (error) throw error;
-      if (!data) return createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const noticia of data) {
         await this.setInCache(noticia.id, noticia);
       }
 
-      const allResults = [...cachedResults.filter(Boolean), ...data];
-      return createSuccessResult(allResults);
+      const validCachedResults = cachedResults
+        .filter(result => result.success && result.data)
+        .map(result => result.data as Noticia);
+      const allResults = [...validCachedResults, ...data];
+      return createSuccess(allResults);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al obtener las noticias',
         code: 'DB_ERROR',
@@ -146,7 +161,7 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
     }
   }
 
-  async getPublic(): Promise<ServiceResult<Noticia[]>> {
+  async getPublic(): Promise<ServiceResult<Noticia[] | null>> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
@@ -155,15 +170,15 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const noticia of data) {
         await this.setInCache(noticia.id, noticia);
       }
 
-      return createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al obtener las noticias públicas',
         code: 'DB_ERROR',
@@ -172,9 +187,9 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
     }
   }
 
-  async search(term: string, options?: QueryOptions): Promise<ServiceResult<Noticia[]>> {
+  async search(term: string, options?: QueryOptions): Promise<ServiceResult<Noticia[] | null>> {
     try {
-      if (!term.trim()) return createSuccessResult([]);
+      if (!term.trim()) return createSuccess([]);
 
       const searchPattern = `%${term.trim()}%`;
       const { data, error } = await this.supabase
@@ -185,15 +200,15 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data) return createSuccessResult([]);
+      if (!data) return createSuccess([]);
 
       for (const noticia of data) {
         await this.setInCache(noticia.id, noticia);
       }
 
-      return createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al buscar noticias',
         code: 'DB_ERROR',
@@ -202,12 +217,12 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
     }
   }
 
-  async update(id: string, data: UpdateNoticia): Promise<ServiceResult<Noticia>> {
+  async update(id: string, data: UpdateNoticia): Promise<ServiceResult<Noticia | null>> {
     try {
       const validationError = this.validateUpdateInput(data);
       if (validationError) {
-        return createErrorResult({
-          name: 'ServiceError',
+        return createError({
+          name: 'ValidationError',
           message: validationError.message,
           code: 'VALIDATION_ERROR',
           details: validationError
@@ -221,13 +236,31 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .select()
         .single();
 
-      if (error) throw error;
-      if (!noticia) throw new Error('Noticia no encontrada');
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Noticia no encontrada',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
+      }
+
+      if (!noticia) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Noticia no encontrada',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
 
       await this.setInCache(id, noticia);
-      return createSuccessResult(noticia);
+      return createSuccess(noticia);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al actualizar la noticia',
         code: 'DB_ERROR',
@@ -236,12 +269,12 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
     }
   }
 
-  async create(data: CreateNoticia): Promise<ServiceResult<Noticia>> {
+  async create(data: CreateNoticia): Promise<ServiceResult<Noticia | null>> {
     try {
       const validationError = this.validateCreateInput(data);
       if (validationError) {
-        return createErrorResult({
-          name: 'ServiceError',
+        return createError({
+          name: 'ValidationError',
           message: validationError.message,
           code: 'VALIDATION_ERROR',
           details: validationError
@@ -255,14 +288,98 @@ export class NoticiasService extends BaseService<Noticia, 'noticias'> {
         .single();
 
       if (error) throw error;
-      if (!noticia) throw new Error('Error al crear la noticia');
+      if (!noticia) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Error al crear la noticia',
+          code: 'DB_ERROR',
+          details: { data }
+        });
+      }
 
       await this.setInCache(noticia.id, noticia);
-      return createSuccessResult(noticia);
+      return createSuccess(noticia);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Error al crear la noticia',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async delete(id: string): Promise<ServiceResult<boolean>> {
+    try {
+      const { error } = await this.supabase
+        .from(this.tableName)
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Noticia no encontrada',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
+      }
+
+      await this.invalidateCache(id);
+      return createSuccess(true);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al eliminar la noticia',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async softDelete(id: string, userId: string): Promise<ServiceResult<Noticia | null>> {
+    try {
+      const { data: noticia, error } = await this.supabase
+        .from(this.tableName)
+        .update({
+          esta_eliminada: true,
+          eliminado_por_uid: userId,
+          eliminado_en: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return createError({
+            name: 'ValidationError',
+            message: 'Noticia no encontrada',
+            code: 'VALIDATION_ERROR',
+            details: { id }
+          });
+        }
+        throw error;
+      }
+
+      if (!noticia) {
+        return createError({
+          name: 'ValidationError',
+          message: 'Noticia no encontrada',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
+
+      await this.setInCache(id, noticia);
+      return createSuccess(noticia);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'Error al eliminar la noticia',
         code: 'DB_ERROR',
         details: error
       });
