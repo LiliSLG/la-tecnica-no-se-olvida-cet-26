@@ -382,3 +382,12 @@ This update will:
   - Implement proper production-ready auth setup
   - Consider using Supabase's server-side auth helpers for better security
 
+### Authentication & Roles
+
+- Implement role-based authentication (admin, regular user, guest).
+- Define roles in Supabase (via user metadata or custom claims).
+- Protect admin routes based on roles.
+- Add role checks in the AuthProvider and middleware (when we move to server-side auth).
+- Implement role-aware navigation (show/hide menu items based on role).
+- Audit current protected routes and prepare for role-based expansion.
+

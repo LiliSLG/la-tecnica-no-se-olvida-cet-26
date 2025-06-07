@@ -42,8 +42,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="flex">
-        {/* Navigation placeholder */}
+      <div className="flex flex-col md:flex-row">
+      {/* Navigation placeholder */}
         <nav className="w-64 border-r min-h-[calc(100vh-4rem)]">
           {/* Future: Admin navigation */}
         </nav>
