@@ -4,7 +4,6 @@ import { BaseService } from './baseService';
 import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 import { supabase } from '@/lib/supabase/supabaseClient';
 
@@ -62,17 +61,9 @@ export interface MappedPersona {
 /**
  * Service for managing personas
  */
-export class PersonasService extends BaseService<Persona, 'personas'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'personas' = 'personas',
-    cacheConfig: CacheableServiceConfig = { 
-      ttl: 300, 
-      entityType: 'persona',
-      enableCache: true 
-    }
-  ) {
-    super(supabase, tableName, cacheConfig);
+export class PersonasService extends BaseService<Persona> {
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, { tableName: 'personas' });
   }
 
   /**
@@ -184,6 +175,14 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
   }
 
   /**
+   * Validates input data for updating a persona
+   */
+  protected validateUpdateInput(data: Partial<Persona>): ValidationError | null {
+    // Add validation logic here
+    return null;
+  }
+
+  /**
    * Gets a persona by ID with domain mapping
    */
   async getByIdMapped(id: string): Promise<ServiceResult<MappedPersona | null>> {
@@ -240,11 +239,34 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
   }
 
   /**
+   * Searches personas
+   */
+  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Persona[] | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select()
+        .or(`nombre.ilike.%${query}%,apellido.ilike.%${query}%,email.ilike.%${query}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data as Persona[]);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  /**
    * Searches personas with domain mapping
    */
   async searchMapped(query: string, options?: QueryOptions): Promise<ServiceResult<MappedPersona[] | null>> {
     try {
-      const result = await super.search(query, options);
+      const result = await this.search(query, options);
       if (!result.success) {
         return createError({
           name: 'ServiceError',
@@ -332,35 +354,15 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
     try {
       if (!ids.length) return createSuccess([]);
 
-      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]?.success || !cachedResults[index]?.data);
-
-      if (missingIds.length === 0) {
-        const validResults = cachedResults
-          .filter(result => result.success && result.data)
-          .map(result => result.data as Persona);
-        return createSuccess(this.mapPersonasToDomain(validResults));
-      }
-
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
-        .in('id', missingIds);
+        .in('id', ids);
 
       if (error) throw error;
       if (!data) return createSuccess([]);
 
-      for (const persona of data) {
-        await this.setInCache(persona.id, persona);
-      }
-
-      const allResults = [
-        ...cachedResults
-          .filter(result => result.success && result.data)
-          .map(result => result.data as Persona),
-        ...data
-      ];
-      return createSuccess(this.mapPersonasToDomain(allResults));
+      return createSuccess(this.mapPersonasToDomain(data));
     } catch (error) {
       return createError({
         name: 'ServiceError',
@@ -387,10 +389,6 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      for (const persona of data) {
-        await this.setInCache(persona.id, persona);
-      }
 
       return createSuccess(this.mapPersonasToDomain(data));
     } catch (error) {
@@ -420,10 +418,6 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      for (const persona of data) {
-        await this.setInCache(persona.id, persona);
-      }
-
       return createSuccess(this.mapPersonasToDomain(data));
     } catch (error) {
       return createError({
@@ -450,10 +444,6 @@ export class PersonasService extends BaseService<Persona, 'personas'> {
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      for (const persona of data) {
-        await this.setInCache(persona.id, persona);
-      }
 
       return createSuccess(this.mapPersonasToDomain(data));
     } catch (error) {

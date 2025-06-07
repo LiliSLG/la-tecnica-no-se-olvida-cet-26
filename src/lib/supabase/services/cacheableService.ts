@@ -1,147 +1,150 @@
-import { cacheService } from '../../redis/cacheService';
-import { cacheKeys } from '../../redis/cacheKeys';
-import { Database } from '../types/database.types';
-import { ServiceResult, QueryOptions, BaseServiceConfig } from '@/lib/supabase/types/service';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
+import { ServiceResult } from '@/lib/supabase/types/service';
+import { createSuccessResult } from '@/lib/supabase/types/serviceResult';
+import { BaseService } from './baseService';
+import { cacheService } from '@/lib/redis/cacheService';
+import { cacheKeys } from '@/lib/redis/cacheKeys';
+import { ValidationError } from '../errors/types';
 
-type EntityType = Exclude<keyof typeof cacheKeys, 'helpers'>;
-type EntityId = string;
+// Check if we're on the server side
+const isServer = typeof window === 'undefined';
 
-/**
- * Configuration for cacheable services
- */
 export interface CacheableServiceConfig {
-  /** The type of entity being cached */
-  entityType: EntityType;
-  /** Time to live for cached items in seconds */
-  ttl?: number;
-  /** Whether caching is enabled for this service */
-  enableCache?: boolean;
+  entityType: keyof typeof cacheKeys;
+  ttl: number;
+  enableCache: boolean;
 }
 
-/**
- * Base class for services that support caching
- * @template T The type of entity being cached
- */
-export class CacheableService<T extends { id: string }> {
-  protected readonly entityType: EntityType;
-  protected readonly ttl: number;
-  protected readonly enableCache: boolean;
+export abstract class CacheableService<T extends { id: string }> extends BaseService<T> {
+  private readonly ttl: number;
+  private readonly enableCache: boolean;
+  private readonly entityType: keyof typeof cacheKeys;
 
-  constructor(config: CacheableServiceConfig) {
+  constructor(supabase: any, config: CacheableServiceConfig) {
+    super(supabase, { tableName: config.entityType as any });
     this.entityType = config.entityType;
-    this.ttl = config.ttl || 3600; // Default 1 hour
-    this.enableCache = config.enableCache ?? true;
+    this.ttl = config.ttl;
+    this.enableCache = config.enableCache;
   }
 
-  /**
-   * Retrieves an entity from cache by ID
-   */
-  protected async getFromCache(id: EntityId): Promise<ServiceResult<T | null>> {
-    if (!this.enableCache) return createSuccessResult<T | null>(null);
-    
-    const key = cacheKeys[this.entityType].byId(id);
+  protected async getFromCache(id: string): Promise<ServiceResult<T | null>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult<T | null>(null);
+    }
+    const key = `${this.entityType}:${id}`;
     return cacheService.get<T>(key);
   }
 
-  /**
-   * Stores an entity in cache by ID
-   */
-  protected async setInCache(id: EntityId, data: T): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    const key = cacheKeys[this.entityType].byId(id);
+  protected async setInCache(id: string, data: T): Promise<ServiceResult<boolean>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult(true);
+    }
+    const key = `${this.entityType}:${id}`;
     return cacheService.set(key, data, this.ttl);
   }
 
-  /**
-   * Invalidates cache entries for an entity
-   */
-  protected async invalidateCache(id: EntityId): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    const key = cacheKeys[this.entityType].byId(id);
-    const result = await cacheService.delete(key);
-    if (!result.success) return result;
-    
-    // Invalidate related caches
-    const listKey = cacheKeys[this.entityType].list();
-    return cacheService.delete(listKey);
+  protected async invalidateCache(id: string): Promise<ServiceResult<boolean>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult(true);
+    }
+    const key = `${this.entityType}:${id}`;
+    return cacheService.delete(key);
   }
 
-  /**
-   * Invalidates cache entries for related entities
-   */
-  protected async invalidateRelatedCaches(id: EntityId, relations: Array<keyof typeof cacheKeys[EntityType]>): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    for (const relation of relations) {
-      const key = cacheKeys[this.entityType][relation]?.(id);
-      if (key) {
-        const result = await cacheService.delete(key);
-        if (!result.success) return result;
+  protected async getListFromCache(): Promise<ServiceResult<T[] | null>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult<T[] | null>(null);
+    }
+    const key = `${this.entityType}:list`;
+    return cacheService.get<T[]>(key);
+  }
+
+  protected async setListInCache(data: T[]): Promise<ServiceResult<boolean>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult(true);
+    }
+    const key = `${this.entityType}:list`;
+    return cacheService.set(key, data, this.ttl);
+  }
+
+  protected async getQueryFromCache(query: string): Promise<ServiceResult<T[] | null>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult<T[] | null>(null);
+    }
+    const key = `${this.entityType}:query:${query}`;
+    return cacheService.get<T[]>(key);
+  }
+
+  protected async setQueryInCache(query: string, data: T[]): Promise<ServiceResult<boolean>> {
+    if (!isServer || !this.enableCache) {
+      return createSuccessResult(true);
+    }
+    const key = `${this.entityType}:query:${query}`;
+    return cacheService.set(key, data, this.ttl);
+  }
+
+  // Override BaseService methods to add caching
+  public async getById(id: string): Promise<ServiceResult<T | null>> {
+    // Try to get from cache first
+    const cachedResult = await this.getFromCache(id);
+    if (cachedResult.success && cachedResult.data) {
+      return createSuccessResult(cachedResult.data);
+    }
+
+    // If not in cache, get from database
+    const result = await super.getById(id);
+    if (result.success && result.data) {
+      // Cache the result
+      await this.setInCache(id, result.data);
+    }
+    return result;
+  }
+
+  public async getAll(options?: any): Promise<ServiceResult<T[] | null>> {
+    // Try to get from cache first if not bypassing cache
+    if (!options?.bypassCache) {
+      const cachedResult = await this.getListFromCache();
+      if (cachedResult.success && cachedResult.data) {
+        return createSuccessResult(cachedResult.data);
       }
     }
-    return createSuccessResult(true);
+
+    // If not in cache, get from database
+    const result = await super.getAll(options);
+    if (result.success && result.data && !options?.bypassCache) {
+      // Cache the results
+      await this.setListInCache(result.data);
+    }
+    return result;
   }
 
-  /**
-   * Retrieves a list of entities from cache
-   */
-  protected async getListFromCache(): Promise<ServiceResult<T[] | null>> {
-    if (!this.enableCache) return createSuccessResult<T[] | null>(null);
-    
-    const key = cacheKeys[this.entityType].list();
-    return cacheService.get<T[]>(key);
+  public async create(data: Omit<T, 'id'>): Promise<ServiceResult<T | null>> {
+    const result = await super.create(data);
+    if (result.success && result.data) {
+      // Cache the new entity
+      await this.setInCache(result.data.id, result.data);
+      // Invalidate list cache
+      await this.invalidateCache(result.data.id);
+    }
+    return result;
   }
 
-  /**
-   * Stores a list of entities in cache
-   */
-  protected async setListInCache(data: T[]): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    const key = cacheKeys[this.entityType].list();
-    return cacheService.set(key, data, this.ttl);
+  public async update(id: string, data: Partial<T>): Promise<ServiceResult<T | null>> {
+    const result = await super.update(id, data);
+    if (result.success && result.data) {
+      // Update cache
+      await this.setInCache(id, result.data);
+      // Invalidate related caches
+      await this.invalidateCache(id);
+    }
+    return result;
   }
 
-  /**
-   * Retrieves search results from cache
-   */
-  protected async getQueryFromCache(query: string): Promise<ServiceResult<T[] | null>> {
-    if (!this.enableCache) return createSuccessResult<T[] | null>(null);
-    
-    const key = cacheKeys[this.entityType].byQuery(query);
-    return cacheService.get<T[]>(key);
+  // Implement abstract methods from BaseService
+  protected validateCreateInput(data: Partial<T>): ValidationError | null {
+    return null; // Override in derived classes
   }
 
-  /**
-   * Stores search results in cache
-   */
-  protected async setQueryInCache(query: string, data: T[]): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    const key = cacheKeys[this.entityType].byQuery(query);
-    return cacheService.set(key, data, this.ttl);
-  }
-
-  /**
-   * Retrieves statistics from cache
-   */
-  protected async getStatsFromCache(): Promise<ServiceResult<Record<string, any> | null>> {
-    if (!this.enableCache) return createSuccessResult<Record<string, any> | null>(null);
-    
-    const key = cacheKeys[this.entityType].stats();
-    return cacheService.get<Record<string, any>>(key);
-  }
-
-  /**
-   * Stores statistics in cache
-   */
-  protected async setStatsInCache(stats: Record<string, any>): Promise<ServiceResult<boolean>> {
-    if (!this.enableCache) return createSuccessResult(true);
-    
-    const key = cacheKeys[this.entityType].stats();
-    return cacheService.set(key, stats, this.ttl);
+  protected validateUpdateInput(data: Partial<T>): ValidationError | null {
+    return null; // Override in derived classes
   }
 } 

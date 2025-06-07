@@ -1,16 +1,21 @@
 import Redis from 'ioredis';
 import { REDIS_CONFIG } from './config';
 
+// Check if we're on the server side
+const isServer = typeof window === 'undefined';
+
 class RedisClient {
   private static instance: RedisClient;
-  private client: Redis;
-  private subscriber: Redis;
+  private client: Redis | null = null;
+  private subscriber: Redis | null = null;
   private isConnected: boolean = false;
 
   private constructor() {
-    this.client = new Redis(REDIS_CONFIG);
-    this.subscriber = new Redis(REDIS_CONFIG);
-    this.setupEventListeners();
+    if (isServer) {
+      this.client = new Redis(REDIS_CONFIG);
+      this.subscriber = new Redis(REDIS_CONFIG);
+      this.setupEventListeners();
+    }
   }
 
   public static getInstance(): RedisClient {
@@ -21,6 +26,8 @@ class RedisClient {
   }
 
   private setupEventListeners(): void {
+    if (!this.client || !this.subscriber) return;
+
     this.client.on('connect', () => {
       console.log('Redis client connected');
       this.isConnected = true;
@@ -45,26 +52,24 @@ class RedisClient {
     });
   }
 
-  public getClient(): Redis {
+  public getClient(): Redis | null {
     return this.client;
   }
 
-  public getSubscriber(): Redis {
+  public getSubscriber(): Redis | null {
     return this.subscriber;
   }
 
   public async connect(): Promise<void> {
-    if (!this.isConnected) {
-      await this.client.connect();
-    }
+    if (!isServer || !this.client || this.isConnected) return;
+    await this.client.connect();
   }
 
   public async disconnect(): Promise<void> {
-    if (this.isConnected) {
-      await this.client.quit();
-      await this.subscriber.quit();
-      this.isConnected = false;
-    }
+    if (!isServer || !this.client || !this.subscriber || !this.isConnected) return;
+    await this.client.quit();
+    await this.subscriber.quit();
+    this.isConnected = false;
   }
 
   public isReady(): boolean {

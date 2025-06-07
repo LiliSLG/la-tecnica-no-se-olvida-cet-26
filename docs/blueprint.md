@@ -240,6 +240,14 @@ Usage:
 
 ## Authentication
 
+## Cache & Frontend-safe Services
+
+- `BaseService` is the base class for services that are safe to use in the frontend (app router, admin pages, public pages).
+- `CacheableService` extends `BaseService` and adds Redis-based caching functionality. It must only be used in the backend (API routes, server components).
+- Services that are used in the frontend (such as `PersonasService`, `ProyectosService`, etc.) must extend only `BaseService`, to avoid introducing Redis or Node.js-only modules (such as `dns`) into the frontend bundle.
+- The separation between `BaseService` and `CacheableService` is required to ensure the frontend builds and runs correctly in the browser.
+
+
 The application uses Supabase Authentication with the following architecture:
 
 - `authService.ts`: Main authentication service that handles:
