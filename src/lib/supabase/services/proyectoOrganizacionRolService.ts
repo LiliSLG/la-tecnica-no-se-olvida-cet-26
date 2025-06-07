@@ -4,20 +4,34 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type ProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Row'] & { id: string };
 type CreateProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Insert'];
 type UpdateProyectoOrganizacionRol = Database['public']['Tables']['proyecto_organizacion_rol']['Update'];
 
-export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganizacionRol, 'proyecto_organizacion_rol'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'proyecto_organizacion_rol' = 'proyecto_organizacion_rol',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto', enableCache: true }
-  ) {
-    super(supabase, tableName, cacheConfig);
+export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganizacionRol> {
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, { tableName: 'proyecto_organizacion_rol' });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'ProyectoOrganizacionRolService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'ProyectoOrganizacionRolService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateProyectoOrganizacionRol): ValidationError | null {
@@ -121,7 +135,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
         });
       }
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -164,7 +177,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
 
       if (error) throw error;
 
-      await this.invalidateCache(`${proyectoId}-${organizacionId}`);
       return createSuccess(true);
     } catch (error) {
       return createError({
@@ -247,7 +259,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
         });
       }
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -281,10 +292,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -317,10 +324,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -372,7 +375,6 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
 
       if (!data) return createSuccess(null);
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -382,5 +384,15 @@ export class ProyectoOrganizacionRolService extends BaseService<ProyectoOrganiza
         details: error
       });
     }
+  }
+
+  async create(data: Omit<ProyectoOrganizacionRol, 'id'>): Promise<ServiceResult<ProyectoOrganizacionRol | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<ProyectoOrganizacionRol, 'id'> = {
+      proyecto_id: data.proyecto_id,
+      organizacion_id: data.organizacion_id,
+      rol: data.rol,
+    };
+    return super.create(createData);
   }
 } 

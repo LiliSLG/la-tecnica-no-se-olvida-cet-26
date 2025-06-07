@@ -1,4 +1,5 @@
 import { redisClient } from './client';
+import Redis from 'ioredis';
 
 export interface RedisHealthStatus {
   isConnected: boolean;
@@ -33,6 +34,16 @@ export class RedisHealthCheck {
 
     this.lastCheck = now;
     const client = redisClient.getClient();
+
+    if (!client) {
+      this.lastError = 'Redis client not initialized';
+      return {
+        isConnected: false,
+        pingLatency: -1,
+        memoryUsage: { used: 0, peak: 0 },
+        lastError: this.lastError,
+      };
+    }
 
     try {
       const startTime = Date.now();

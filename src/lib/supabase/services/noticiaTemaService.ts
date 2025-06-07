@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
@@ -11,13 +11,32 @@ type CreateNoticiaTema = Database['public']['Tables']['noticia_tema']['Insert'];
 type Tema = Database['public']['Tables']['temas']['Row'];
 type Noticia = Database['public']['Tables']['noticias']['Row'];
 
-export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'> {
+export class NoticiaTemaService extends CacheableService<NoticiaTema> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'noticia_tema', {
+    super(supabase, {
       entityType: 'noticia',
       ttl: 3600, // 1 hour
       enableCache: true,
     });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'NoticiaTemaService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'NoticiaTemaService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateNoticiaTema): ValidationError | null {
@@ -30,6 +49,15 @@ export class NoticiaTemaService extends BaseService<NoticiaTema, 'noticia_tema'>
     }
 
     return null;
+  }
+
+  async create(data: Omit<NoticiaTema, 'id'>): Promise<ServiceResult<NoticiaTema | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<NoticiaTema, 'id'> = {
+      noticia_id: data.noticia_id,
+      tema_id: data.tema_id,
+    };
+    return super.create(createData);
   }
 
   async addTemaToNoticia(noticiaId: string, temaId: string): Promise<ServiceResult<void>> {

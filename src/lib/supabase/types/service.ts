@@ -1,6 +1,6 @@
 // src/lib/supabase/types/service.ts
 
-import { ServiceError } from '@/lib/supabase/errors/types';
+import { ServiceError } from '../errors/types';
 
 export interface ServiceResult<T> {
   success: boolean;

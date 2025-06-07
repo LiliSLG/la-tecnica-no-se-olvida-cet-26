@@ -1,11 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/supabase/types/database.types';
-import { BaseService } from '@/lib/supabase/services/baseService';
-import { ServiceResult, QueryOptions } from '@/lib/supabase/types/service';
+import { CacheableService } from '@/lib/supabase/services/cacheableService';
+import { createErrorResult as createError, createSuccessResult as createSuccess, ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '@/lib/supabase/errors/types';
 import { mapValidationError } from '@/lib/supabase/errors/utils';
-import { CacheableServiceConfig } from '@/lib/supabase/services/cacheableService';
-import { createSuccessResult as createSuccess, createErrorResult as createError } from '@/lib/supabase/types/serviceResult';
 import { supabase } from '@/lib/supabase/supabaseClient';
 
 type OfertaLaboral = Database['public']['Tables']['ofertas_laborales']['Row'];
@@ -32,17 +30,32 @@ export interface MappedOfertaLaboral {
 /**
  * Service for managing job offers
  */
-export class OfertasLaboralesService extends BaseService<OfertaLaboral, 'ofertas_laborales'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'ofertas_laborales' = 'ofertas_laborales',
-    cacheConfig: CacheableServiceConfig = { 
-      ttl: 300, 
-      entityType: 'ofertas_laborales' as any,
-      enableCache: true 
+export class OfertasLaboralesService extends CacheableService<OfertaLaboral> {
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, {
+      entityType: 'proyecto',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'OfertasLaboralesService',
+        details: { ...context, error }
+      };
     }
-  ) {
-    super(supabase, tableName, cacheConfig);
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'OfertasLaboralesService',
+      details: { ...context, error }
+    };
   }
 
   /**
@@ -260,6 +273,45 @@ export class OfertasLaboralesService extends BaseService<OfertaLaboral, 'ofertas
     } catch (error) {
       return createError(this.handleError(error, { operation: 'getPublicMapped' }));
     }
+  }
+
+  async create(data: Omit<OfertaLaboral, 'id'>): Promise<ServiceResult<OfertaLaboral | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<OfertaLaboral, 'id'> = {
+      titulo: data.titulo,
+      descripcion: data.descripcion ?? null,
+      empresa: data.empresa ?? null,
+      ubicacion: data.ubicacion ?? null,
+      estado: data.estado,
+      esta_eliminada: data.esta_eliminada ?? false,
+      eliminado_por_uid: data.eliminado_por_uid ?? null,
+      eliminado_en: data.eliminado_en ?? null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+    return super.create(createData);
+  }
+
+  /**
+   * Searches for job offers based on a query string
+   */
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<OfertaLaboral[]>> {
+    try {
+      const result = await super.search(query, options);
+      if (!result.success) return result;
+      return { success: true, data: result.data || [], error: undefined };
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  protected getSearchableFields(): string[] {
+    return ['titulo', 'descripcion', 'empresa', 'ubicacion'];
   }
 }
 

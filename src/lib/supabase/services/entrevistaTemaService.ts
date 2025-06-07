@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
@@ -9,13 +9,32 @@ import { createSuccessResult as createSuccess, createErrorResult as createError 
 type EntrevistaTema = Database['public']['Tables']['entrevista_tema']['Row'] & { id: string };
 type CreateEntrevistaTema = Database['public']['Tables']['entrevista_tema']['Insert'];
 
-export class EntrevistaTemaService extends BaseService<EntrevistaTema, 'entrevista_tema'> {
+export class EntrevistaTemaService extends CacheableService<EntrevistaTema> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'entrevista_tema', {
+    super(supabase, {
       entityType: 'entrevista',
       ttl: 3600, // 1 hour
       enableCache: true,
     });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'EntrevistaTemaService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'EntrevistaTemaService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateEntrevistaTema): ValidationError | null {
@@ -28,6 +47,15 @@ export class EntrevistaTemaService extends BaseService<EntrevistaTema, 'entrevis
     }
 
     return null;
+  }
+
+  async create(data: Omit<EntrevistaTema, 'id'>): Promise<ServiceResult<EntrevistaTema | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<EntrevistaTema, 'id'> = {
+      entrevista_id: data.entrevista_id,
+      tema_id: data.tema_id,
+    };
+    return super.create(createData);
   }
 
   async addTemaToEntrevista(entrevistaId: string, temaId: string): Promise<ServiceResult<void>> {

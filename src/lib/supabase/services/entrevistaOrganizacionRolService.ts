@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
@@ -12,13 +12,32 @@ type CreateEntrevistaOrganizacionRol = Database['public']['Tables']['entrevista_
 const VALID_ROLES = ['patrocinador', 'organizador', 'colaborador'] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
-export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrganizacionRol, 'entrevista_organizacion_rol'> {
+export class EntrevistaOrganizacionRolService extends CacheableService<EntrevistaOrganizacionRol> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'entrevista_organizacion_rol', {
+    super(supabase, {
       entityType: 'entrevista',
       ttl: 3600, // 1 hour
       enableCache: true,
     });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'EntrevistaOrganizacionRolService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'EntrevistaOrganizacionRolService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateEntrevistaOrganizacionRol): ValidationError | null {
@@ -39,6 +58,16 @@ export class EntrevistaOrganizacionRolService extends BaseService<EntrevistaOrga
     }
 
     return null;
+  }
+
+  async create(data: Omit<EntrevistaOrganizacionRol, 'id'>): Promise<ServiceResult<EntrevistaOrganizacionRol | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<EntrevistaOrganizacionRol, 'id'> = {
+      entrevista_id: data.entrevista_id,
+      organizacion_id: data.organizacion_id,
+      rol: data.rol,
+    };
+    return super.create(createData);
   }
 
   async addOrganizacionToEntrevista(entrevistaId: string, organizacionId: string, rol: ValidRole): Promise<ServiceResult<void>> {

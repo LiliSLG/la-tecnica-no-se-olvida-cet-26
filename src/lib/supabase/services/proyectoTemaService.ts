@@ -9,13 +9,28 @@ import { createSuccessResult as createSuccess, createErrorResult as createError 
 type ProyectoTema = Database['public']['Tables']['proyecto_tema']['Row'] & { id: string };
 type CreateProyectoTema = Database['public']['Tables']['proyecto_tema']['Insert'];
 
-export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tema'> {
+export class ProyectoTemaService extends BaseService<ProyectoTema> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'proyecto_tema', {
-      entityType: 'proyecto',
-      ttl: 3600, // 1 hour
-      enableCache: true,
-    });
+    super(supabase, { tableName: 'proyecto_tema' });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'ProyectoTemaService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'ProyectoTemaService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateProyectoTema): ValidationError | null {
@@ -25,6 +40,18 @@ export class ProyectoTemaService extends BaseService<ProyectoTema, 'proyecto_tem
 
     if (!data.tema_id) {
       return mapValidationError('Tema ID is required', 'tema_id', data.tema_id);
+    }
+
+    return null;
+  }
+
+  protected validateUpdateInput(data: Partial<ProyectoTema>): ValidationError | null {
+    if (data.proyecto_id === '') {
+      return mapValidationError('Proyecto ID cannot be empty', 'proyecto_id', data.proyecto_id);
+    }
+
+    if (data.tema_id === '') {
+      return mapValidationError('Tema ID cannot be empty', 'tema_id', data.tema_id);
     }
 
     return null;

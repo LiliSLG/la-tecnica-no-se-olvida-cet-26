@@ -1,8 +1,8 @@
-import { ServiceResult } from '@/lib/supabase/types/service';
-import { createSuccessResult } from '@/lib/supabase/types/serviceResult';
+import { ServiceResult } from '../types/service';
+import { createSuccessResult } from '../types/serviceResult';
 import { BaseService } from './baseService';
-import { cacheService } from '@/lib/redis/cacheService';
-import { cacheKeys } from '@/lib/redis/cacheKeys';
+import { cacheService } from '../../redis/cacheService';
+import { cacheKeys } from '../../redis/cacheKeys';
 import { ValidationError } from '../errors/types';
 
 // Check if we're on the server side

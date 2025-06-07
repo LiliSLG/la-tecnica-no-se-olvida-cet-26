@@ -4,7 +4,6 @@ import { BaseService } from './baseService';
 import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 // Import relation services
@@ -29,17 +28,13 @@ interface MappedProyecto {
   actualizadoEn: string;
 }
 
-export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
+export class ProyectosService extends BaseService<Proyecto> {
   private proyectoTemaService: ProyectoTemaService;
   private proyectoPersonaRolService: ProyectoPersonaRolService;
   private proyectoOrganizacionRolService: ProyectoOrganizacionRolService;
 
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'proyectos' = 'proyectos',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto', enableCache: true }
-  ) {
-    super(supabase, tableName, cacheConfig);
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, { tableName: 'proyectos' });
     this.proyectoTemaService = new ProyectoTemaService(supabase);
     this.proyectoPersonaRolService = new ProyectoPersonaRolService(supabase);
     this.proyectoOrganizacionRolService = new ProyectoOrganizacionRolService(supabase);
@@ -66,11 +61,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
 
   async getById(id: string): Promise<ServiceResult<Proyecto | null>> {
     try {
-      const cachedResult = await this.getFromCache(id);
-      if (cachedResult.success && cachedResult.data) {
-        return createSuccess(cachedResult.data);
-      }
-
       const { data: proyecto, error } = await this.supabase
         .from(this.tableName)
         .select('*')
@@ -85,8 +75,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       }
 
       if (!proyecto) return createSuccess(null);
-
-      await this.setInCache(id, proyecto);
       return createSuccess(proyecto);
     } catch (error) {
       return createError({
@@ -102,33 +90,15 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     try {
       if (!ids.length) return createSuccess([]);
 
-      const cachedResults = await Promise.all(ids.map(id => this.getFromCache(id)));
-      const missingIds = ids.filter((id, index) => !cachedResults[index]?.success || !cachedResults[index]?.data);
-
-      if (missingIds.length === 0) {
-        const validResults = cachedResults
-          .filter(result => result.success && result.data)
-          .map(result => result.data as Proyecto);
-        return createSuccess(validResults);
-      }
-
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
-        .in('id', missingIds);
+        .in('id', ids);
 
       if (error) throw error;
       if (!data) return createSuccess([]);
 
-      for (const proyecto of data) {
-        await this.setInCache(proyecto.id, proyecto);
-      }
-
-      const validCachedResults = cachedResults
-        .filter(result => result.success && result.data)
-        .map(result => result.data as Proyecto);
-      const allResults = [...validCachedResults, ...data];
-      return createSuccess(allResults);
+      return createSuccess(data);
     } catch (error) {
       return createError({
         name: 'ServiceError',
@@ -150,10 +120,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      for (const proyecto of data) {
-        await this.setInCache(proyecto.id, proyecto);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -165,26 +131,11 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     }
   }
 
-  async search(term: string): Promise<ServiceResult<Proyecto[] | null>> {
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<Proyecto[]>> {
     try {
-      if (!term.trim()) return createSuccess([]);
-
-      const searchPattern = `%${term.trim()}%`;
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .or(`titulo.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
-        .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return createSuccess(null);
-
-      for (const proyecto of data) {
-        await this.setInCache(proyecto.id, proyecto);
-      }
-
-      return createSuccess(data);
+      const result = await super.search(query, options);
+      if (!result.success) return result;
+      return { success: true, data: result.data || [], error: undefined };
     } catch (error) {
       return createError({
         name: 'ServiceError',
@@ -224,11 +175,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -263,11 +209,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -304,11 +245,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -343,11 +279,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -432,7 +363,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         }
       }
 
-      await this.setInCache(proyecto.id, proyecto);
       return createSuccess(proyecto);
     } catch (error) {
       return createError({
@@ -468,11 +398,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -496,11 +421,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      // Cache results
-      for (const result of data) {
-        await this.setInCache(result.id, result);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -556,7 +476,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         });
       }
 
-      await this.setInCache(id, proyecto);
       return createSuccess(proyecto);
     } catch (error) {
       return createError({
@@ -611,7 +530,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         });
       }
 
-      await this.setInCache(id, proyecto);
       return createSuccess(proyecto);
     } catch (error) {
       return createError({
@@ -663,7 +581,6 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
         });
       }
 
-      await this.setInCache(id, proyecto);
       return createSuccess(proyecto);
     } catch (error) {
       return createError({
@@ -675,43 +592,80 @@ export class ProyectosService extends BaseService<Proyecto, 'proyectos'> {
     }
   }
 
-  async create(data: CreateProyecto): Promise<ServiceResult<Proyecto | null>> {
+  async create(data: Omit<Proyecto, 'id'>): Promise<ServiceResult<Proyecto | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<Proyecto, 'id'> = {
+      titulo: data.titulo,
+      descripcion: data.descripcion ?? null,
+      archivo_principal_url: data.archivo_principal_url ?? null,
+      status: data.status ?? 'borrador',
+      esta_eliminado: data.esta_eliminado ?? false,
+      eliminado_por_uid: data.eliminado_por_uid ?? null,
+      eliminado_en: data.eliminado_en ?? null,
+      created_at: data.created_at ?? new Date().toISOString(),
+      updated_at: data.updated_at ?? new Date().toISOString(),
+    };
+    return super.create(createData);
+  }
+
+  protected async getRelatedEntities<R>(
+    id: string,
+    sourceTable: string,
+    targetTable: string,
+    junctionTable: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<R[] | null>> {
     try {
-      const validationError = this.validateCreateInput(data);
-      if (validationError) {
-        return createError({
-          name: 'ValidationError',
-          message: validationError.message,
-          code: 'VALIDATION_ERROR',
-          details: validationError
+      let query = this.supabase
+        .from(targetTable)
+        .select(`
+          *,
+          ${junctionTable}!inner (
+            ${sourceTable}!inner (
+              id
+            )
+          )
+        `)
+        .eq(`${junctionTable}.${sourceTable}_id`, id);
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
         });
       }
 
-      const { data: proyecto, error } = await this.supabase
-        .from(this.tableName)
-        .insert(data)
-        .select()
-        .single();
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await query;
 
       if (error) throw error;
-      if (!proyecto) {
-        return createError({
-          name: 'ServiceError',
-          message: 'Failed to create project',
-          code: 'DB_ERROR',
-          details: { data }
-        });
-      }
+      if (!results) return createSuccess<R[] | null>(null);
 
-      await this.setInCache(proyecto.id, proyecto);
-      return createSuccess(proyecto);
+      return createSuccess(results as R[]);
     } catch (error) {
-      return createError({
+      return createError<R[] | null>({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'An unexpected error occurred',
         code: 'DB_ERROR',
         details: error
       });
     }
+  }
+
+  protected getSearchableFields(): string[] {
+    return ['nombre', 'descripcion', 'estado', 'ciudad', 'provincia'];
   }
 } 

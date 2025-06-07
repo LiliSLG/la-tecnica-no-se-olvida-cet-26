@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
@@ -12,13 +12,32 @@ type CreateEntrevistaPersonaRol = Database['public']['Tables']['entrevista_perso
 const VALID_ROLES = ['entrevistador', 'entrevistado', 'moderador'] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
-export class EntrevistaPersonaRolService extends BaseService<EntrevistaPersonaRol, 'entrevista_persona_rol'> {
+export class EntrevistaPersonaRolService extends CacheableService<EntrevistaPersonaRol> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'entrevista_persona_rol', {
+    super(supabase, {
       entityType: 'entrevista',
       ttl: 3600, // 1 hour
       enableCache: true,
     });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'EntrevistaPersonaRolService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'EntrevistaPersonaRolService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateEntrevistaPersonaRol): ValidationError | null {
@@ -39,6 +58,16 @@ export class EntrevistaPersonaRolService extends BaseService<EntrevistaPersonaRo
     }
 
     return null;
+  }
+
+  async create(data: Omit<EntrevistaPersonaRol, 'id'>): Promise<ServiceResult<EntrevistaPersonaRol | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<EntrevistaPersonaRol, 'id'> = {
+      entrevista_id: data.entrevista_id,
+      persona_id: data.persona_id,
+      rol: data.rol,
+    };
+    return super.create(createData);
   }
 
   async addPersonaToEntrevista(entrevistaId: string, personaId: string, rol: ValidRole): Promise<ServiceResult<void>> {

@@ -4,20 +4,34 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type ProyectoPersonaRol = Database['public']['Tables']['proyecto_persona_rol']['Row'] & { id: string };
 type CreateProyectoPersonaRol = Database['public']['Tables']['proyecto_persona_rol']['Insert'];
 type UpdateProyectoPersonaRol = Database['public']['Tables']['proyecto_persona_rol']['Update'];
 
-export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, 'proyecto_persona_rol'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'proyecto_persona_rol' = 'proyecto_persona_rol',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'proyecto', enableCache: true }
-  ) {
-    super(supabase, tableName, cacheConfig);
+export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol> {
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, { tableName: 'proyecto_persona_rol' });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'ProyectoPersonaRolService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'ProyectoPersonaRolService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateProyectoPersonaRol): ValidationError | null {
@@ -121,7 +135,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
         });
       }
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -164,7 +177,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
 
       if (error) throw error;
 
-      await this.invalidateCache(`${proyectoId}-${personaId}`);
       return createSuccess(true);
     } catch (error) {
       return createError({
@@ -247,7 +259,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
         });
       }
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -281,10 +292,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -317,10 +324,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -372,7 +375,6 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
 
       if (!data) return createSuccess(null);
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -382,5 +384,15 @@ export class ProyectoPersonaRolService extends BaseService<ProyectoPersonaRol, '
         details: error
       });
     }
+  }
+
+  async create(data: Omit<ProyectoPersonaRol, 'id'>): Promise<ServiceResult<ProyectoPersonaRol | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<ProyectoPersonaRol, 'id'> = {
+      proyecto_id: data.proyecto_id,
+      persona_id: data.persona_id,
+      rol: data.rol,
+    };
+    return super.create(createData);
   }
 } 

@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase/supabaseClient';
-import { ServiceResult, createSuccessResult, createErrorResult } from '@/lib/supabase/types/service';
-import { PersonasService } from './personasService';
-import { Database } from '../types/database.types';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '../types/database.types';
+import { ServiceResult } from '../types/service';
+import { createSuccessResult, createErrorResult } from '../types/serviceResult';
+import { PersonasService } from './personasService';
 
 // TODO: If PersonasService mapping changes, update this helper accordingly
 function mapPersonaToDomain(persona: Database['public']['Tables']['personas']['Row']) {
@@ -29,14 +29,16 @@ type Persona = Database['public']['Tables']['personas']['Row'];
 
 export class AuthService {
   private personasService: PersonasService;
+  private supabase: SupabaseClient<Database>;
 
   constructor(supabase: SupabaseClient<Database>) {
+    this.supabase = supabase;
     this.personasService = new PersonasService(supabase);
   }
 
   async signIn(email: string, password: string): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -95,7 +97,7 @@ export class AuthService {
 
   async signUp(email: string, password: string, userData: Partial<MappedPersona>): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await this.supabase.auth.signUp({
         email,
         password,
       });
@@ -190,7 +192,7 @@ export class AuthService {
 
   async signOut(): Promise<ServiceResult<void>> {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await this.supabase.auth.signOut();
       if (error) {
         return createErrorResult({
           name: 'ServiceError',
@@ -213,7 +215,7 @@ export class AuthService {
 
   async resetPassword(email: string): Promise<ServiceResult<void>> {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await this.supabase.auth.resetPasswordForEmail(email);
       if (error) {
         return createErrorResult({
           name: 'ServiceError',
@@ -236,7 +238,7 @@ export class AuthService {
 
   async updatePassword(password: string): Promise<ServiceResult<void>> {
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await this.supabase.auth.updateUser({ password });
       if (error) {
         return createErrorResult({
           name: 'ServiceError',
@@ -259,7 +261,7 @@ export class AuthService {
 
   async getCurrentUser(): Promise<ServiceResult<MappedPersona | null>> {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await this.supabase.auth.getUser();
       if (authError) {
         return createErrorResult({
           name: 'ServiceError',

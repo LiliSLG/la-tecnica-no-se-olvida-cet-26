@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase/supabaseClient";
+import { supabase } from "../lib/supabase/supabaseClient";
 import { toast } from "sonner";
 
 interface AuthContextType {

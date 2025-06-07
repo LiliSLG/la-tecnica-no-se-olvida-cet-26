@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { VISIBILIDAD_PERFIL } from "@/lib/constants/persona";
 
 export const personaSchema = z.object({
   id: z.string().optional(),
@@ -16,7 +17,6 @@ export const personaSchema = z.object({
   provincia: z.string().optional(),
   direccion: z.string().optional(),
   codigoPostal: z.string().optional(),
-  fotoPerfil: z.string().nullable(),
   linksProfesionales: z.array(z.object({
     plataforma: z.string(),
     url: z.string().url("URL inválida")
@@ -35,7 +35,7 @@ export const personaSchema = z.object({
   empresaOInstitucionActual: z.string().nullable(),
   cargoActual: z.string().nullable(),
   telefonoContacto: z.string().nullable(),
-  visibilidadPerfil: z.string().default("public"),
+  visibilidadPerfil: z.enum(VISIBILIDAD_PERFIL.map(v => v.value) as [string, ...string[]]).default("publico"),
   estaEliminada: z.boolean().default(false),
   eliminadoPorUid: z.string().nullable(),
   eliminadoEn: z.string().nullable(),

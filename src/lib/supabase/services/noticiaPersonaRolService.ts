@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
@@ -15,13 +15,32 @@ type Noticia = Database['public']['Tables']['noticias']['Row'];
 const VALID_ROLES = ['autor', 'editor', 'colaborador'] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
-export class NoticiaPersonaRolService extends BaseService<NoticiaPersonaRol, 'noticia_persona_rol'> {
+export class NoticiaPersonaRolService extends CacheableService<NoticiaPersonaRol> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'noticia_persona_rol', {
+    super(supabase, {
       entityType: 'noticia',
       ttl: 3600, // 1 hour
       enableCache: true,
     });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'NoticiaPersonaRolService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'NoticiaPersonaRolService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreateNoticiaPersonaRol): ValidationError | null {
@@ -54,6 +73,16 @@ export class NoticiaPersonaRolService extends BaseService<NoticiaPersonaRol, 'no
 
   private isValidRole(rol: string): rol is ValidRole {
     return VALID_ROLES.includes(rol as ValidRole);
+  }
+
+  async create(data: Omit<NoticiaPersonaRol, 'id'>): Promise<ServiceResult<NoticiaPersonaRol | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<NoticiaPersonaRol, 'id'> = {
+      noticia_id: data.noticia_id,
+      persona_id: data.persona_id,
+      rol: data.rol,
+    };
+    return super.create(createData);
   }
 
   async addPersonaToNoticia(noticiaId: string, personaId: string, rol: ValidRole): Promise<ServiceResult<void>> {

@@ -5,7 +5,7 @@ import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
-import { supabase } from '@/lib/supabase/supabaseClient';
+import { supabase } from '../supabaseClient';
 
 type Persona = Database['public']['Tables']['personas']['Row'];
 type CreatePersona = Database['public']['Tables']['personas']['Insert'];
@@ -241,16 +241,11 @@ export class PersonasService extends BaseService<Persona> {
   /**
    * Searches personas
    */
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Persona[] | null>> {
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<Persona[]>> {
     try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select()
-        .or(`nombre.ilike.%${query}%,apellido.ilike.%${query}%,email.ilike.%${query}%`)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return createSuccess(data as Persona[]);
+      const result = await super.search(query, options);
+      if (!result.success) return result;
+      return { success: true, data: result.data || [], error: undefined };
     } catch (error) {
       return createError({
         name: 'ServiceError',
@@ -454,6 +449,51 @@ export class PersonasService extends BaseService<Persona> {
         details: error
       });
     }
+  }
+
+  async create(data: Omit<Persona, 'id'>): Promise<ServiceResult<Persona | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<Persona, 'id'> = {
+      nombre: data.nombre,
+      apellido: data.apellido,
+      email: data.email ?? null,
+      biografia: data.biografia ?? null,
+      foto_url: data.foto_url ?? null,
+      categoria_principal: data.categoria_principal ?? "otro",
+      capacidades_plataforma: data.capacidades_plataforma ?? [],
+      activo: data.activo ?? true,
+      es_admin: data.es_admin ?? false,
+      titulo_profesional: data.titulo_profesional ?? null,
+      descripcion_personal_o_profesional: data.descripcion_personal_o_profesional ?? null,
+      areas_de_interes_o_expertise: data.areas_de_interes_o_expertise ?? [],
+      disponible_para_proyectos: data.disponible_para_proyectos ?? false,
+      es_ex_alumno_cet: data.es_ex_alumno_cet ?? false,
+      ano_cursada_actual_cet: data.ano_cursada_actual_cet ?? null,
+      ano_egreso_cet: data.ano_egreso_cet ?? null,
+      titulacion_obtenida_cet: data.titulacion_obtenida_cet ?? null,
+      proyecto_final_cet_id: data.proyecto_final_cet_id ?? null,
+      buscando_oportunidades: data.buscando_oportunidades ?? false,
+      estado_situacion_laboral: data.estado_situacion_laboral ?? "no_especificado",
+      historia_de_exito_o_resumen_trayectoria: data.historia_de_exito_o_resumen_trayectoria ?? null,
+      empresa_o_institucion_actual: data.empresa_o_institucion_actual ?? null,
+      cargo_actual: data.cargo_actual ?? null,
+      ofrece_colaboracion_como: data.ofrece_colaboracion_como ?? [],
+      telefono_contacto: data.telefono_contacto ?? null,
+      links_profesionales: data.links_profesionales ?? [],
+      ubicacion_residencial: {
+        ciudad: data.ubicacion_residencial?.ciudad ?? "",
+        provincia: data.ubicacion_residencial?.provincia ?? "rio_negro",
+        direccion: data.ubicacion_residencial?.direccion,
+        codigo_postal: data.ubicacion_residencial?.codigo_postal,
+      },
+      visibilidad_perfil: data.visibilidad_perfil ?? "publico",
+      esta_eliminada: data.esta_eliminada ?? false,
+      eliminado_por_uid: data.eliminado_por_uid ?? null,
+      eliminado_en: data.eliminado_en ?? null,
+      created_at: data.created_at ?? new Date().toISOString(),
+      updated_at: data.updated_at ?? new Date().toISOString(),
+    };
+    return super.create(createData);
   }
 }
 

@@ -1,20 +1,19 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult } from '../types/service';
 import { QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type Entrevista = Database['public']['Tables']['entrevistas']['Row'];
 type CreateEntrevista = Database['public']['Tables']['entrevistas']['Insert'];
 type UpdateEntrevista = Database['public']['Tables']['entrevistas']['Update'];
 
-export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
+export class EntrevistasService extends CacheableService<Entrevista> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'entrevistas', {
+    super(supabase, {
       entityType: 'entrevista',
       ttl: 3600, // 1 hour
       enableCache: true,
@@ -74,8 +73,65 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
     }
   }
 
+  protected async getRelatedEntities<R>(
+    id: string,
+    sourceTable: string,
+    targetTable: string,
+    junctionTable: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<R[] | null>> {
+    try {
+      let query = this.supabase
+        .from(targetTable)
+        .select(`
+          *,
+          ${junctionTable}!inner (
+            ${sourceTable}!inner (
+              id
+            )
+          )
+        `)
+        .eq(`${junctionTable}.${sourceTable}_id`, id);
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await query;
+
+      if (error) throw error;
+      if (!results) return createSuccess<R[] | null>(null);
+
+      return createSuccess(results as R[]);
+    } catch (error) {
+      return createError<R[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
   async getAll(options?: QueryOptions): Promise<ServiceResult<Entrevista[] | null>> {
-    return this.getAllWithPagination(options);
+    return super.getAll(options);
   }
 
   async getByTema(
@@ -263,21 +319,15 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
   ): Promise<ServiceResult<Entrevista[] | null>> {
     try {
       const { data: results, error } = await this.supabase
-        .from(this.tableName)
+        .from('entrevistas')
         .select()
-        .eq('esta_publicada', true)
-        .eq('esta_eliminada', false)
+        .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       if (!results) return createSuccess<Entrevista[] | null>(null);
 
-      // Cache individual results
-      for (const result of results) {
-        await this.setInCache(result.id, result);
-      }
-
-      return createSuccess(results);
+      return createSuccess(results as Entrevista[]);
     } catch (error) {
       return createError<Entrevista[] | null>({
         name: 'ServiceError',
@@ -289,53 +339,20 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
   }
 
   async getById(id: string): Promise<ServiceResult<Entrevista | null>> {
-    try {
-      const cachedResult = await this.getFromCache(id);
-      if (cachedResult.success && cachedResult.data) {
-        return createSuccess(cachedResult.data);
-      }
-
-      const { data: entrevista, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      if (!entrevista) return createSuccess<Entrevista | null>(null);
-
-      await this.setInCache(id, entrevista);
-      return createSuccess(entrevista);
-    } catch (error) {
-      return createError<Entrevista | null>({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
+    return super.getById(id);
   }
 
   async getByIds(ids: string[]): Promise<ServiceResult<Entrevista[] | null>> {
     try {
-      if (!ids.length) {
-        return createSuccess<Entrevista[] | null>([]);
-      }
-
-      const { data: entrevistas, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
+      const { data: results, error } = await this.supabase
+        .from('entrevistas')
+        .select()
         .in('id', ids);
 
       if (error) throw error;
-      if (!entrevistas) return createSuccess<Entrevista[] | null>([]);
+      if (!results) return createSuccess<Entrevista[] | null>(null);
 
-      // Cache individual results
-      for (const entrevista of entrevistas) {
-        await this.setInCache(entrevista.id, entrevista);
-      }
-
-      return createSuccess(entrevistas);
+      return createSuccess(results as Entrevista[]);
     } catch (error) {
       return createError<Entrevista[] | null>({
         name: 'ServiceError',
@@ -348,22 +365,16 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
 
   async getPublic(): Promise<ServiceResult<Entrevista[] | null>> {
     try {
-      const { data: entrevistas, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('esta_publicada', true)
-        .eq('esta_eliminada', false)
+      const { data: results, error } = await this.supabase
+        .from('entrevistas')
+        .select()
+        .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!entrevistas) return createSuccess<Entrevista[] | null>([]);
+      if (!results) return createSuccess<Entrevista[] | null>(null);
 
-      // Cache individual results
-      for (const entrevista of entrevistas) {
-        await this.setInCache(entrevista.id, entrevista);
-      }
-
-      return createSuccess(entrevistas);
+      return createSuccess(results as Entrevista[]);
     } catch (error) {
       return createError<Entrevista[] | null>({
         name: 'ServiceError',
@@ -374,37 +385,13 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
     }
   }
 
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Entrevista[] | null>> {
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<Entrevista[]>> {
     try {
-      if (!query) {
-        return createSuccess<Entrevista[] | null>([]);
-      }
-
-      let searchQuery = this.supabase
-        .from(this.tableName)
-        .select()
-        .textSearch('search_vector', query)
-        .eq('esta_eliminada', false);
-
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          searchQuery = searchQuery.eq(key, value);
-        });
-      }
-
-      const { data: results, error } = await searchQuery;
-
-      if (error) throw error;
-      if (!results) return createSuccess<Entrevista[] | null>([]);
-
-      // Cache individual results
-      for (const result of results) {
-        await this.setInCache(result.id, result);
-      }
-
-      return createSuccess(results);
+      const result = await super.search(query, options);
+      if (!result.success) return result;
+      return { success: true, data: result.data || [], error: undefined };
     } catch (error) {
-      return createError<Entrevista[] | null>({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'An unexpected error occurred',
         code: 'DB_ERROR',
@@ -414,69 +401,27 @@ export class EntrevistasService extends BaseService<Entrevista, 'entrevistas'> {
   }
 
   async update(id: string, data: UpdateEntrevista): Promise<ServiceResult<Entrevista | null>> {
-    try {
-      const validationError = this.validateUpdateInput(data);
-      if (validationError) {
-        return createError<Entrevista | null>({
-          name: 'ValidationError',
-          message: validationError.message,
-          code: 'VALIDATION_ERROR',
-          details: validationError
-        });
-      }
-
-      const { data: updated, error } = await this.supabase
-        .from(this.tableName)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!updated) return createSuccess<Entrevista | null>(null);
-
-      await this.setInCache(id, updated);
-      return createSuccess(updated);
-    } catch (error) {
-      return createError<Entrevista | null>({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
+    return super.update(id, data);
   }
 
-  async create(data: CreateEntrevista): Promise<ServiceResult<Entrevista | null>> {
-    try {
-      const validationError = this.validateCreateInput(data);
-      if (validationError) {
-        return createError<Entrevista | null>({
-          name: 'ValidationError',
-          message: validationError.message,
-          code: 'VALIDATION_ERROR',
-          details: validationError
-        });
-      }
+  async create(data: Omit<Entrevista, 'id'>): Promise<ServiceResult<Entrevista | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<Entrevista, 'id'> = {
+      titulo: data.titulo,
+      descripcion: data.descripcion ?? null,
+      video_url: data.video_url ?? null,
+      status: data.status ?? 'scheduled',
+      fecha_entrevista: data.fecha_entrevista ?? null,
+      esta_eliminada: data.esta_eliminada ?? false,
+      eliminado_por_uid: data.eliminado_por_uid ?? null,
+      eliminado_en: data.eliminado_en ?? null,
+      created_at: data.created_at ?? new Date().toISOString(),
+      updated_at: data.updated_at ?? new Date().toISOString(),
+    };
+    return super.create(createData);
+  }
 
-      const { data: created, error } = await this.supabase
-        .from(this.tableName)
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!created) return createSuccess<Entrevista | null>(null);
-
-      await this.setInCache(created.id, created);
-      return createSuccess(created);
-    } catch (error) {
-      return createError<Entrevista | null>({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
+  protected getSearchableFields(): string[] {
+    return ['titulo', 'descripcion', 'entrevistador', 'entrevistado'];
   }
 } 

@@ -4,20 +4,34 @@ import { BaseService } from './baseService';
 import { ServiceResult } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
-import { CacheableServiceConfig } from './cacheableService';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 
 type PersonaTema = Database['public']['Tables']['persona_tema']['Row'] & { id: string };
 type CreatePersonaTema = Database['public']['Tables']['persona_tema']['Insert'];
 type UpdatePersonaTema = Database['public']['Tables']['persona_tema']['Update'];
 
-export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'> {
-  constructor(
-    supabase: SupabaseClient<Database>,
-    tableName: 'persona_tema' = 'persona_tema',
-    cacheConfig: CacheableServiceConfig = { ttl: 300, entityType: 'persona', enableCache: true }
-  ) {
-    super(supabase, tableName, cacheConfig);
+export class PersonaTemaService extends BaseService<PersonaTema> {
+  constructor(supabase: SupabaseClient<Database>) {
+    super(supabase, { tableName: 'persona_tema' });
+  }
+
+  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+    if (error instanceof Error) {
+      return {
+        name: 'ServiceError',
+        message: error.message,
+        code: 'DB_ERROR',
+        source: 'PersonaTemaService',
+        details: { ...context, error }
+      };
+    }
+    return {
+      name: 'ServiceError',
+      message: 'An unexpected error occurred',
+      code: 'DB_ERROR',
+      source: 'PersonaTemaService',
+      details: { ...context, error }
+    };
   }
 
   protected validateCreateInput(data: CreatePersonaTema): ValidationError | null {
@@ -38,6 +52,15 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
       return mapValidationError('El ID del tema no puede estar vacío', 'tema_id', data.tema_id);
     }
     return null;
+  }
+
+  async create(data: Omit<PersonaTema, 'id'>): Promise<ServiceResult<PersonaTema | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<PersonaTema, 'id'> = {
+      persona_id: data.persona_id,
+      tema_id: data.tema_id,
+    };
+    return super.create(createData);
   }
 
   async addTemaToPersona(
@@ -93,7 +116,6 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
         });
       }
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -136,7 +158,6 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
 
       if (error) throw error;
 
-      await this.invalidateCache(`${personaId}-${temaId}`);
       return createSuccess(true);
     } catch (error) {
       return createError({
@@ -170,10 +191,6 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
       if (error) throw error;
       if (!data) return createSuccess(null);
 
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
-
       return createSuccess(data);
     } catch (error) {
       return createError({
@@ -206,10 +223,6 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
 
       if (error) throw error;
       if (!data) return createSuccess(null);
-
-      for (const item of data) {
-        await this.setInCache(item.id, item);
-      }
 
       return createSuccess(data);
     } catch (error) {
@@ -261,7 +274,6 @@ export class PersonaTemaService extends BaseService<PersonaTema, 'persona_tema'>
 
       if (!data) return createSuccess(null);
 
-      await this.setInCache(data.id, data);
       return createSuccess(data);
     } catch (error) {
       return createError({

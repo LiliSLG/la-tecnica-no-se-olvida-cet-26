@@ -41,7 +41,7 @@ export const personaSchema = z.object({
   anoCursadaActualCET: z.number().int().min(1).max(6).nullable(),
   anoEgresoCET: z.number().int().min(1900).max(new Date().getFullYear()).nullable(),
   titulacionObtenidaCET: z.string().nullable(),
-  proyectoFinalCETId: z.string().uuid().nullable(),
+  proyectoFinalCETId: z.string().nullable(),
   buscandoOportunidades: z.boolean().default(false),
   estadoSituacionLaboral: z.enum(ESTADOS_SITUACION_LABORAL),
   historiaDeExitoOResumenTrayectoria: z.string().nullable(),

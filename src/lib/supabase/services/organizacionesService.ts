@@ -1,11 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { BaseService } from './baseService';
+import { CacheableService } from './cacheableService';
 import { ServiceResult, QueryOptions } from '../types/service';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
-import { CacheableServiceConfig } from './cacheableService';
 
 type Organizacion = Database['public']['Tables']['organizaciones']['Row'];
 type CreateOrganizacion = Database['public']['Tables']['organizaciones']['Insert'];
@@ -15,9 +14,9 @@ type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 type Noticia = Database['public']['Tables']['noticias']['Row'];
 type Entrevista = Database['public']['Tables']['entrevistas']['Row'];
 
-export class OrganizacionesService extends BaseService<Organizacion, 'organizaciones'> {
+export class OrganizacionesService extends CacheableService<Organizacion> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, 'organizaciones', {
+    super(supabase, {
       entityType: 'organizacion',
       ttl: 3600, // 1 hour
       enableCache: true,
@@ -66,7 +65,64 @@ export class OrganizacionesService extends BaseService<Organizacion, 'organizaci
   }
 
   async getAll(options?: QueryOptions): Promise<ServiceResult<Organizacion[] | null>> {
-    return this.getAllWithPagination(options);
+    return super.getAll(options);
+  }
+
+  protected async getRelatedEntities<R>(
+    id: string,
+    sourceTable: string,
+    targetTable: string,
+    junctionTable: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<R[] | null>> {
+    try {
+      let query = this.supabase
+        .from(targetTable)
+        .select(`
+          *,
+          ${junctionTable}!inner (
+            ${sourceTable}!inner (
+              id
+            )
+          )
+        `)
+        .eq(`${junctionTable}.${sourceTable}_id`, id);
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await query;
+
+      if (error) throw error;
+      if (!results) return createSuccess<R[] | null>(null);
+
+      return createSuccess(results as R[]);
+    } catch (error) {
+      return createError<R[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
   }
 
   async getByTema(
@@ -410,26 +466,11 @@ export class OrganizacionesService extends BaseService<Organizacion, 'organizaci
     }
   }
 
-  async search(query: string, options?: QueryOptions): Promise<ServiceResult<Organizacion[] | null>> {
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<Organizacion[]>> {
     try {
-      if (!query.trim()) return createSuccess([]);
-
-      const searchPattern = `%${query.trim()}%`;
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .or(`nombre.ilike.${searchPattern},descripcion.ilike.${searchPattern}`)
-        .eq('esta_eliminada', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (!data) return createSuccess([]);
-
-      for (const organizacion of data) {
-        await this.setInCache(organizacion.id, organizacion);
-      }
-
-      return createSuccess(data);
+      const result = await super.search(query, options);
+      if (!result.success) return result;
+      return { success: true, data: result.data || [], error: undefined };
     } catch (error) {
       return createError({
         name: 'ServiceError',
@@ -492,44 +533,20 @@ export class OrganizacionesService extends BaseService<Organizacion, 'organizaci
     }
   }
 
-  async create(data: CreateOrganizacion): Promise<ServiceResult<Organizacion | null>> {
-    try {
-      const validationError = this.validateCreateInput(data);
-      if (validationError) {
-        return createError({
-          name: 'ValidationError',
-          message: validationError.message,
-          code: 'VALIDATION_ERROR',
-          details: validationError
-        });
-      }
-
-      const { data: organizacion, error } = await this.supabase
-        .from(this.tableName)
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!organizacion) {
-        return createError({
-          name: 'ServiceError',
-          message: 'Error creating organizacion',
-          code: 'DB_ERROR',
-          details: { data }
-        });
-      }
-
-      await this.setInCache(organizacion.id, organizacion);
-      return createSuccess(organizacion);
-    } catch (error) {
-      return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
+  async create(data: Omit<Organizacion, 'id'>): Promise<ServiceResult<Organizacion | null>> {
+    // Ensure required fields are not undefined
+    const createData: Omit<Organizacion, 'id'> = {
+      nombre: data.nombre,
+      descripcion: data.descripcion ?? null,
+      logo_url: data.logo_url ?? null,
+      sitio_web: data.sitio_web ?? null,
+      esta_eliminada: data.esta_eliminada ?? false,
+      eliminado_por_uid: data.eliminado_por_uid ?? null,
+      eliminado_en: data.eliminado_en ?? null,
+      created_at: data.created_at ?? new Date().toISOString(),
+      updated_at: data.updated_at ?? new Date().toISOString(),
+    };
+    return super.create(createData);
   }
 
   async delete(id: string): Promise<ServiceResult<boolean>> {
@@ -607,5 +624,9 @@ export class OrganizacionesService extends BaseService<Organizacion, 'organizaci
         details: error
       });
     }
+  }
+
+  protected getSearchableFields(): string[] {
+    return ['nombre', 'descripcion', 'tipo', 'ciudad', 'provincia', 'pais'];
   }
 } 

@@ -1,12 +1,28 @@
-import { supabase } from '@/lib/supabase/supabaseClient';
+import { supabase } from '../supabaseClient';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 import { ServiceResult } from '../types/service';
+import { storageConfig } from '../supabaseStorage';
 
 export class StorageService {
   private readonly bucketName: string;
+  private readonly maxFileSize: number;
+  private readonly allowedTypes: readonly string[];
 
-  constructor(bucketName: string = 'personas') {
-    this.bucketName = bucketName;
+  constructor(bucketName: keyof typeof storageConfig.buckets = 'public') {
+    const bucketConfig = storageConfig.buckets[bucketName];
+    this.bucketName = bucketConfig.name;
+    this.maxFileSize = bucketConfig.maxFileSize;
+    this.allowedTypes = bucketConfig.allowedTypes;
+  }
+
+  private validateFile(file: File): string | null {
+    if (file.size > this.maxFileSize) {
+      return `File size exceeds maximum allowed size of ${this.maxFileSize / (1024 * 1024)}MB`;
+    }
+    if (!this.allowedTypes.includes(file.type)) {
+      return `File type ${file.type} is not allowed. Allowed types: ${this.allowedTypes.join(', ')}`;
+    }
+    return null;
   }
 
   async uploadFile(
@@ -14,6 +30,17 @@ export class StorageService {
     path: string
   ): Promise<ServiceResult<{ path: string; url: string } | null>> {
     try {
+      // Validate file
+      const validationError = this.validateFile(file);
+      if (validationError) {
+        return createError({
+          name: 'ValidationError',
+          message: validationError,
+          code: 'VALIDATION_ERROR',
+        });
+      }
+
+      // Upload file
       const { data, error } = await supabase.storage
         .from(this.bucketName)
         .upload(path, file, {
@@ -30,6 +57,7 @@ export class StorageService {
         });
       }
 
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from(this.bucketName)
         .getPublicUrl(data.path);

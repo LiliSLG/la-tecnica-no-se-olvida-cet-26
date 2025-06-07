@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { ServiceResult, QueryOptions } from '@/lib/supabase/types/service';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
+import { ServiceResult, QueryOptions } from '../types/service';
+import { createSuccessResult, createErrorResult } from '../types/serviceResult';
 import { ValidationError } from '../errors/types';
 import { mapValidationError } from '../errors/utils';
 
@@ -190,4 +190,66 @@ export abstract class BaseService<T extends { id: string }> {
 
   protected abstract validateCreateInput(data: Partial<T>): ValidationError | null;
   protected abstract validateUpdateInput(data: Partial<T>): ValidationError | null;
+
+  /**
+   * Returns the list of fields to search in the .or() clause. Override in subclasses for custom behavior.
+   */
+  protected getSearchableFields(): string[] {
+    // By default, return an empty array. Subclasses should override.
+    return [];
+  }
+
+  /**
+   * Searches for entities based on a query string
+   */
+  public async search(query: string, options?: QueryOptions): Promise<ServiceResult<T[]>> {
+    try {
+      let searchQuery = this.supabase
+        .from(this.tableName)
+        .select();
+
+      // Apply search filters
+      const searchableFields = this.getSearchableFields();
+      if (query && searchableFields.length > 0) {
+        const searchConditions = searchableFields.map(field => `${field}.ilike.%${query}%`).join(',');
+        searchQuery = searchQuery.or(searchConditions);
+      }
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          searchQuery = searchQuery.eq(key, value);
+        });
+      }
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        searchQuery = searchQuery.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        searchQuery = searchQuery.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await searchQuery;
+
+      if (error) throw error;
+      if (!results) {
+        return { success: true, data: [], error: undefined };
+      }
+      return { success: true, data: results as T[], error: undefined };
+    } catch (error) {
+      return createErrorResult<T[]>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
 } 
