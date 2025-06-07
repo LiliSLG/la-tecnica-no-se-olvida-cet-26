@@ -101,6 +101,8 @@ export default function NuevaPersonaPage() {
             const fileExt = selectedFile.name.split('.').pop();
             const filePath = `personas/persona-${personaId}.${fileExt}`;
 
+            console.log("Uploading file:", selectedFile);
+
             // Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
                 .from('personas')
@@ -112,6 +114,8 @@ export default function NuevaPersonaPage() {
             const { data: { publicUrl } } = supabase.storage
                 .from('personas')
                 .getPublicUrl(filePath);
+
+            console.log("Upload result:", { publicUrl, filePath });
 
             return publicUrl;
         } catch (error) {
@@ -198,6 +202,7 @@ export default function NuevaPersonaPage() {
             if (selectedFile) {
                 const photoUrl = await uploadProfilePhoto(result.data.id);
                 if (photoUrl) {
+                    console.log("Updating persona with foto_url:", photoUrl);
                     // Update persona with photo URL
                     const updateResult = await personasService.update(result.data.id, {
                         foto_url: photoUrl
