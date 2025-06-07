@@ -108,16 +108,15 @@ export default function PersonasListPage() {
                 <TableRow key={persona.id}>
                   <TableCell>
                     {persona.foto_url ? (
-                      <div className="relative w-[50px] h-[50px]">
-                        <Image
-                          src={persona.foto_url}
-                          alt={`Foto de ${persona.nombre}`}
-                          fill
-                          className="object-cover rounded"
-                        />
-                      </div>
+                      <img
+                        src={persona.foto_url}
+                        alt={`Foto de ${persona.nombre}`}
+                        width={40}
+                        height={40}
+                        className="object-cover rounded"
+                      />
                     ) : (
-                      <div className="w-[50px] h-[50px] bg-muted rounded flex items-center justify-center">
+                      <div className="w-[40px] h-[40px] bg-muted rounded flex items-center justify-center">
                         <span className="text-xs text-muted-foreground">Sin foto</span>
                       </div>
                     )}

@@ -78,6 +78,26 @@
 - **Icons:** Simple and illustrative, reflecting both technical and rural aspects of the content (e.g., Lucid Icons).
 - **Layout:** Clear, structured layout with intuitive navigation. Responsive design is critical.
 
+## Theme / Design System
+- The project uses Tailwind CSS utility-first styling.
+- Global theme (colors, typography) will be defined in Tailwind config.
+- Components will be built with consistent design tokens.
+- Existing utility classes (flex, spacing) are compatible with this system.
+
+
+## UX / Design
+- **Modern & Clean**: Use a modern, minimalist design that reflects the technical nature of the project.
+- **Consistency**: Maintain a coherent color palette and style throughout the application.
+- **Accessibility**: Ensure the application is accessible to all users, following WCAG 2.1.
+- **Responsive Design**:
+  - The application must be fully responsive and usable on mobile devices.
+  - All screens must adapt to different screen sizes.
+  - Public pages must be fully functional on mobile.
+  - Admin pages may have simplified layouts on mobile, maintaining essential functionality.
+- **Visual Feedback**: Provide clear feedback for all user actions.
+- **Intuitive Navigation**: Clear and easy-to-understand structure.
+
+
 ## Design Considerations & Project Philosophy
 
 - **Sustainability & Maintainability:**  
@@ -239,6 +259,21 @@ Usage:
 
 
 ## Authentication
+
+The authentication system follows this architecture:
+
+- **authService.ts**: Provides core authentication methods (signIn, signUp, signOut, getCurrentUser, resetPassword, updatePassword). Uses the Supabase client.
+- **AuthProvider.tsx**: React context provider that manages session state (session, user, loading, signIn, signOut). Listens to Supabase auth state changes. Wraps the app so that authentication state is accessible to all components.
+- **/middleware.ts**: Protects `/admin/*` routes by redirecting unauthenticated users to `/login`. Redirects authenticated users away from `/login` to `/admin`.
+- **/app/login/page.tsx**: Provides a login form (email/password) with error handling and redirection.
+
+Session persistence is handled by Supabase's built-in localStorage mechanism. The AuthProvider listens to changes and keeps the React app state in sync.
+
+The current system supports basic email/password login and route protection. Future improvements (such as role-based access control or OAuth) should extend this architecture and be documented here.
+Note on Supabase Client:
+
+In order to ensure compatibility with Next.js 15 App Router and Client Components, we use `createBrowserClient` from `@supabase/ssr` in `supabaseClient.ts`. This prevents compatibility issues (such as the known `@supabase/node-fetch` error) when using `supabaseClient` in components like `AuthProvider.tsx`. This approach follows Supabase's official recommendations for Next.js App Router. The architecture maintains a single shared instance of the Supabase client for use in all services.
+
 
 ## Cache & Frontend-safe Services
 

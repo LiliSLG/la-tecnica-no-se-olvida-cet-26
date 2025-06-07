@@ -1,5 +1,22 @@
 # Changelog
 
+## [2025-06-07] Basic Authentication Implementation
+- Updated `supabaseClient.ts` to use `createBrowserClient` from `@supabase/ssr` to ensure compatibility with Next.js 15 App Router and Client Components. This change prevents the known `@supabase/node-fetch` error when using `supabaseClient` in `AuthProvider.tsx` and other client components. No changes were needed in `authService.ts` or `supabaseStorage.ts`.
+
+- Implemented core authentication system using Supabase Auth:
+  - Created `AuthProvider.tsx` component for managing auth state and session
+  - Added `/login` page with email/password form
+  - Implemented session persistence in localStorage
+  - Added protected routes for `/admin/*` paths
+- Added authentication middleware:
+  - Redirects unauthenticated users to login
+  - Redirects authenticated users away from login page
+  - Protects admin routes
+- Integrated authentication flow with existing `authService.ts` and `supabaseClient.ts`:
+  - Session management
+  - User state tracking
+  - Automatic token refresh
+
 ### Refactored
 - Standardized all service classes to correctly extend `BaseService` with proper generic parameters and constructor calls.
 - Fixed inheritance and super() calls in:

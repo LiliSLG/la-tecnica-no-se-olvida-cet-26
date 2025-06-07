@@ -99,23 +99,23 @@ export default function NuevaPersonaPage() {
 
         try {
             const fileExt = selectedFile.name.split('.').pop();
-            const filePath = `personas/persona-${personaId}.${fileExt}`;
+            const filename = `persona-${personaId}.${fileExt}`;
 
             console.log("Uploading file:", selectedFile);
 
             // Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
                 .from('personas')
-                .upload(filePath, selectedFile);
+                .upload(filename, selectedFile);
 
             if (uploadError) throw uploadError;
 
             // Get public URL
             const { data: { publicUrl } } = supabase.storage
                 .from('personas')
-                .getPublicUrl(filePath);
+                .getPublicUrl(filename);
 
-            console.log("Upload result:", { publicUrl, filePath });
+            console.log("Upload result:", { publicUrl, filename });
 
             return publicUrl;
         } catch (error) {

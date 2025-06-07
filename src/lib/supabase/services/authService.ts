@@ -23,7 +23,7 @@ function mapPersonaToDomain(persona: Database['public']['Tables']['personas']['R
   };
 }
 
-type MappedPersona = ReturnType<typeof mapPersonaToDomain>;
+export type MappedPersona = ReturnType<typeof mapPersonaToDomain>;
 
 type Persona = Database['public']['Tables']['personas']['Row'];
 

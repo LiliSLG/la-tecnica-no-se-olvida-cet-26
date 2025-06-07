@@ -1,5 +1,24 @@
 # Future Developments and Improvements
 
+## Current Frontend Rebuild (from scratch - Next.js 15.2)
+
+### Progress
+- [x] Initial setup of new frontend in `/src/app`
+- [x] Core Authentication implemented:
+  - AuthProvider for session management
+  - `/login` page with email/password form
+  - Authentication middleware for route protection
+- [ ] Admin Panel rebuild in progress
+- [ ] Public pages rebuild in progress
+- [ ] Advanced role-based access control (to be implemented after basic Admin is stable)
+- [ ] Final testing and validation
+
+### Architecture
+- Following patterns defined in `blueprint.md`
+- Using Next.js 15.2 App Router
+- Fully integrated with Supabase backend
+- Clean implementation without legacy code
+
 ## Pending / To Do
 
 - [ ] **Role Automation:** Implement role automation logic to update `Persona.capacidadesPlataforma` based on actual involvement in projects (`proyecto_autor`, `proyecto_tutor`, etc.). This will now be done via Supabase triggers or backend services (not Cloud Functions).
@@ -93,14 +112,14 @@
    - [ ] Document rollback procedures
    - [ ] Create migration best practices guide
 
-### Phase 3: Authentication and Authorization
+### Phase 3: Authentication and Authorization (obsolete - replaced by new frontend rebuild)
 - [ ] User authentication implementation
 - [ ] Role-based access control
 - [ ] Permission management
 - [ ] Session handling
 - [ ] Security enhancements
 
-### Phase 4: Frontend Development
+### Phase 4: Frontend Development (obsolete - replaced by new frontend rebuild)
 - [ ] Component library setup
 - [ ] Page layouts and templates
 - [ ] Form implementations
@@ -353,4 +372,13 @@ This update will:
 4. Add thumbnail and duration tracking
 5. Add publication status
 6. Add appropriate indexes for performance
+
+## Authentication Improvements
+
+### Server-Side Auth Protection
+- [ ] Implement proper Supabase SSR auth helpers in middleware
+  - Move auth protection back to middleware using server-side session validation
+  - Add role-based access control
+  - Implement proper production-ready auth setup
+  - Consider using Supabase's server-side auth helpers for better security
 

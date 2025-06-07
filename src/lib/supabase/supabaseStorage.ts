@@ -57,13 +57,13 @@ export async function uploadFile(
     
     const timestamp = Date.now();
     const safeName = file.name.replace(/\s+/g, "_");
-    const fullPath = `${folder}/${timestamp}_${safeName}`;
+    const filename = `${timestamp}_${safeName}`;
 
     let uploadResponse;
     try {
       uploadResponse = await supabase.storage
         .from(bucketName)
-        .upload(fullPath, file, {
+        .upload(filename, file, {
           cacheControl: "3600",
           upsert: false,
         });

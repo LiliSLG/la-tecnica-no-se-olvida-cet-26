@@ -1,18 +1,22 @@
 // src/app/layout.tsx
-
-import "@/styles/globals.css"; // Si tenés tu CSS global
 import { ReactNode } from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from "@/providers/AuthProvider";
 
-export const metadata = {
-  title: "La técnica no se olvida",
-  description: "Admin Panel",
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "La Técnica No Se Olvida",
+  description: "Archivo histórico de la Escuela Técnica N°26",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
-      <body className="min-h-screen bg-gray-100 text-gray-900">
-        {children}
+      <body className={inter.className}>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
