@@ -56,7 +56,7 @@ export default function PersonasListPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 px-4">
         <div className="flex items-center justify-center h-64">
           <p className="text-lg">Cargando personas...</p>
         </div>
@@ -66,7 +66,7 @@ export default function PersonasListPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 px-4">
         <div className="flex items-center justify-center h-64">
           <p className="text-lg text-red-500">{error}</p>
         </div>
@@ -75,32 +75,32 @@ export default function PersonasListPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Gestión de Personas</h1>
         <Button onClick={() => router.push("/admin/gestion-personas/nueva")}>
           Nueva Persona
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Foto</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Apellido</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Alumno/Exalumno</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="w-[60px]">Foto</TableHead>
+              <TableHead className="min-w-[120px]">Nombre</TableHead>
+              <TableHead className="min-w-[120px]">Apellido</TableHead>
+              <TableHead className="min-w-[200px]">Email</TableHead>
+              <TableHead className="min-w-[100px]">Estado</TableHead>
+              <TableHead className="min-w-[120px]">Alumno/Exalumno</TableHead>
+              <TableHead className="w-[100px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {personas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  No hay personas registradas
+                <TableCell colSpan={7} className="text-center py-8">
+                  <p className="text-muted-foreground">No hay personas registradas</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -121,9 +121,9 @@ export default function PersonasListPage() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>{persona.nombre}</TableCell>
+                  <TableCell className="font-medium">{persona.nombre}</TableCell>
                   <TableCell>{persona.apellido}</TableCell>
-                  <TableCell>{persona.email || "-"}</TableCell>
+                  <TableCell className="truncate max-w-[200px]">{persona.email || "-"}</TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -135,12 +135,13 @@ export default function PersonasListPage() {
                       {persona.activo ? "Activo" : "Inactivo"}
                     </span>
                   </TableCell>
-                  <TableCell>{getCETStatus(persona)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{getCETStatus(persona)}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
                       asChild
+                      className="whitespace-nowrap"
                     >
                       <Link href={`/admin/gestion-personas/editar/${persona.id}`}>
                         Editar
