@@ -235,7 +235,7 @@ export default function NuevaPersonaPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <Tabs defaultValue="basica" className="w-full">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
                         <TabsTrigger value="basica">Información Básica</TabsTrigger>
                         <TabsTrigger value="actividad">Actividad y Trayectoria</TabsTrigger>
                         <TabsTrigger value="red">Unirme a la red</TabsTrigger>
@@ -248,26 +248,45 @@ export default function NuevaPersonaPage() {
                         <div className="p-4 border rounded-md">
                             <h2 className="text-xl font-bold mb-4">Información Básica</h2>
                             <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label htmlFor="nombre">Nombre</label>
-                                        <Input id="nombre" {...register("nombre")} />
-                                        {errors.nombre && <p className="text-red-500">{errors.nombre.message}</p>}
+                                        <label htmlFor="nombre" className="text-sm font-medium">Nombre</label>
+                                        <Input 
+                                            id="nombre" 
+                                            {...register("nombre")} 
+                                            className={errors.nombre ? "border-red-500" : ""}
+                                        />
+                                        {errors.nombre && (
+                                            <p className="text-sm text-red-500 mt-1">{errors.nombre.message}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
-                                        <label htmlFor="apellido">Apellido</label>
-                                        <Input id="apellido" {...register("apellido")} />
-                                        {errors.apellido && <p className="text-red-500">{errors.apellido.message}</p>}
+                                        <label htmlFor="apellido" className="text-sm font-medium">Apellido</label>
+                                        <Input 
+                                            id="apellido" 
+                                            {...register("apellido")} 
+                                            className={errors.apellido ? "border-red-500" : ""}
+                                        />
+                                        {errors.apellido && (
+                                            <p className="text-sm text-red-500 mt-1">{errors.apellido.message}</p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label htmlFor="email">Email</label>
-                                    <Input id="email" type="email" {...register("email")} />
-                                    {errors.email && <p className="text-red-500">{errors.email.message}</p>}
+                                    <label htmlFor="email" className="text-sm font-medium">Email</label>
+                                    <Input 
+                                        id="email" 
+                                        type="email" 
+                                        {...register("email")} 
+                                        className={errors.email ? "border-red-500" : ""}
+                                    />
+                                    {errors.email && (
+                                        <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
+                                    )}
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <label htmlFor="fotoPerfil">Foto de Perfil</label>
+                                    <label htmlFor="fotoPerfil" className="text-sm font-medium">Foto de Perfil</label>
                                     <div className="flex flex-col gap-4">
                                         {previewUrl && (
                                             <div className="flex justify-center">
@@ -286,18 +305,21 @@ export default function NuevaPersonaPage() {
                                             accept="image/*"
                                             onChange={handleFileSelect}
                                             disabled={isLoading}
+                                            className="cursor-pointer"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label htmlFor="historiaDeExitoOResumenTrayectoria">Biografía</label>
+                                    <label htmlFor="historiaDeExitoOResumenTrayectoria" className="text-sm font-medium">Biografía</label>
                                     <Textarea
                                         id="historiaDeExitoOResumenTrayectoria"
                                         {...register("historiaDeExitoOResumenTrayectoria")}
                                         placeholder="Cuéntanos sobre ti..."
-                                        className="min-h-[150px]"
+                                        className={`min-h-[150px] ${errors.historiaDeExitoOResumenTrayectoria ? "border-red-500" : ""}`}
                                     />
-                                    {errors.historiaDeExitoOResumenTrayectoria && <p className="text-red-500">{errors.historiaDeExitoOResumenTrayectoria.message}</p>}
+                                    {errors.historiaDeExitoOResumenTrayectoria && (
+                                        <p className="text-sm text-red-500 mt-1">{errors.historiaDeExitoOResumenTrayectoria.message}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -510,17 +532,21 @@ export default function NuevaPersonaPage() {
                     </TabsContent>
                 </Tabs>
 
-                <div className="flex justify-end space-x-4">
+                {/* Form actions */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-end mt-6">
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={() => router.push("/admin/gestion-personas")}
+                        onClick={() => router.back()}
                         disabled={isLoading}
                     >
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Creando..." : "Crear Persona"}
+                    <Button
+                        type="submit"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Guardando..." : "Guardar"}
                     </Button>
                 </div>
             </form>
