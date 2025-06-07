@@ -123,7 +123,7 @@ export class AuthService {
         nombre: userData?.nombre ?? "",
         apellido: "",
         email: userData?.email ?? "",
-        foto_url:  null,
+        foto_url: null,
         biografia: null,
         categoria_principal: "ninguno_asignado",
         capacidades_plataforma: [],
@@ -133,8 +133,6 @@ export class AuthService {
         eliminado_en: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      
-        // Campos adicionales requeridos:
         activo: true,
         titulo_profesional: "",
         descripcion_personal_o_profesional: "",
