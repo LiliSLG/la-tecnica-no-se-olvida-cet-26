@@ -121,18 +121,23 @@ export function useDataTableState<T extends object>({
         return value && String(value).toLowerCase().includes(searchTerm);
       });
 
-      // Show deleted filter
-      const matchesDeleted = filters.showDeleted || !(item as any).esta_eliminada;
-
       // Custom filters
       const matchesCustomFilters = filterFields.every(field => {
         const filterValue = filters[field.key as string];
-        if (!filterValue || filterValue === 'all') return true;
-        const itemValue = field.key in item ? String(item[field.key as keyof T]) : null;
-        return itemValue === filterValue;
+        if (filterValue === undefined || filterValue === null || filterValue === 'all') return true;
+        
+        const itemValue = field.key in item ? item[field.key as keyof T] : null;
+        
+        // Handle boolean values
+        if (typeof filterValue === 'boolean') {
+          return itemValue === filterValue;
+        }
+        
+        // Handle string values
+        return String(itemValue) === String(filterValue);
       });
 
-      return matchesSearch && matchesDeleted && matchesCustomFilters;
+      return matchesSearch && matchesCustomFilters;
     });
   }, [data, search, filters, searchFields, filterFields]);
 

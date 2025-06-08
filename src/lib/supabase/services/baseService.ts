@@ -131,7 +131,35 @@ export abstract class BaseService<T extends { id: string }> {
       // Apply filters
       if (options?.filters) {
         Object.entries(options.filters).forEach(([key, value]) => {
-          query = query.eq(key, value);
+          if (typeof value === 'string' && value.includes('.')) {
+            // Handle filter values with operators (e.g., 'eq.true')
+            const [operator, filterValue] = value.split('.');
+            switch (operator) {
+              case 'eq':
+                query = query.eq(key, filterValue === 'true' ? true : filterValue === 'false' ? false : filterValue);
+                break;
+              case 'neq':
+                query = query.neq(key, filterValue === 'true' ? true : filterValue === 'false' ? false : filterValue);
+                break;
+              case 'gt':
+                query = query.gt(key, filterValue);
+                break;
+              case 'gte':
+                query = query.gte(key, filterValue);
+                break;
+              case 'lt':
+                query = query.lt(key, filterValue);
+                break;
+              case 'lte':
+                query = query.lte(key, filterValue);
+                break;
+              default:
+                query = query.eq(key, value);
+            }
+          } else {
+            // Handle regular filter values
+            query = query.eq(key, value);
+          }
         });
       }
 

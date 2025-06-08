@@ -78,10 +78,19 @@ export default function PersonasListPage() {
 
   const fetchPersonas = async () => {
     try {
-      const result = await personasService.getAll();
+      const filters = tableState.filters;
+      const queryOptions = {
+        filters: {
+          esta_eliminada: filters.esta_eliminada ? 'eq.true' : 'eq.false'
+        }
+      };
+      
+      console.log('Fetching with filters:', filters);
+      const result = await personasService.getAll(queryOptions);
       if (!result.success) {
         throw new Error(result.error?.message || "Error al cargar las personas");
       }
+      console.log('API Response:', result.data);
       setPersonas(result.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar las personas");
@@ -92,8 +101,20 @@ export default function PersonasListPage() {
   };
 
   useEffect(() => {
+    console.log('Current personas state:', personas);
+  }, [personas]);
+
+  useEffect(() => {
+    console.log('Current tableState:', {
+      filters: tableState.filters,
+      paginatedData: tableState.paginatedData,
+      totalItems: tableState.totalItems
+    });
+  }, [tableState.filters, tableState.paginatedData, tableState.totalItems]);
+
+  useEffect(() => {
     fetchPersonas();
-  }, []);
+  }, [tableState.filters.esta_eliminada]);
 
   const handleDelete = async () => {
     if (!personaToDelete || !currentUserId) return;

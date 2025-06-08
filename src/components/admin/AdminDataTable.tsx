@@ -69,6 +69,9 @@ export function AdminDataTable<T extends object>({
   emptyState,
   pageSizes = [10, 25, 50, 100],
 }: AdminDataTableProps<T>) {
+  console.log('AdminDataTable received data:', data);
+  console.log('AdminDataTable state:', state);
+
   const {
     search,
     filters,
@@ -84,6 +87,8 @@ export function AdminDataTable<T extends object>({
     setCurrentPage,
     setPageSize,
   } = state;
+
+  console.log('AdminDataTable paginatedData:', paginatedData);
 
   const handlePageSizeChange = (newSize: number) => {
     state.setPageSize(newSize);
