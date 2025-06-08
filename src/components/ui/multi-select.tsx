@@ -10,7 +10,7 @@ interface Option {
 }
 
 interface MultiSelectProps {
-  options: Option[];
+  options: readonly Option[];
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;

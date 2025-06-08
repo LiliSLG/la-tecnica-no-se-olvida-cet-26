@@ -252,4 +252,32 @@ export abstract class BaseService<T extends { id: string }> {
       });
     }
   }
+
+  /**
+   * Soft deletes an entity by setting deletion metadata
+   * @param id The ID of the entity to soft delete
+   * @param deletedByUid The UID of the user performing the deletion
+   */
+  public async softDelete(id: string, deletedByUid: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await this.supabase
+        .from(this.tableName)
+        .update({
+          esta_eliminada: true,
+          eliminado_por_uid: deletedByUid,
+          eliminado_en: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      return createSuccessResult(null);
+    } catch (error) {
+      return createErrorResult<null>({
+        name: error instanceof Error ? 'DB_ERROR' : 'SYSTEM_ERROR',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
 } 

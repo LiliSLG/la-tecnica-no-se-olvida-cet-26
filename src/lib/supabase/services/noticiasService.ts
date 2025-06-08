@@ -301,51 +301,6 @@ export class NoticiasService extends CacheableService<Noticia> {
     }
   }
 
-  async softDelete(id: string, userId: string): Promise<ServiceResult<Noticia | null>> {
-    try {
-      const { data: noticia, error } = await this.supabase
-        .from(this.tableName)
-        .update({
-          esta_eliminada: true,
-          eliminado_por_uid: userId,
-          eliminado_en: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return createError({
-            name: 'ValidationError',
-            message: 'Noticia no encontrada',
-            code: 'VALIDATION_ERROR',
-            details: { id }
-          });
-        }
-        throw error;
-      }
-
-      if (!noticia) {
-        return createError({
-          name: 'ValidationError',
-          message: 'Noticia no encontrada',
-          code: 'VALIDATION_ERROR',
-          details: { id }
-        });
-      }
-
-      await this.setInCache(id, noticia);
-      return createSuccess(noticia);
-    } catch (error) {
-      return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Error al eliminar la noticia',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
 
   protected async getRelatedEntities<R>(
     id: string,

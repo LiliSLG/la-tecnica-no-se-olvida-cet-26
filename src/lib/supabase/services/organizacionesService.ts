@@ -580,51 +580,6 @@ export class OrganizacionesService extends CacheableService<Organizacion> {
     }
   }
 
-  async softDelete(id: string, userId: string): Promise<ServiceResult<Organizacion | null>> {
-    try {
-      const { data: organizacion, error } = await this.supabase
-        .from(this.tableName)
-        .update({
-          esta_eliminada: true,
-          eliminado_por_uid: userId,
-          eliminado_en: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return createError({
-            name: 'ValidationError',
-            message: 'Organizacion not found',
-            code: 'VALIDATION_ERROR',
-            details: { id }
-          });
-        }
-        throw error;
-      }
-
-      if (!organizacion) {
-        return createError({
-          name: 'ValidationError',
-          message: 'Organizacion not found',
-          code: 'VALIDATION_ERROR',
-          details: { id }
-        });
-      }
-
-      await this.setInCache(id, organizacion);
-      return createSuccess(organizacion);
-    } catch (error) {
-      return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
 
   protected getSearchableFields(): string[] {
     return ['nombre', 'descripcion', 'tipo', 'ciudad', 'provincia', 'pais'];
