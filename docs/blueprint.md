@@ -318,3 +318,7 @@ The application uses Supabase Authentication with the following architecture:
 
 The service follows the standard service architecture pattern and integrates with the user profile system through PersonasService.
 
+
+## Documentación
+
+Ver `/docs/README.md` para el patrón de documentación de funcionalidades.
