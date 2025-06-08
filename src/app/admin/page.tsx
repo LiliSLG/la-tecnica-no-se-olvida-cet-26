@@ -14,71 +14,85 @@ import {
 export default function AdminDashboard() {
   const contentManagementSections = [
     {
-      title: "Manage People",
-      description: "Manage personas, their profiles, and related information",
+      title: "Comunidad",
+      //description: "Gestión de Comunidad",
+      description: "Gestionar las personas que integran la comunidad: estudiantes, ex estudiantes, tutores, colaboradores, docentes e invitados.",
       href: "/admin/gestion-personas",
       isActive: true
     },
     {
-      title: "Manage Projects",
-      description: "Manage projects and their details",
+      title: "Proyectos",
+      //description: "Gestión de Proyectos",
+      description: "Gestionar los proyectos desarrollados por la comunidad y sus participantes asociados.",
       href: "/admin/gestion-proyectos",
-      isActive: true
+      isActive: false
     },
     {
-      title: "Manage News",
-      description: "Manage news articles and announcements",
+      title: "Noticias",
+      //description: "Gestión de Noticias",
+      description: "Administrar las noticias y novedades que se mostrarán en la web",
       href: "/admin/gestion-noticias",
-      isActive: true
+      isActive: false
     },
     {
-      title: "Manage Oral Histories",
-      description: "Manage oral history recordings and transcripts",
+      title: "Historias Orales",
+      //description: "Gestión de Historias Orales",
+      description: "Gestionar las historias orales y testimonios recopilados por la comunidad.",
       href: "/admin/gestion-historias-orales",
-      isActive: true
+      isActive: false
     },
     {
-      title: "Manage Organizations",
-      description: "Manage organizations and their details",
+      title: "Organizaciones Vinculadas",
+      //description: "Gestión de Organizaciones Vinculadas",
+      description: "Administrar las organizaciones que colaboran o se vinculan con la comunidad.",
       href: "/admin/gestion-organizaciones",
-      isActive: true
+      isActive: false
     },
     {
-      title: "Manage Topics",
-      description: "Manage topics and their relationships",
+      title: "Temáticas / Ejes",
+      //description: "Gestión de Temáticas / Ejes",
+      description: "Definir y gestionar las temáticas o ejes que estructuran los contenidos y proyectos de la comunidad.",
       href: "/admin/gestion-temas",
-      isActive: true
+      isActive: false
     },
     {
-      title: "Manage Courses",
-      description: "Manage courses and their details",
+      title: "Cursos",
+      //description: "Gestión de Cursos",
+      description: "Gestionar los cursos ofrecidos a los alumnos del CET, así como sus detalles y participantes.",
       href: "/admin/gestion-cursos",
-      isActive: true
+      isActive: false
+    },
+    {
+      title: "Bolsa de Trabajo",
+      //description: "Gestión de Ofertas de trabajo",
+      description: "Gestión de Ofertas de trabajo para los alumnos del CET",
+      href: "/admin/gestion-ofertasTrabajo",
+      isActive: false
     }
   ];
 
   const generalAdminSections = [
     {
-      title: "Users & Roles",
-      description: "To be completed",
+      title: "Gestión de Usuarios y Roles",
+      description: "A completar",
       href: "#",
       isActive: false
     },
     {
-      title: "Statistics",
-      description: "To be completed",
+      title: "Estadísticas",
+      description: "A completar",
       href: "#",
       isActive: false
     },
     {
-      title: "Site Settings",
-      description: "To be completed",
+      title: "Configuración del Sitio",
+      description: "A completar",
       href: "#",
       isActive: false
     },
     {
-      title: "Logs / Audit",
-      description: "To be completed",
+      title: "Registros y Auditoría",
+      description: "A completar",
       href: "#",
       isActive: false
     }
@@ -87,7 +101,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-2xl font-bold mb-4">Content Management</h2>
+        <h2 className="text-2xl font-bold mb-4">Gestión de contenidos</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {contentManagementSections.map((section) => (
             <Card key={section.title} className="flex flex-col">
@@ -96,14 +110,14 @@ export default function AdminDashboard() {
                 <CardDescription>{section.description}</CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto">
-                <Button 
-                  variant="default" 
-                  className="w-full" 
-                  asChild 
+                <Button
+                  variant="default"
+                  className="w-full"
+                  asChild
                   disabled={!section.isActive}
                 >
                   <Link href={section.href}>
-                    {section.isActive ? "Manage" : "Coming Soon"}
+                    {section.isActive ? "Gestionar" : "Próximamente"}
                   </Link>
                 </Button>
               </CardFooter>
@@ -113,7 +127,7 @@ export default function AdminDashboard() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold mb-4">General Administration</h2>
+        <h2 className="text-2xl font-bold mb-4"> Administración General</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {generalAdminSections.map((section) => (
             <Card key={section.title} className="flex flex-col">
@@ -122,14 +136,14 @@ export default function AdminDashboard() {
                 <CardDescription>{section.description}</CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto">
-                <Button 
-                  variant="default" 
-                  className="w-full" 
-                  asChild 
+                <Button
+                  variant="default"
+                  className="w-full"
+                  asChild
                   disabled={!section.isActive}
                 >
                   <Link href={section.href}>
-                    {section.isActive ? "Manage" : "Coming Soon"}
+                    {section.isActive ? "Gestionar" : "Próximamente"}
                   </Link>
                 </Button>
               </CardFooter>

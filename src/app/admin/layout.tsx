@@ -10,14 +10,15 @@ import { Menu } from "lucide-react";
 
 const sidebarLinks = [
   { id: 'dashboard', href: "/admin", label: "Dashboard" },
-  { id: 'people', href: "/admin/gestion-personas", label: "Manage People" },
-  { id: 'projects', href: "#", label: "Manage Projects" },
-  { id: 'news', href: "#", label: "Manage News" },
-  { id: 'histories', href: "#", label: "Manage Oral Histories" },
-  { id: 'organizations', href: "#", label: "Manage Organizations" },
-  { id: 'topics', href: "#", label: "Manage Topics" },
-  { id: 'courses', href: "#", label: "Manage Courses" },
-  { id: 'settings', href: "#", label: "Settings" },
+  { id: 'people', href: "/admin/gestion-personas", label: "Comunidad" },
+  { id: 'projects', href: "#", label: "Proyectos" },
+  { id: 'news', href: "#", label: "Noticias" },
+  { id: 'histories', href: "#", label: "Historias Orales" },
+  { id: 'organizations', href: "#", label: "Organizaciones" },
+  { id: 'topics', href: "#", label: "Temáticas" },
+  { id: 'courses', href: "#", label: "Cursos" },
+  { id: 'bolsa', href: "#", label: "Bolsa de Trabajo" },
+  { id: 'settings', href: "#", label: "Configuración" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -54,7 +55,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="text-lg font-semibold">Admin Panel</div>
+          <div className="text-lg font-semibold">Panel de administrador</div>
         </div>
       </header>
 
