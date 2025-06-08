@@ -28,11 +28,22 @@ export type ColumnConfig<T> = {
   className?: string;
 };
 
-export type AdminDataTableProps<T> = {
+interface FilterField {
+  key: string;
+  label: string;
+  type: 'select' | 'switch';
+  options?: { value: string; label: string }[];
+}
+
+interface AdminDataTableProps<T extends object> {
   title?: string;
   data: T[];
   columns: ColumnConfig<T>[];
-  config: Omit<DataTableConfig<T>, 'data'>;
+  config: {
+    searchFields: (keyof T)[];
+    filterFields: FilterField[];
+    sortableColumns: (keyof T)[];
+  };
   state: DataTableState<T>;
   onAdd?: () => void;
   addLabel?: string;
@@ -45,18 +56,18 @@ export type AdminDataTableProps<T> = {
     };
   };
   pageSizes?: number[];
-};
+}
 
-export function AdminDataTable<T>({
+export function AdminDataTable<T extends object>({
   title,
   data,
   columns,
   config,
   state,
   onAdd,
-  addLabel = "Nuevo",
+  addLabel = "Agregar",
   emptyState,
-  pageSizes = [10, 20],
+  pageSizes = [10, 25, 50, 100],
 }: AdminDataTableProps<T>) {
   const {
     search,
@@ -73,6 +84,25 @@ export function AdminDataTable<T>({
     setCurrentPage,
     setPageSize,
   } = state;
+
+  const handlePageSizeChange = (newSize: number) => {
+    state.setPageSize(newSize);
+    state.setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    state.setCurrentPage(newPage);
+  };
+
+  const handlePreviousPage = () => {
+    const newPage = Math.max(1, currentPage - 1);
+    state.setCurrentPage(newPage);
+  };
+
+  const handleNextPage = () => {
+    const newPage = Math.min(totalPages, currentPage + 1);
+    state.setCurrentPage(newPage);
+  };
 
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -198,7 +228,7 @@ export function AdminDataTable<T>({
             </p>
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => setPageSize(Number(value))}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
             >
               <SelectTrigger className="w-[100px]">
                 <SelectValue placeholder="Por página" />
@@ -216,7 +246,7 @@ export function AdminDataTable<T>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={handlePreviousPage}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -225,7 +255,7 @@ export function AdminDataTable<T>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={handleNextPage}
               disabled={currentPage === totalPages}
             >
               Siguiente

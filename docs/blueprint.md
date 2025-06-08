@@ -122,6 +122,30 @@
 
 # 📘 Architecture Notes
 
+## UI Patterns and Layout Conventions
+
+### Admin Sidebar Pattern
+The Admin Panel uses a **Sidebar-based layout** as the default navigation pattern:
+- On desktop: persistent Sidebar is shown.
+- On mobile: Sidebar collapses into a drawer menu for better usability.
+- This layout is applied consistently across all `/admin/*` pages.
+- The Sidebar contains global admin navigation, while page-level actions are placed within the main content area.
+
+### AdminDataTable Pattern
+For displaying and managing lists of entities in the Admin Panel, the project uses a **standardized AdminDataTable component**:
+- Provides consistent UI and UX across entity management screens.
+- Includes built-in support for:
+  - Search
+  - Sorting
+  - Filtering
+  - Pagination
+  - Custom column rendering
+  - Empty state handling
+  - Loading state
+  - Error state
+- All new Admin CRUD pages must use AdminDataTable as the base table component.
+- Existing legacy tables should be migrated to this pattern as part of ongoing refactors (see `docs/todos.md`).
+
 ## /lib/supabase/ Structure and Service Pattern
 
 This section documents the current architecture and conventions for the `/lib/supabase/` folder and service layer.
@@ -293,3 +317,4 @@ The application uses Supabase Authentication with the following architecture:
   - Error handling and type safety
 
 The service follows the standard service architecture pattern and integrates with the user profile system through PersonasService.
+

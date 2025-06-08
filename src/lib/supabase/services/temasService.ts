@@ -6,14 +6,19 @@ import { mapValidationError } from '../errors/utils';
 import { ValidationError } from '../errors/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
+import { CacheableService } from './cacheableService';
 
 type Tema = Database['public']['Tables']['temas']['Row'];
 type CreateTema = Database['public']['Tables']['temas']['Insert'];
 type UpdateTema = Database['public']['Tables']['temas']['Update'];
 
-export class TemasService extends BaseService<Tema> {
+export class TemasService extends CacheableService<Tema> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, { tableName: 'temas' });
+    super(supabase, {
+      entityType: 'tema',
+      ttl: 3600, // 1 hour
+      enableCache: true,
+    });
   }
 
   protected validateCreateInput(data: CreateTema): ValidationError | null {
