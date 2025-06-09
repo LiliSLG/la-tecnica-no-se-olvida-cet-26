@@ -26,6 +26,7 @@ import { supabase } from "@/lib/supabase/supabaseClient";
 import { Database } from "@/lib/supabase/types/database.types";
 import { PROVINCIAS } from "@/lib/constants/persona";
 import { AREAS_DE_INTERES, TIPOS_COLABORACION, CAPACIDADES_PLATAFORMA } from "@/lib/constants/persona";
+import { cn } from "@/lib/utils";
 
 const personasService = new PersonasService(supabase);
 const personaTemaService = new PersonaTemaService(supabase);
@@ -48,6 +49,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
   const [selectedTemas, setSelectedTemas] = useState<string[]>([]);
   const [selectedProyectoFinal, setSelectedProyectoFinal] = useState<string | null>(null);
   const [linksProfesionales, setLinksProfesionales] = useState<Array<{ plataforma: string; url: string }>>([]);
+  const [currentlyOpenDropdown, setCurrentlyOpenDropdown] = useState<string | null>(null);
 
   const {
     register,
@@ -247,16 +249,17 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
   return (
     <form onSubmit={handleSubmit(onSubmitForm)} className="mx-auto max-w-screen-md px-4 py-6 space-y-8">
       <div className="border-b pb-4">
-        <Tabs defaultValue="basica" className="w-full">
-          <div className="-mx-4 sm:-mx-6 lg:-mx-8 overflow-x-auto no-scrollbar pb-2">
-            <TabsList className="flex flex-nowrap space-x-2 px-4 sm:px-6 lg:px-8">
-              <TabsTrigger value="basica" className="min-w-max">Información Básica</TabsTrigger>
-              <TabsTrigger value="actividad" className="min-w-max">Actividad y Trayectoria</TabsTrigger>
-              <TabsTrigger value="red" className="min-w-max">Unirme a la red</TabsTrigger>
-              <TabsTrigger value="cet" className="min-w-max">Información CET</TabsTrigger>
-              <TabsTrigger value="ubicacion" className="min-w-max">Ubicación</TabsTrigger>
-            </TabsList>
-          </div>
+        <Tabs defaultValue="basica" className="w-full overflow-x-visible overflow-y-visible" onValueChange={() => setCurrentlyOpenDropdown(null)}
+        >
+          {/*<TabsList className="grid w-full grid-cols-5">*/}
+          <TabsList className="overflow-x-auto whitespace-nowrap flex gap-2 px-2">
+
+            <TabsTrigger value="basica">Información Básica</TabsTrigger>
+            <TabsTrigger value="actividad">Actividad y Trayectoria</TabsTrigger>
+            <TabsTrigger value="red">Unirme a la red</TabsTrigger>
+            <TabsTrigger value="cet">Información CET</TabsTrigger>
+            <TabsTrigger value="ubicacion">Ubicación</TabsTrigger>
+          </TabsList>
           <TabsContent value="basica" className="space-y-6 pt-4">
             <h2 className="text-xl font-semibold">Información Básica</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -354,7 +357,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
               <div className="col-span-full">
                 <div className="space-y-2">
                   <Label htmlFor="descripcionPersonalOProfesional">Descripción Personal o Profesional</Label>
-                  <Textarea id="descripcionPersonalOProfesional" {...register("descripcionPersonalOProfesional")} className="w-full min-h-[100px]" />
+                  <Textarea id="descripcionPersonalOProfesional" {...register("descripcionPersonalOProfesional")} className="w-full resize-y" rows={3} />
                   {errors.descripcionPersonalOProfesional && <p className="text-red-500">{errors.descripcionPersonalOProfesional.message}</p>}
                 </div>
               </div>
@@ -383,35 +386,29 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                 <div className="space-y-2">
                   <Label>Links Profesionales</Label>
                   {linksProfesionales.map((link, index) => (
-                    <div key={index} className="flex gap-2 mb-2 items-end">
-                      <div className="w-1/3">
-                        <Label htmlFor={`plataforma-${index}`} className="sr-only">Plataforma</Label>
-                        <Input
-                          id={`plataforma-${index}`}
-                          value={link.plataforma}
-                          onChange={(e) => {
-                            const newLinks = [...linksProfesionales];
-                            newLinks[index].plataforma = e.target.value;
-                            setLinksProfesionales(newLinks);
-                            setValue(`linksProfesionales.${index}.plataforma`, e.target.value);
-                          }}
-                          placeholder="Plataforma (ej: LinkedIn)" className="w-full"
-                        />
-                      </div>
-                      <div className="w-2/3">
-                        <Label htmlFor={`url-${index}`} className="sr-only">URL</Label>
-                        <Input
-                          id={`url-${index}`}
-                          value={link.url}
-                          onChange={(e) => {
-                            const newLinks = [...linksProfesionales];
-                            newLinks[index].url = e.target.value;
-                            setLinksProfesionales(newLinks);
-                            setValue(`linksProfesionales.${index}.url`, e.target.value);
-                          }}
-                          placeholder="URL" className="w-full"
-                        />
-                      </div>
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        placeholder="Plataforma (Ej: LinkedIn)"
+                        value={link.plataforma}
+                        onChange={(e) => {
+                          const newLinks = [...linksProfesionales];
+                          newLinks[index].plataforma = e.target.value;
+                          setLinksProfesionales(newLinks);
+                          setValue("linksProfesionales", newLinks);
+                        }}
+                        className="w-full"
+                      />
+                      <Input
+                        placeholder="URL"
+                        value={link.url}
+                        onChange={(e) => {
+                          const newLinks = [...linksProfesionales];
+                          newLinks[index].url = e.target.value;
+                          setLinksProfesionales(newLinks);
+                          setValue("linksProfesionales", newLinks);
+                        }}
+                        className="w-full"
+                      />
                       <Button type="button" variant="outline" size="sm" onClick={() => {
                         const newLinks = linksProfesionales.filter((_, i) => i !== index);
                         setLinksProfesionales(newLinks);
@@ -433,42 +430,69 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
           </TabsContent>
 
           {/* Unirme a la red */}
-          <TabsContent value="red" className="space-y-6 pt-4">
+          <TabsContent
+            value="red"
+            className="space-y-6 pt-4"
+            style={{
+              overflowX: currentlyOpenDropdown ? 'visible' : undefined,
+              overflowY: currentlyOpenDropdown ? 'visible' : undefined,
+              zIndex: 0,  // 🚀 ESTA LÍNEA
+            }}
+          >
             <h2 className="text-xl font-semibold">Unirme a la red</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="col-span-full">
                 <div className="space-y-2">
                   <Label>Áreas de Interés o Expertise</Label>
+
                   <MultiSelect
                     selected={selectedTemas}
-                    onChange={(values) => setSelectedTemas(values)}
+                    onChange={setSelectedTemas}
+                    open={currentlyOpenDropdown === "areasInteres"}
+                    onOpenChange={(open) => {
+                      setCurrentlyOpenDropdown(open ? "areasInteres" : null);
+                    }}
                     options={AREAS_DE_INTERES.map(area => ({ value: area, label: area.replace(/_/g, ' ').replace(/\\b\\w/g, (char) => char.toUpperCase()) }))}
                     placeholder="Seleccionar áreas de interés"
                   />
+
                   {errors.areasDeInteresOExpertise && <p className="text-red-500">{errors.areasDeInteresOExpertise.message}</p>}
                 </div>
               </div>
               <div className="col-span-full">
                 <div className="space-y-2">
                   <Label>Ofrece Colaboración Como</Label>
+
                   <MultiSelect
                     selected={watch("ofreceColaboracionComo") || []}
                     onChange={(values: string[]) => setValue("ofreceColaboracionComo", values)}
+                    open={currentlyOpenDropdown === "colaboracion"}
+                    onOpenChange={(open) => {
+                      setCurrentlyOpenDropdown(open ? "colaboracion" : null);
+                    }}
                     options={TIPOS_COLABORACION.map(tipo => ({ value: tipo, label: tipo.replace(/_/g, ' ').replace(/\\b\\w/g, (char) => char.toUpperCase()) }))}
                     placeholder="Seleccionar roles de colaboración"
                   />
+
                   {errors.ofreceColaboracionComo && <p className="text-red-500">{errors.ofreceColaboracionComo.message}</p>}
                 </div>
               </div>
               <div className="col-span-full">
                 <div className="space-y-2">
                   <Label>Capacidades de Plataforma</Label>
+
                   <MultiSelect
                     selected={watch("capacidadesPlataforma") || []}
                     onChange={(values: string[]) => setValue("capacidadesPlataforma", values)}
+                    open={currentlyOpenDropdown === "capacidades"}
+                    onOpenChange={(open) => {
+                      setCurrentlyOpenDropdown(open ? "capacidades" : null);
+                    }}
                     options={CAPACIDADES_PLATAFORMA}
                     placeholder="Seleccionar capacidades de plataforma"
                   />
+
+
                   {errors.capacidadesPlataforma && <p className="text-red-500">{errors.capacidadesPlataforma.message}</p>}
                 </div>
               </div>
@@ -651,17 +675,17 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
               </div>
             </div>
           </TabsContent>
-        </Tabs>
-      </div>
 
-      <div className="flex justify-end gap-4 mt-6">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {submitLabel}
-        </Button>
+          <div className="mt-8 flex justify-end">
+            <Button type="submit" className="min-w-[120px]" disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                submitLabel
+              )}
+            </Button>
+          </div>
+        </Tabs>
       </div>
     </form>
   );
