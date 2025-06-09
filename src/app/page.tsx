@@ -11,6 +11,12 @@ export default function HomePage() {
             <a>Ir a Admin Dashboard</a>
           </Button>
         </Link>
+        <p className="mt-4">Ir a vista publica para testear.</p>
+        <Link href="/comunidad/personas" passHref legacyBehavior>
+          <Button asChild>
+            <a>Ir a vista publica personas</a>
+          </Button>
+        </Link>
       </main>
     );
   }
