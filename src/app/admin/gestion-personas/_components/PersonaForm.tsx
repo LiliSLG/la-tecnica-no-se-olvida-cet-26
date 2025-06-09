@@ -46,7 +46,6 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.foto_url || null);
-  const [selectedTemas, setSelectedTemas] = useState<string[]>([]);
   const [selectedProyectoFinal, setSelectedProyectoFinal] = useState<string | null>(null);
   const [linksProfesionales, setLinksProfesionales] = useState<Array<{ plataforma: string; url: string }>>([]);
   const [currentlyOpenDropdown, setCurrentlyOpenDropdown] = useState<string | null>(null);
@@ -54,10 +53,10 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
   const {
     register,
     handleSubmit,
-    formState: { errors },
     setValue,
     watch,
     control,
+    formState: { errors, isDirty },
   } = useForm<PersonaFormData>({
     resolver: zodResolver(personaSchema),
     defaultValues: initialData ? {
@@ -211,6 +210,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
           platform: link.plataforma,
           url: link.url,
         })) ?? [],
+
         areas_de_interes_o_expertise: data.areasDeInteresOExpertise ?? [],
         ofrece_colaboracion_como: data.ofreceColaboracionComo ?? [],
         capacidades_plataforma: data.capacidadesPlataforma ?? [],
@@ -446,15 +446,16 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                   <Label>Áreas de Interés o Expertise</Label>
 
                   <MultiSelect
-                    selected={selectedTemas}
-                    onChange={setSelectedTemas}
+                    selected={watch("areasDeInteresOExpertise") || []}
+                    onChange={(values: string[]) => setValue("areasDeInteresOExpertise", values)}
                     open={currentlyOpenDropdown === "areasInteres"}
                     onOpenChange={(open) => {
                       setCurrentlyOpenDropdown(open ? "areasInteres" : null);
                     }}
-                    options={AREAS_DE_INTERES.map(area => ({ value: area, label: area.replace(/_/g, ' ').replace(/\\b\\w/g, (char) => char.toUpperCase()) }))}
+                    options={AREAS_DE_INTERES.map((item) => ({ value: item, label: item }))}
                     placeholder="Seleccionar áreas de interés"
                   />
+
 
                   {errors.areasDeInteresOExpertise && <p className="text-red-500">{errors.areasDeInteresOExpertise.message}</p>}
                 </div>
@@ -496,19 +497,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                   {errors.capacidadesPlataforma && <p className="text-red-500">{errors.capacidadesPlataforma.message}</p>}
                 </div>
               </div>
-              <div className="col-span-full sm:col-span-1">
-                <div className="flex items-center space-x-2">
-                  <Controller
-                    name="buscandoOportunidades"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                  <Label htmlFor="buscandoOportunidades">Buscando Oportunidades</Label>
-                  {errors.buscandoOportunidades && <p className="text-red-500">{errors.buscandoOportunidades.message}</p>}
-                </div>
-              </div>
+
               <div className="col-span-full sm:col-span-1">
                 <div className="flex items-center space-x-2">
                   <Controller
@@ -554,26 +543,26 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                 <div className="space-y-2">
                   <Label htmlFor="proyectoFinalCETId">Proyecto Final CET</Label>
                   <Select
+                    value={watch("proyectoFinalCETId") ?? ""}
                     onValueChange={(value) => setValue("proyectoFinalCETId", value)}
-                    defaultValue={watch("proyectoFinalCETId") || ""}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar proyecto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Add options dynamically from projectsService.getAll() */}
-                      <SelectItem value="">Ninguno</SelectItem>
-                      {/* Example: */}
+                      {/* Cuando tengas los proyectos, los mapeas aquí */}
                       {/* {proyectos.map((proyecto) => (
-                        <SelectItem key={proyecto.id} value={proyecto.id}>
-                          {proyecto.nombre}
-                        </SelectItem>
-                      ))} */}
+      <SelectItem key={proyecto.id} value={proyecto.id}>
+        {proyecto.nombre}
+      </SelectItem>
+    ))} */}
                     </SelectContent>
                   </Select>
+
                   {errors.proyectoFinalCETId && <p className="text-red-500">{errors.proyectoFinalCETId.message}</p>}
                 </div>
               </div>
+
               <div className="col-span-full sm:col-span-1">
                 <div className="space-y-2">
                   <Label htmlFor="situacionLaboral">Situación Laboral</Label>
@@ -584,7 +573,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar situación laboral" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="bg-white">
                       <SelectItem value="no_especificado">No especificado</SelectItem>
                       <SelectItem value="empleado">Empleado</SelectItem>
                       <SelectItem value="buscando">Buscando empleo</SelectItem>
@@ -598,7 +587,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
               <div className="col-span-full sm:col-span-1">
                 <div className="space-y-2">
                   <Label htmlFor="visibilidadPerfil">Visibilidad del Perfil</Label>
-                  <Select
+                  {/*<Select
                     onValueChange={(value) => setValue("visibilidadPerfil", value as PersonaFormData["visibilidadPerfil"])}
                     defaultValue={watch("visibilidadPerfil")}
                   >
@@ -610,7 +599,21 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                       <SelectItem value="privado">Privado (solo administradores)</SelectItem>
                       <SelectItem value="solo_cet">Solo miembros CET</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select>*/}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={watch("visibilidadPerfil") === "publico"}
+                      onCheckedChange={(checked) =>
+                        setValue("visibilidadPerfil", checked ? "publico" : "privado")
+                      }
+                    />
+                    <Label className="text-sm">
+                      {watch("visibilidadPerfil") === "publico"
+                        ? "Perfil Público"
+                        : "Perfil Privado"}
+                    </Label>
+                  </div>
+
                   {errors.visibilidadPerfil && <p className="text-red-500">{errors.visibilidadPerfil.message}</p>}
                 </div>
               </div>
@@ -625,6 +628,19 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
                   />
                   <Label htmlFor="esExAlumnoCET">Es Ex-alumno CET</Label>
                   {errors.esExAlumnoCET && <p className="text-red-500">{errors.esExAlumnoCET.message}</p>}
+                </div>
+              </div>
+              <div className="col-span-full sm:col-span-1">
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    name="buscandoOportunidades"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="buscandoOportunidades">Buscando Oportunidades</Label>
+                  {errors.buscandoOportunidades && <p className="text-red-500">{errors.buscandoOportunidades.message}</p>}
                 </div>
               </div>
             </div>
@@ -676,7 +692,24 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
             </div>
           </TabsContent>
 
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (isDirty) {
+                  if (confirm("Hay cambios sin guardar. ¿Seguro que quieres cancelar?")) {
+                    router.push("/admin/gestion-personas");
+                  }
+                } else {
+                  router.push("/admin/gestion-personas");
+                }
+              }}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+
             <Button type="submit" className="min-w-[120px]" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
