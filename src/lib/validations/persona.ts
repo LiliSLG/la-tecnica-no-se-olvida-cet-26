@@ -1,5 +1,27 @@
 import { z } from "zod";
-import { VISIBILIDAD_PERFIL } from "@/lib/constants/persona";
+import { VISIBILIDAD_PERFIL, PROVINCIAS } from "@/lib/constants/persona";
+
+// Schema for residential location
+const ubicacionResidencialSchema = z.object({
+  direccion: z.string().min(1, "La dirección es requerida"),
+  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]], {
+    required_error: "La provincia es requerida"
+  }),
+  localidad: z.string().min(1, "La localidad es requerida"),
+  codigo_postal: z.string().min(1, "El código postal es requerido"),
+  lat: z.union([
+    z.number(),
+    z.string().transform((val) => val === "" ? undefined : Number(val)),
+    z.undefined(),
+    z.null()
+  ]).optional(),
+  lng: z.union([
+    z.number(),
+    z.string().transform((val) => val === "" ? undefined : Number(val)),
+    z.undefined(),
+    z.null()
+  ]).optional(),
+});
 
 export const personaSchema = z.object({
   id: z.string().optional(),
@@ -12,11 +34,7 @@ export const personaSchema = z.object({
   categoria: z.string().optional(),
   proyectoFinalCETId: z.string().nullable(),
   situacionLaboral: z.string().optional(),
-  pais: z.string().optional(),
-  ciudad: z.string().optional(),
-  provincia: z.string().optional(),
-  direccion: z.string().optional(),
-  codigoPostal: z.string().optional(),
+  ubicacionResidencial: ubicacionResidencialSchema,
   linksProfesionales: z.array(z.object({
     plataforma: z.string(),
     url: z.string().url("URL inválida")

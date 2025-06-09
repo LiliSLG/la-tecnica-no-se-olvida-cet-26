@@ -16,10 +16,14 @@ const linkProfesionalSchema = z.object({
 
 // Schema for residential location
 const ubicacionResidencialSchema = z.object({
-  ciudad: z.string().min(2, "La ciudad debe tener al menos 2 caracteres"),
-  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]]),
-  direccion: z.string().optional(),
-  codigoPostal: z.string().optional(),
+  direccion: z.string().min(1, "La dirección es requerida"),
+  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]], {
+    required_error: "La provincia es requerida"
+  }),
+  localidad: z.string().min(1, "La localidad es requerida"),
+  codigo_postal: z.string().min(1, "El código postal es requerido"),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 
 // Base schema that matches database structure

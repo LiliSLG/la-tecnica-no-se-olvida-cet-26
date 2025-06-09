@@ -6,19 +6,31 @@ import { mapValidationError } from '../errors/utils';
 import { ValidationError } from '../errors/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
-import { CacheableService } from './cacheableService';
+import { supabase } from "../supabaseClient";
 
 type Tema = Database['public']['Tables']['temas']['Row'];
 type CreateTema = Database['public']['Tables']['temas']['Insert'];
 type UpdateTema = Database['public']['Tables']['temas']['Update'];
 
-export class TemasService extends CacheableService<Tema> {
+// Type mapping for the application layer
+type AppTemaUpdate = Omit<UpdateTema, 'categoriatema'> & {
+  categoriaTema?: Database['public']['Enums']['tema_categoria_enum'];
+};
+
+export interface MappedTema {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  categoriaTema: Database['public']['Enums']['tema_categoria_enum'];
+  estaEliminado: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export class TemasService extends BaseService<Tema> {
   constructor(supabase: SupabaseClient<Database>) {
-    super(supabase, {
-      entityType: 'tema',
-      ttl: 3600, // 1 hour
-      enableCache: true,
-    });
+    super(supabase, { tableName: 'temas' });
+
   }
 
   protected validateCreateInput(data: CreateTema): ValidationError | null {
@@ -49,64 +61,7 @@ export class TemasService extends CacheableService<Tema> {
     return super.getAll(options);
   }
 
-  protected async getRelatedEntities<R>(
-    id: string,
-    sourceTable: string,
-    targetTable: string,
-    junctionTable: string,
-    options?: QueryOptions
-  ): Promise<ServiceResult<R[] | null>> {
-    try {
-      let query = this.supabase
-        .from(targetTable)
-        .select(`
-          *,
-          ${junctionTable}!inner (
-            ${sourceTable}!inner (
-              id
-            )
-          )
-        `)
-        .eq(`${junctionTable}.${sourceTable}_id`, id);
-
-      // Apply filters
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          query = query.eq(key, value);
-        });
-      }
-
-      // Apply pagination
-      if (options?.page && options?.pageSize) {
-        const from = (options.page - 1) * options.pageSize;
-        const to = from + options.pageSize - 1;
-        query = query.range(from, to);
-      }
-
-      // Apply sorting
-      if (options?.sortBy) {
-        query = query.order(options.sortBy, { 
-          ascending: options.sortOrder !== 'desc' 
-        });
-      }
-
-      const { data: results, error } = await query;
-
-      if (error) throw error;
-      if (!results) return createSuccess<R[] | null>(null);
-
-      return createSuccess(results as R[]);
-    } catch (error) {
-      return createError<R[] | null>({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
-      });
-    }
-  }
-
-  protected handleError(error: unknown, context: { operation: string; [key: string]: any }): ValidationError {
+  protected handleError(error: unknown, context: { operation: string;[key: string]: any }): ValidationError {
     if (error instanceof Error) {
       return {
         name: 'ServiceError',
@@ -294,19 +249,17 @@ export class TemasService extends CacheableService<Tema> {
         .select()
         .eq('esta_eliminado', false)
         .order('nombre', { ascending: true });
-
+  
       if (error) throw error;
       if (!results) return createSuccess(null);
-
-      for (const result of results) {
-        await this.setInCache(result.id, result);
-      }
-
+  
+      // No se cachea nada, simplemente se devuelve el resultado
       return createSuccess(results);
     } catch (error) {
       return createError(this.handleError(error, { operation: 'getAllActivos' }));
     }
   }
+  
 
   async getById(id: string): Promise<ServiceResult<Tema | null>> {
     try {
@@ -361,10 +314,10 @@ export class TemasService extends CacheableService<Tema> {
   async getPublic(): Promise<ServiceResult<Tema[]>> {
     try {
       const { data, error } = await this.supabase
-        .from(this.tableName)
+        .from('temas')
         .select('*')
         .eq('esta_eliminado', false)
-        .order('created_at', { ascending: false });
+        .order('nombre', { ascending: true });
 
       if (error) throw error;
       if (!data) return createSuccess([]);
@@ -395,11 +348,18 @@ export class TemasService extends CacheableService<Tema> {
     }
   }
 
-  async update(id: string, data: Database['public']['Tables']['temas']['Update']): Promise<ServiceResult<Tema>> {
+  async update(id: string, data: AppTemaUpdate): Promise<ServiceResult<Tema>> {
     try {
+      // Map the camelCase field to the database column name
+      const dbData = {
+        ...data,
+        categoriatema: data.categoriaTema,
+      };
+      delete (dbData as any).categoriaTema;
+
       const { data: result, error } = await this.supabase
         .from(this.tableName)
-        .update(data)
+        .update(dbData)
         .eq('id', id)
         .select()
         .single();
@@ -425,11 +385,18 @@ export class TemasService extends CacheableService<Tema> {
     }
   }
 
-  async create(data: Omit<Tema, 'id'>): Promise<ServiceResult<Tema | null>> {
+  async create(data: AppTemaUpdate): Promise<ServiceResult<Tema | null>> {
     try {
+      // Map the camelCase field to the database column name
+      const dbData = {
+        ...data,
+        categoriatema: data.categoriaTema,
+      };
+      delete (dbData as any).categoriaTema;
+
       const { data: result, error } = await this.supabase
         .from(this.tableName)
-        .insert(data)
+        .insert(dbData)
         .select()
         .single();
 
@@ -437,6 +404,88 @@ export class TemasService extends CacheableService<Tema> {
       if (!result) return createSuccess(null);
 
       return createSuccess(result);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async delete(id: string): Promise<{ success: boolean; error?: Error }> {
+    try {
+      const { error } = await this.supabase
+        .from("temas")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  }
+
+  async getPublicMapped(): Promise<ServiceResult<MappedTema[]>> {
+    try {
+      const result = await this.getPublic();
+      if (!result.success || !result.data) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Failed to get public temas',
+          code: 'DB_ERROR'
+        });
+      }
+
+      const mappedData: MappedTema[] = result.data.map((tema) => ({
+        id: tema.id,
+        nombre: tema.nombre,
+        descripcion: tema.descripcion,
+        categoriaTema: tema.categoriatema ?? 'otro',
+        estaEliminado: tema.esta_eliminado ?? false,
+        createdAt: tema.created_at ?? '',
+        updatedAt: tema.updated_at ?? '',
+      }));
+
+      return createSuccess(mappedData);
+    } catch (error) {
+      return createError({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
+
+  async getByIdMapped(id: string): Promise<ServiceResult<MappedTema | null>> {
+    try {
+      const result = await this.getById(id);
+      if (!result.success) {
+        return createError({
+          name: 'ServiceError',
+          message: 'Failed to get tema by id',
+          code: 'DB_ERROR'
+        });
+      }
+
+      if (!result.data) {
+        return createSuccess(null);
+      }
+
+      const mappedData: MappedTema = {
+        id: result.data.id,
+        nombre: result.data.nombre,
+        descripcion: result.data.descripcion,
+        categoriaTema: result.data.categoriatema ?? 'otro',
+        estaEliminado: result.data.esta_eliminado ?? false,
+        createdAt: result.data.created_at ?? "",
+        updatedAt: result.data.updated_at ?? "",
+      };
+
+      return createSuccess(mappedData);
     } catch (error) {
       return createError({
         name: 'ServiceError',

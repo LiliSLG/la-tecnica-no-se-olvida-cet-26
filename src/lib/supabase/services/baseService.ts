@@ -308,4 +308,64 @@ export abstract class BaseService<T extends { id: string }> {
       });
     }
   }
+
+  /**
+   * Retrieves related entities through a junction table
+   */
+  protected async getRelatedEntities<R>(
+    id: string,
+    sourceTable: string,
+    targetTable: string,
+    junctionTable: string,
+    options?: QueryOptions
+  ): Promise<ServiceResult<R[] | null>> {
+    try {
+      let query = this.supabase
+        .from(targetTable)
+        .select(`
+          *,
+          ${junctionTable}!inner (
+            ${sourceTable}!inner (
+              id
+            )
+          )
+        `)
+        .eq(`${junctionTable}.${sourceTable}_id`, id);
+
+      // Apply filters
+      if (options?.filters) {
+        Object.entries(options.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+
+      // Apply pagination
+      if (options?.page && options?.pageSize) {
+        const from = (options.page - 1) * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      // Apply sorting
+      if (options?.sortBy) {
+        query = query.order(options.sortBy, { 
+          ascending: options.sortOrder !== 'desc' 
+        });
+      }
+
+      const { data: results, error } = await query;
+
+      if (error) throw error;
+      if (!results) return createSuccessResult<R[] | null>(null);
+
+      return createSuccessResult(results as R[]);
+    } catch (error) {
+      return createErrorResult<R[] | null>({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
 } 

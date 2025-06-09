@@ -54,6 +54,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     control,
     formState: { errors, isDirty },
@@ -61,33 +62,40 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
     resolver: zodResolver(personaSchema),
     defaultValues: initialData ? {
       nombre: initialData.nombre,
-      apellido: initialData.apellido,
+      apellido: initialData.apellido || "",
       email: initialData.email,
       activo: initialData.activo,
       tituloProfesional: initialData.titulo_profesional,
       descripcionPersonalOProfesional: initialData.descripcion_personal_o_profesional,
-      situacionLaboral: initialData.estado_situacion_laboral,
-      ciudad: initialData.ubicacion_residencial?.ciudad || "",
-      provincia: initialData.ubicacion_residencial?.provincia || "rio_negro",
-      direccion: initialData.ubicacion_residencial?.direccion || "",
-      codigoPostal: initialData.ubicacion_residencial?.codigo_postal || "",
+      situacionLaboral: initialData.estado_situacion_laboral || "no_especificado",
+      ubicacionResidencial: {
+        direccion: (initialData.ubicacion_residencial as any)?.direccion || "",
+        provincia: (initialData.ubicacion_residencial as any)?.provincia || "rio_negro",
+        localidad: (initialData.ubicacion_residencial as any)?.localidad || "",
+        codigo_postal: (initialData.ubicacion_residencial as any)?.codigo_postal || "",
+        lat: (initialData.ubicacion_residencial as any)?.lat || undefined,
+        lng: (initialData.ubicacion_residencial as any)?.lng || undefined,
+      },
       proyectoFinalCETId: initialData.proyecto_final_cet_id,
-      linksProfesionales: initialData.links_profesionales || [],
+      linksProfesionales: (initialData.links_profesionales as any)?.map((link: any) => ({
+        plataforma: link.platform || "",
+        url: link.url || "",
+      })) || [],
       areasDeInteresOExpertise: initialData.areas_de_interes_o_expertise || [],
       ofreceColaboracionComo: initialData.ofrece_colaboracion_como || [],
       capacidadesPlataforma: initialData.capacidades_plataforma || [],
-      esAdmin: initialData.es_admin,
-      disponibleParaProyectos: initialData.disponible_para_proyectos,
+      esAdmin: initialData.es_admin || false,
+      disponibleParaProyectos: initialData.disponible_para_proyectos || false,
       anoCursadaActualCET: initialData.ano_cursada_actual_cet,
       anoEgresoCET: initialData.ano_egreso_cet,
       titulacionObtenidaCET: initialData.titulacion_obtenida_cet,
-      buscandoOportunidades: initialData.buscando_oportunidades,
+      buscandoOportunidades: initialData.buscando_oportunidades || false,
       historiaDeExitoOResumenTrayectoria: initialData.historia_de_exito_o_resumen_trayectoria,
       empresaOInstitucionActual: initialData.empresa_o_institucion_actual,
       cargoActual: initialData.cargo_actual,
       telefonoContacto: initialData.telefono_contacto,
-      visibilidadPerfil: initialData.visibilidad_perfil,
-      estaEliminada: initialData.esta_eliminada,
+      visibilidadPerfil: initialData.visibilidad_perfil || "publico",
+      estaEliminada: initialData.esta_eliminada || false,
       eliminadoPorUid: initialData.eliminado_por_uid,
       eliminadoEn: initialData.eliminado_en,
     } : {
@@ -98,10 +106,14 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
       tituloProfesional: null,
       descripcionPersonalOProfesional: null,
       situacionLaboral: "no_especificado",
-      ciudad: "",
-      provincia: "rio_negro",
-      direccion: "",
-      codigoPostal: "",
+      ubicacionResidencial: {
+        direccion: "",
+        provincia: "rio_negro",
+        localidad: "",
+        codigo_postal: "",
+        lat: undefined,
+        lng: undefined,
+      },
       proyectoFinalCETId: null,
       linksProfesionales: [],
       areasDeInteresOExpertise: [],
@@ -161,7 +173,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
     }
   };
 
-  const onSubmitForm = async (data: PersonaFormData) => {
+  const onSubmitForm = async (data: any) => {
     try {
       setIsLoading(true);
       // Map all camelCase form data to snake_case backend fields
@@ -188,7 +200,7 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
         estado_situacion_laboral: data.situacionLaboral ?? "no_especificado",
 
         // Profile settings
-        visibilidad_perfil: data.visibilidadPerfil,
+        visibilidad_perfil: data.visibilidadPerfil as Database['public']['Enums']['visibilidad_perfil_enum'],
         disponible_para_proyectos: data.disponibleParaProyectos,
         buscando_oportunidades: data.buscandoOportunidades,
 
@@ -199,14 +211,16 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
 
         // Location
         ubicacion_residencial: {
-          ciudad: data.ciudad ?? '',
-          provincia: data.provincia ?? 'rio_negro',
-          direccion: data.direccion ?? '',
-          codigo_postal: data.codigoPostal ?? ''
-        },
+          direccion: data.ubicacionResidencial.direccion,
+          provincia: data.ubicacionResidencial.provincia,
+          localidad: data.ubicacionResidencial.localidad,
+          codigo_postal: data.ubicacionResidencial.codigo_postal,
+          lat: data.ubicacionResidencial.lat,
+          lng: data.ubicacionResidencial.lng,
+        } as any,
 
         // Arrays and collections
-        links_profesionales: data.linksProfesionales?.map(link => ({
+        links_profesionales: data.linksProfesionales?.map((link: any) => ({
           platform: link.plataforma,
           url: link.url,
         })) ?? [],
@@ -649,44 +663,111 @@ export default function PersonaForm({ initialData, onSubmit, submitLabel = "Guar
           {/* Ubicación */}
           <TabsContent value="ubicacion" className="space-y-6 pt-4">
             <h2 className="text-xl font-semibold">Ubicación</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="col-span-full sm:col-span-1">
-                <div className="space-y-2 w-full">
-                  <Label htmlFor="ciudad">Ciudad</Label>
-                  <Input id="ciudad" {...register("ciudad")} className="w-full" />
-                  {errors.ciudad && <p className="text-red-500">{errors.ciudad.message}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ubicacionResidencial.direccion">Dirección</Label>
+                <Input
+                  id="ubicacionResidencial.direccion"
+                  {...register("ubicacionResidencial.direccion")}
+                  placeholder="Ingrese su dirección"
+                />
+                {errors.ubicacionResidencial?.direccion && (
+                  <p className="text-sm text-red-500">{errors.ubicacionResidencial.direccion.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ubicacionResidencial.provincia">Provincia</Label>
+                <Select
+                  onValueChange={(value) => setValue("ubicacionResidencial.provincia", value)}
+                  defaultValue={getValues("ubicacionResidencial.provincia")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione una provincia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVINCIAS.map((provincia) => (
+                      <SelectItem key={provincia.value} value={provincia.value}>
+                        {provincia.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.ubicacionResidencial?.provincia && (
+                  <p className="text-sm text-red-500">{errors.ubicacionResidencial.provincia.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ubicacionResidencial.localidad">Localidad</Label>
+                <Input
+                  id="ubicacionResidencial.localidad"
+                  {...register("ubicacionResidencial.localidad")}
+                  placeholder="Ingrese su localidad"
+                />
+                {errors.ubicacionResidencial?.localidad && (
+                  <p className="text-sm text-red-500">{errors.ubicacionResidencial.localidad.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ubicacionResidencial.codigo_postal">Código Postal</Label>
+                <Input
+                  id="ubicacionResidencial.codigo_postal"
+                  {...register("ubicacionResidencial.codigo_postal")}
+                  placeholder="Ingrese su código postal"
+                />
+                {errors.ubicacionResidencial?.codigo_postal && (
+                  <p className="text-sm text-red-500">{errors.ubicacionResidencial.codigo_postal.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Geographic Location Section */}
+            <div className="mt-6 space-y-4">
+              <h3 className="text-lg font-semibold">Ubicación Geográfica</h3>
+              <p className="text-sm text-muted-foreground">
+                In the future, you'll be able to select your location from a map.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ubicacionResidencial.lat">Latitud</Label>
+                  <Input
+                    id="ubicacionResidencial.lat"
+                    type="number"
+                    step="any"
+                    {...register("ubicacionResidencial.lat", {
+                      setValueAs: (v) => v === "" ? undefined : Number(v)
+                    })}
+                    placeholder="Ej: -41.1335"
+                  />
+                  {errors.ubicacionResidencial?.lat && (
+                    <p className="text-sm text-red-500">{errors.ubicacionResidencial.lat.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ubicacionResidencial.lng">Longitud</Label>
+                  <Input
+                    id="ubicacionResidencial.lng"
+                    type="number"
+                    step="any"
+                    {...register("ubicacionResidencial.lng", {
+                      setValueAs: (v) => v === "" ? undefined : Number(v)
+                    })}
+                    placeholder="Ej: -71.3103"
+                  />
+                  {errors.ubicacionResidencial?.lng && (
+                    <p className="text-sm text-red-500">{errors.ubicacionResidencial.lng.message}</p>
+                  )}
                 </div>
               </div>
-              <div className="col-span-full sm:col-span-1">
-                <div className="space-y-2 w-full">
-                  <Label htmlFor="provincia">Provincia</Label>
-                  <Select onValueChange={(value) => setValue("provincia", value as Provincia)} defaultValue={watch("provincia")}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccionar provincia" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PROVINCIAS.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.provincia && <p className="text-red-500">{errors.provincia.message}</p>}
-                </div>
-              </div>
-              <div className="col-span-full sm:col-span-1">
-                <div className="space-y-2 w-full">
-                  <Label htmlFor="direccion">Dirección</Label>
-                  <Input id="direccion" {...register("direccion")} className="w-full" />
-                  {errors.direccion && <p className="text-red-500">{errors.direccion.message}</p>}
-                </div>
-              </div>
-              <div className="col-span-full sm:col-span-1">
-                <div className="space-y-2 w-full">
-                  <Label htmlFor="codigoPostal">Código Postal</Label>
-                  <Input id="codigoPostal" {...register("codigoPostal")} className="w-full" />
-                  {errors.codigoPostal && <p className="text-red-500">{errors.codigoPostal.message}</p>}
+
+              {/* Map Selector Placeholder */}
+              <div className="mt-4 p-4 bg-muted rounded-lg border border-dashed border-muted-foreground/25">
+                <div className="aspect-video bg-muted/50 rounded flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Map selector coming soon</p>
                 </div>
               </div>
             </div>

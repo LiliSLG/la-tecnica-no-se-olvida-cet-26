@@ -46,19 +46,18 @@ export default function EditarPersonaPage() {
 
   const handleSubmit = async (data: any) => {
     try {
+      setIsLoading(true);
       const result = await personasService.update(id, data);
-      if (!result.success || !result.data) {
+      if (!result.success) {
         throw new Error(result.error?.message || "Error al actualizar la persona");
       }
       toast.success("Persona actualizada exitosamente");
-      // Refresh the router cache before navigation
-      router.refresh();
-      // Add a small delay to ensure the refresh is processed
-      setTimeout(() => {
-        router.push("/admin/gestion-personas");
-      }, 100);
+      router.push("/admin/gestion-personas");
     } catch (err) {
+      console.error("Error updating persona:", err);
       toast.error(err instanceof Error ? err.message : "Error al actualizar la persona");
+    } finally {
+      setIsLoading(false);
     }
   };
 

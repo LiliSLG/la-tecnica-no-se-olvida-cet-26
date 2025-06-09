@@ -53,7 +53,7 @@ export default function AdminDashboard() {
       //description: "Gestión de Temáticas / Ejes",
       description: "Definir y gestionar las temáticas o ejes que estructuran los contenidos y proyectos de la comunidad.",
       href: "/admin/gestion-temas",
-      isActive: false
+      isActive: true
     },
     {
       title: "Cursos",

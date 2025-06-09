@@ -29,7 +29,7 @@
 - ofreceColaboracionComo (array text[])
 - telefonoContacto
 - linksProfesionales (jsonb)
-- ubicacionResidencial (jsonb)
+- ubicacionResidencial (jsonb) ver abajo
 - visibilidadPerfil (visibilidad_perfil_enum)
 - ingresadoPor
 - creadoEn (timestamp)
@@ -38,6 +38,24 @@
 - estaEliminada (boolean)
 - eliminadoEn (timestamp)
 - eliminadoPorUid
+
+
+---
+
+
+El campo `ubicacionResidencial` representa la dirección residencial de una persona. Se guarda como un objeto estructurado en formato JSONB con los siguientes campos:
+
+- `direccion`: calle y número (string)
+- `provincia`: provincia (string)
+- `localidad`: ciudad o localidad (string)
+- `codigo_postal`: código postal (string)
+- `lat` (opcional): latitud geográfica (number)
+- `lng` (opcional): longitud geográfica (number)
+
+Este campo es interpretado por los formularios como un objeto anidado. Se recomienda validar al menos los campos de texto como obligatorios y mantener `lat` y `lng` como opcionales para futuras visualizaciones en mapas.
+📌 Nota:
+Se planea en el futuro vincular estos campos a un selector de ubicación con mapa interactivo, permitiendo que el usuario elija su posición directamente desde una interfaz visual. Mientras tanto, estos valores pueden ingresarse manualmente o dejarse en blanco.
+
 
 ### proyectos
 - id (UUID, PK)

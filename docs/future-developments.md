@@ -391,3 +391,27 @@ This update will:
 - Implement role-aware navigation (show/hide menu items based on role).
 - Audit current protected routes and prepare for role-based expansion.
 
+
+
+# Idea: Implement hierarchical structure Area → Topic → Subtopic in the knowledge model
+
+Currently, `topics` are a flat entity (`temas` table), used as a transversal axis in the relationships with persons, projects, interviews, and news.
+
+This future improvement proposes adding an explicit hierarchy:
+
+- `Area` (broad thematic category)
+- `Topic` (intermediate category)
+- `Subtopic` (specific detail)
+
+Motivations:
+- Improve navigation and public usability (hierarchical filters)
+- Enable more precise search and filtering
+- Better reflect the structure of rural and technical knowledge of CET 26 and its community
+
+Implications:
+- Requires redesign of the data model (new tables, relationships)
+- Requires migration of existing topics
+- Requires Admin Panel refactor (hierarchy management)
+- Requires adaptation of the AI-based search and public filters
+
+Current status: documented idea. It is recommended to evaluate this improvement during the optimization phase of search and AI, once the current CRUD is consolidated and the public frontend is operational.

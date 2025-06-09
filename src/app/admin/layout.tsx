@@ -15,7 +15,7 @@ const sidebarLinks = [
   { id: 'news', href: "#", label: "Noticias" },
   { id: 'histories', href: "#", label: "Historias Orales" },
   { id: 'organizations', href: "#", label: "Organizaciones" },
-  { id: 'topics', href: "#", label: "Temáticas" },
+  { id: 'topics', href: "/admin/gestion-temas", label: "Temáticas" },
   { id: 'courses', href: "#", label: "Cursos" },
   { id: 'bolsa', href: "#", label: "Bolsa de Trabajo" },
   { id: 'settings', href: "#", label: "Configuración" },
