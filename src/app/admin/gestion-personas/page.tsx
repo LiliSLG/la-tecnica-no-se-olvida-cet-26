@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Pencil, Trash2, UserPlus, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -229,6 +229,17 @@ export default function PersonasListPage() {
       className: 'w-[120px] text-right',
       render: (persona: Persona) => (
         <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+            className="hover:bg-muted focus:ring-2 focus:ring-offset-2 h-8 w-8"
+          >
+            <Link href={`/admin/gestion-personas/${persona.id}`}>
+              <Eye className="h-4 w-4" />
+              <span className="sr-only">Ver</span>
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="icon"
