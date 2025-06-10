@@ -11,6 +11,15 @@ type Persona = Database['public']['Tables']['personas']['Row'];
 type CreatePersona = Database['public']['Tables']['personas']['Insert'];
 type UpdatePersona = Database['public']['Tables']['personas']['Update'];
 
+type UbicacionResidencial = {
+  direccion: string;
+  provincia: string;
+  localidad: string;
+  codigo_postal: string;
+  lat?: number;
+  lng?: number;
+};
+
 /**
  * Mapped version of Persona for domain use
  */
@@ -44,13 +53,8 @@ export interface MappedPersona {
     platform: string;
     url: string;
   }>;
-  ubicacionResidencial: {
-    ciudad: string;
-    provincia: string;
-    direccion?: string;
-    codigoPostal?: string;
-  };
-  visibilidadPerfil: string;
+  ubicacionResidencial: UbicacionResidencial;
+  visibilidadPerfil: "publico" | "solo_registrados_plataforma" | "privado" | "solo_admins_y_propio";
   estaEliminada: boolean;
   eliminadoPorUid: string | null;
   eliminadoEn: string | null;
@@ -70,10 +74,34 @@ export class PersonasService extends BaseService<Persona> {
    * Maps a database row to a domain model
    */
   private mapPersonaToDomain(persona: Persona): MappedPersona {
+    const defaultUbicacionResidencial = {
+      direccion: '',
+      provincia: 'rio_negro',
+      localidad: '',
+      codigo_postal: '',
+    };
+
+    let ubicacionResidencialData = defaultUbicacionResidencial;
+
+    if (persona.ubicacion_residencial &&
+      typeof persona.ubicacion_residencial === 'object' &&
+      !Array.isArray(persona.ubicacion_residencial)) {
+      const ubicacion = persona.ubicacion_residencial as Record<string, unknown>;
+      ubicacionResidencialData = {
+        direccion: typeof ubicacion.direccion === 'string' ? ubicacion.direccion : defaultUbicacionResidencial.direccion,
+        provincia: typeof ubicacion.provincia === 'string' ? ubicacion.provincia : defaultUbicacionResidencial.provincia,
+        localidad: typeof ubicacion.localidad === 'string' ? ubicacion.localidad : defaultUbicacionResidencial.localidad,
+        codigo_postal: typeof ubicacion.codigo_postal === 'string' ? ubicacion.codigo_postal : defaultUbicacionResidencial.codigo_postal,
+        lat: typeof ubicacion.lat === 'number' ? ubicacion.lat : undefined,
+        lng: typeof ubicacion.lng === 'number' ? ubicacion.lng : undefined,
+      } as UbicacionResidencial;
+
+    }
+
     return {
       id: persona.id,
       nombre: persona.nombre,
-      apellido: persona.apellido,
+      apellido: persona.apellido ?? '',
       email: persona.email,
       fotoUrl: persona.foto_url,
       categoriaPrincipal: persona.categoria_principal || "otro",
@@ -96,19 +124,14 @@ export class PersonasService extends BaseService<Persona> {
       cargoActual: persona.cargo_actual,
       ofreceColaboracionComo: persona.ofrece_colaboracion_como || [],
       telefonoContacto: persona.telefono_contacto,
-      linksProfesionales: persona.links_profesionales || [],
-      ubicacionResidencial: {
-        ciudad: persona.ubicacion_residencial?.ciudad || "",
-        provincia: persona.ubicacion_residencial?.provincia || "rio_negro",
-        direccion: persona.ubicacion_residencial?.direccion,
-        codigoPostal: persona.ubicacion_residencial?.codigo_postal,
-      },
-      visibilidadPerfil: persona.visibilidad_perfil || "publico",
+      linksProfesionales: (persona.links_profesionales as Array<{ platform: string; url: string; }>) || [],
+      ubicacionResidencial: ubicacionResidencialData,
+      visibilidadPerfil: (persona.visibilidad_perfil as "publico" | "solo_registrados_plataforma" | "privado" | "solo_admins_y_propio") || "publico",
       estaEliminada: persona.esta_eliminada ?? false,
       eliminadoPorUid: persona.eliminado_por_uid,
       eliminadoEn: persona.eliminado_en,
-      createdAt: persona.created_at,
-      updatedAt: persona.updated_at,
+      createdAt: persona.created_at ?? '',
+      updatedAt: persona.updated_at ?? '',
     };
   }
 
@@ -123,6 +146,15 @@ export class PersonasService extends BaseService<Persona> {
    * Maps a domain model to a database row
    */
   private mapDomainToPersona(data: Partial<MappedPersona>): Partial<Persona> {
+    const ubicacionResidencial = data.ubicacionResidencial ? {
+      direccion: data.ubicacionResidencial.direccion,
+      provincia: data.ubicacionResidencial.provincia,
+      localidad: data.ubicacionResidencial.localidad,
+      codigo_postal: data.ubicacionResidencial.codigo_postal,
+      lat: data.ubicacionResidencial.lat,
+      lng: data.ubicacionResidencial.lng
+    } : undefined;
+
     return {
       id: data.id,
       nombre: data.nombre,
@@ -150,7 +182,7 @@ export class PersonasService extends BaseService<Persona> {
       ofrece_colaboracion_como: data.ofreceColaboracionComo,
       telefono_contacto: data.telefonoContacto,
       links_profesionales: data.linksProfesionales,
-      ubicacion_residencial: data.ubicacionResidencial,
+      ubicacion_residencial: ubicacionResidencial,
       visibilidad_perfil: data.visibilidadPerfil,
       esta_eliminada: data.estaEliminada,
       eliminado_por_uid: data.eliminadoPorUid,
@@ -428,20 +460,39 @@ export class PersonasService extends BaseService<Persona> {
    * Gets all public personas with domain mapping
    */
   async getPublicMapped(
-    options?: QueryOptions
+    options?: QueryOptions & { temaId?: string }
   ): Promise<ServiceResult<MappedPersona[] | null>> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('esta_eliminada', false)
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          persona_tema!inner(
+            tema_id
+          )
+        `)
+        .eq('esta_eliminada', false);
 
-      if (error) throw error;
+      // Apply tema filter if provided
+      if (options?.temaId) {
+        query = query.eq('persona_tema.tema_id', options.temaId);
+      }
+
+      // Order by creation date after all filters are applied
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching public personas:', error);
+        throw error;
+      }
+      
       if (!data) return createSuccess(null);
 
       return createSuccess(this.mapPersonasToDomain(data));
     } catch (error) {
+      console.error('Error in getPublicMapped:', error);
       return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'An unexpected error occurred',
@@ -453,6 +504,7 @@ export class PersonasService extends BaseService<Persona> {
 
   async create(data: Omit<Persona, 'id'>): Promise<ServiceResult<Persona | null>> {
     // Ensure required fields are not undefined
+    const ubicacion = data.ubicacion_residencial as Partial<UbicacionResidencial>;
     const createData: Omit<Persona, 'id'> = {
       nombre: data.nombre,
       apellido: data.apellido,
@@ -480,12 +532,16 @@ export class PersonasService extends BaseService<Persona> {
       ofrece_colaboracion_como: data.ofrece_colaboracion_como ?? [],
       telefono_contacto: data.telefono_contacto ?? null,
       links_profesionales: data.links_profesionales ?? [],
+
       ubicacion_residencial: {
-        ciudad: data.ubicacion_residencial?.ciudad ?? "",
-        provincia: data.ubicacion_residencial?.provincia ?? "rio_negro",
-        direccion: data.ubicacion_residencial?.direccion,
-        codigo_postal: data.ubicacion_residencial?.codigo_postal,
+        direccion: ubicacion?.direccion ?? '',
+        provincia: ubicacion?.provincia ?? 'rio_negro',
+        localidad: ubicacion?.localidad ?? '',
+        codigo_postal: ubicacion?.codigo_postal ?? '',
+        lat: ubicacion?.lat,
+        lng: ubicacion?.lng,
       },
+
       visibilidad_perfil: data.visibilidad_perfil ?? "publico",
       esta_eliminada: data.esta_eliminada ?? false,
       eliminado_por_uid: data.eliminado_por_uid ?? null,
@@ -502,11 +558,11 @@ const personasService = new PersonasService(supabase);
 
 // Export utility functions
 export const getPersonasByIds = (ids: string[]) => personasService.getByIdsMapped(ids);
-export const getPublicEgresadosYEstudiantes = (options?: QueryOptions) => 
+export const getPublicEgresadosYEstudiantes = (options?: QueryOptions) =>
   personasService.getPublicEgresadosYEstudiantesMapped(options);
-export const getPublicTutoresYColaboradores = (options?: QueryOptions) => 
+export const getPublicTutoresYColaboradores = (options?: QueryOptions) =>
   personasService.getPublicTutoresYColaboradoresMapped(options);
-export const getPublicPersonas = (options?: QueryOptions) => 
+export const getPublicPersonas = (options?: QueryOptions) =>
   personasService.getPublicMapped(options);
 
 // Export the singleton instance

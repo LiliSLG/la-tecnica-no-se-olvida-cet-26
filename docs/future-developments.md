@@ -391,7 +391,8 @@ This update will:
 - Implement role-aware navigation (show/hide menu items based on role).
 - Audit current protected routes and prepare for role-based expansion.
 
-
+- [ ] **Admin: Interfaz para Relacionar Proyectos:** En el formulario de creación/edición de proyectos, implementar el campo de búsqueda para encontrar y añadir proyectos relacionados. Debe permitir seleccionar el tipo de relación y añadir una descripción.
+- [ ] **Público: Visualización de Proyectos Relacionados:** En la página de detalle de un proyecto, mostrar dos listas: 1) "Basado en" (proyectos que este referencia) y 2) "Referenciado por" (proyectos que lo referencian a él).
 
 # Idea: Implement hierarchical structure Area → Topic → Subtopic in the knowledge model
 

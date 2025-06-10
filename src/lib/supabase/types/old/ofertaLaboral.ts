@@ -1,4 +1,4 @@
-import { Database } from './database.types';
+import { Database } from '../database.types';
 
 export type MappedOfertaLaboral = {
   id: string;

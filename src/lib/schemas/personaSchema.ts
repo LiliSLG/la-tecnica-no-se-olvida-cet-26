@@ -16,22 +16,32 @@ const linkProfesionalSchema = z.object({
 
 // Schema for residential location
 const ubicacionResidencialSchema = z.object({
-  direccion: z.string().min(1, "La dirección es requerida"),
-  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]], {
-    required_error: "La provincia es requerida"
-  }),
-  localidad: z.string().min(1, "La localidad es requerida"),
-  codigo_postal: z.string().min(1, "El código postal es requerido"),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-});
+  direccion: z.string().optional().nullable(),
+  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]]).optional().nullable(),
+  localidad: z.string().optional().nullable(),
+  codigo_postal: z.string().optional().nullable(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+})
+.transform((data) => {
+  const isEmpty =
+    !data?.direccion &&
+    !data?.provincia &&
+    !data?.localidad &&
+    !data?.codigo_postal &&
+    !data?.lat &&
+    !data?.lng;
+  return isEmpty ? undefined : data;
+})
+.optional()
+.nullable();
 
-// Base schema that matches database structure
-export const personaSchema = z.object({
+// Base schema sin transform
+const personaSchemaRaw = z.object({
   id: z.string().optional(),
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   apellido: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
-  email: z.string().email("Email inválido").nullable(),
+  email: z.string().email("Email inválida").nullable(),
   fotoUrl: z.string().url("URL inválida").nullable(),
   categoriaPrincipal: z.enum(CATEGORIAS_PRINCIPALES),
   capacidadesPlataforma: z.array(z.string()).default([]),
@@ -63,18 +73,23 @@ export const personaSchema = z.object({
   updatedAt: z.string().optional(),
 });
 
-// Form-specific schema with additional validations
-export const personaFormSchema = personaSchema.extend({
+// Schema transformado para uso general (guardar)
+export const personaSchema = personaSchemaRaw.transform(
+  (data: z.infer<typeof personaSchemaRaw>) => ({
+    ...data,
+    capacidadesPlataforma: data.capacidadesPlataforma || [],
+    areasDeInteresOExpertise: data.areasDeInteresOExpertise || [],
+    ofreceColaboracionComo: data.ofreceColaboracionComo || [],
+    linksProfesionales: data.linksProfesionales || [],
+    ubicacionResidencial: data.ubicacionResidencial,
+  })
+);
+
+// Schema extendido para formularios (agrega temas)
+export const personaFormSchema = personaSchemaRaw.extend({
   temas: z.array(z.string().uuid(), {
     required_error: "Debe seleccionar al menos un tema",
   }),
-}).transform(data => ({
-  ...data,
-  // Transform arrays to match database format
-  capacidadesPlataforma: data.capacidadesPlataforma || [],
-  areasDeInteresOExpertise: data.areasDeInteresOExpertise || [],
-  ofreceColaboracionComo: data.ofreceColaboracionComo || [],
-  linksProfesionales: data.linksProfesionales || [],
-}));
+});
 
-export type PersonaFormData = z.infer<typeof personaFormSchema>; 
+export type PersonaFormData = z.infer<typeof personaFormSchema>;

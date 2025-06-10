@@ -1,5 +1,13 @@
 # Changelog
 
+## [2025-06-08] Diseño de Relaciones entre Proyectos
+- Diseñada e implementada en el esquema de la base de datos la funcionalidad para relacionar proyectos entre sí.
+- Creada la tabla `proyecto_relaciones` para modelar relaciones N:M direccionales.
+- Añadido el enum `tipo_relacion_proyecto_enum` para estandarizar los tipos de relación ('referencia', 'mejora', etc.).
+- Incluido un campo `descripcion` para añadir contexto a cada relación.
+- Actualizada la documentación (`schemas.md`, `blueprint.md`, `future-developments.md`) para reflejar este nuevo diseño.
+###- Estandarizado el nombre de la entidad `entrevistas` a `historias_orales` en toda la base de datos y documentación para mayor claridad conceptual.
+
 ## [2025-06-07] Basic Authentication Implementation
 - Updated `supabaseClient.ts` to use `createBrowserClient` from `@supabase/ssr` to ensure compatibility with Next.js 15 App Router and Client Components. This change prevents the known `@supabase/node-fetch` error when using `supabaseClient` in `AuthProvider.tsx` and other client components. No changes were needed in `authService.ts` or `supabaseStorage.ts`.
 

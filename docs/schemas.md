@@ -78,9 +78,9 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - eliminadoEn (timestamp)
 - eliminadoPorUid
 
-### entrevistas
+### historias_orales
 - id (UUID, PK)
-- tipoContenido (tipo_contenido_entrevista_enum)
+- tipoContenido (tipo_contenido_historia_oral_enum)
 - tituloSaber
 - descripcionSaber
 - videoPropioURL
@@ -211,8 +211,8 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - proyecto_id (UUID, FK proyectos)
 - tema_id (UUID, FK temas)
 
-### entrevista_tema
-- entrevista_id (UUID, FK entrevistas)
+### historia_oral_tema
+- entrevista_id (UUID, FK historias_orales)
 - tema_id (UUID, FK temas)
 
 ### noticia_tema
@@ -235,9 +235,9 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - proyecto_id (UUID, FK proyectos)
 - organizacion_id (UUID, FK organizaciones)
 
-### proyecto_entrevista
+### proyecto_historia_oral
 - proyecto_id (UUID, FK proyectos)
-- entrevista_id (UUID, FK entrevistas)
+- entrevista_id (UUID, FK historias_orales)
 
 ### proyecto_archivo
 - id (UUID, PK)
@@ -248,6 +248,12 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - descripcion
 - subidoEn (timestamp)
 
+### proyecto_relaciones
+- proyecto_origen_id (UUID, FK a proyectos)
+- proyecto_referencia_id (UUID, FK a proyectos)
+- tipo_relacion (tipo_relacion_proyecto_enum)
+- descripcion (text)
+- creado_en (timestamp)
 ---
 
 ## Enums definidos
@@ -307,7 +313,7 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - articulo_propio
 - enlace_externo
 
-### tipo_contenido_entrevista_enum
+### tipo_contenido_historia_oral_enum
 - video_propio
 - enlace_video_externo
 
@@ -332,7 +338,15 @@ Se planea en el futuro vincular estos campos a un selector de ubicación con map
 - intermedio
 - avanzado
 
+### tipo_relacion_proyecto_enum
+- referencia             -- "Toma como referencia a"
+- continuacion           -- "Es una continuación de"
+- mejora                 -- "Es una mejora de"
+- inspirado_en           -- "Se inspiró en"
+- utiliza_componentes_de -- "Utiliza componentes/tecnología de"
+- antecedente_directo    -- "Es un antecedente directo de"
 ---
+
 
 ## Notes
 

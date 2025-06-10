@@ -88,13 +88,23 @@ export class TemasService extends BaseService<Tema> {
       if (!personaId) {
         return createError(mapValidationError('Persona ID is required', 'personaId', personaId));
       }
-      return await this.getRelatedEntities<Tema>(
-        personaId,
-        'personas',
-        'temas',
-        'persona_tema',
-        options
-      );
+
+      const { data, error } = await this.supabase
+        .from('temas')
+        .select(`
+          *,
+          persona_tema!inner (
+            persona_id
+          )
+        `)
+        .eq('persona_tema.persona_id', personaId)
+        .eq('esta_eliminado', false)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      if (!data) return createSuccess(null);
+
+      return createSuccess(data);
     } catch (error) {
       return createError(this.handleError(error, { operation: 'getByPersona', personaId }));
     }
@@ -430,7 +440,8 @@ export class TemasService extends BaseService<Tema> {
 
   async getPublicMapped(): Promise<ServiceResult<MappedTema[]>> {
     try {
-      const result = await this.getPublic();
+      // Use getAllActivos instead of getPublic since it's already optimized for public use
+      const result = await this.getAllActivos();
       if (!result.success || !result.data) {
         return createError({
           name: 'ServiceError',
@@ -439,6 +450,7 @@ export class TemasService extends BaseService<Tema> {
         });
       }
 
+      // Map the data to the simplified MappedTema format
       const mappedData: MappedTema[] = result.data.map((tema) => ({
         id: tema.id,
         nombre: tema.nombre,

@@ -162,10 +162,10 @@ export default function VerPersonaPublicPage() {
             </div>
           )}
 
-          {persona.ubicacionResidencial?.ciudad && (
+          {persona.ubicacionResidencial?.localidad && (
             <div>
               <h3 className="text-lg font-semibold mb-2">Ubicación</h3>
-              <p>{persona.ubicacionResidencial.ciudad}, {persona.ubicacionResidencial.provincia}</p>
+              <p>{persona.ubicacionResidencial.localidad}, {persona.ubicacionResidencial.provincia}</p>
             </div>
           )}
         </div>

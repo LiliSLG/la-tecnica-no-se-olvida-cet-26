@@ -9,27 +9,20 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      entrevista_tema: {
+      historia_oral_tema: {
         Row: {
-          entrevista_id: string
+          historia_oral_id: string
           tema_id: string
         }
         Insert: {
-          entrevista_id: string
+          historia_oral_id: string
           tema_id: string
         }
         Update: {
-          entrevista_id?: string
+          historia_oral_id?: string
           tema_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "entrevista_tema_entrevista_id_fkey"
-            columns: ["entrevista_id"]
-            isOneToOne: false
-            referencedRelation: "entrevistas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "entrevista_tema_tema_id_fkey"
             columns: ["tema_id"]
@@ -37,92 +30,117 @@ export type Database = {
             referencedRelation: "temas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "historia_oral_tema_historia_oral_id_fkey"
+            columns: ["historia_oral_id"]
+            isOneToOne: false
+            referencedRelation: "historias_orales"
+            referencedColumns: ["id"]
+          },
         ]
-      }
-      entrevistas: {
-        Row: {
-          created_at: string | null
-          descripcion: string | null
-          eliminado_en: string | null
-          eliminado_por_uid: string | null
-          esta_eliminada: boolean | null
-          fecha_entrevista: string | null
-          id: string
-          status: Database["public"]["Enums"]["interview_status"] | null
-          titulo: string
-          updated_at: string | null
-          video_url: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          descripcion?: string | null
-          eliminado_en?: string | null
-          eliminado_por_uid?: string | null
-          esta_eliminada?: boolean | null
-          fecha_entrevista?: string | null
-          id?: string
-          status?: Database["public"]["Enums"]["interview_status"] | null
-          titulo: string
-          updated_at?: string | null
-          video_url?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          descripcion?: string | null
-          eliminado_en?: string | null
-          eliminado_por_uid?: string | null
-          esta_eliminada?: boolean | null
-          fecha_entrevista?: string | null
-          id?: string
-          status?: Database["public"]["Enums"]["interview_status"] | null
-          titulo?: string
-          updated_at?: string | null
-          video_url?: string | null
-        }
-        Relationships: []
       }
       historias_orales: {
         Row: {
-          archivo_principal_url: string | null
+          ambito_saber: string | null
+          creado_por_uid: string | null
           created_at: string | null
-          descripcion: string | null
+          descripcion_saber: string | null
+          duracion_media_minutos: number | null
           eliminado_en: string | null
           eliminado_por_uid: string | null
           esta_eliminada: boolean | null
-          estado: Database["public"]["Enums"]["estado_entrevista"] | null
+          esta_publicada: boolean | null
+          fecha_grabacion_o_recopilacion: string | null
+          fuente_video_externo: string | null
+          fuentes_informacion: string[] | null
           id: string
-          plataforma_video: string | null
-          tipo_contenido: Database["public"]["Enums"]["tipo_contenido_entrevista"]
-          titulo: string
+          imagen_miniatura_url: string | null
+          modificado_por_uid: string | null
+          palabras_clave_saber: string[] | null
+          plataforma_video_externo:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          plataforma_video_propio:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          recopilado_por_uids: string[] | null
+          tipo_contenido:
+            | Database["public"]["Enums"]["tipo_contenido_entrevista_enum"]
+            | null
+          titulo_saber: string
+          transcripcion_file_url: string | null
+          transcripcion_texto_completo: string | null
           updated_at: string | null
+          url_video_externo: string | null
+          video_propio_url: string | null
         }
         Insert: {
-          archivo_principal_url?: string | null
+          ambito_saber?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
-          descripcion?: string | null
+          descripcion_saber?: string | null
+          duracion_media_minutos?: number | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
           esta_eliminada?: boolean | null
-          estado?: Database["public"]["Enums"]["estado_entrevista"] | null
+          esta_publicada?: boolean | null
+          fecha_grabacion_o_recopilacion?: string | null
+          fuente_video_externo?: string | null
+          fuentes_informacion?: string[] | null
           id?: string
-          plataforma_video?: string | null
-          tipo_contenido: Database["public"]["Enums"]["tipo_contenido_entrevista"]
-          titulo: string
+          imagen_miniatura_url?: string | null
+          modificado_por_uid?: string | null
+          palabras_clave_saber?: string[] | null
+          plataforma_video_externo?:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          plataforma_video_propio?:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          recopilado_por_uids?: string[] | null
+          tipo_contenido?:
+            | Database["public"]["Enums"]["tipo_contenido_entrevista_enum"]
+            | null
+          titulo_saber: string
+          transcripcion_file_url?: string | null
+          transcripcion_texto_completo?: string | null
           updated_at?: string | null
+          url_video_externo?: string | null
+          video_propio_url?: string | null
         }
         Update: {
-          archivo_principal_url?: string | null
+          ambito_saber?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
-          descripcion?: string | null
+          descripcion_saber?: string | null
+          duracion_media_minutos?: number | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
           esta_eliminada?: boolean | null
-          estado?: Database["public"]["Enums"]["estado_entrevista"] | null
+          esta_publicada?: boolean | null
+          fecha_grabacion_o_recopilacion?: string | null
+          fuente_video_externo?: string | null
+          fuentes_informacion?: string[] | null
           id?: string
-          plataforma_video?: string | null
-          tipo_contenido?: Database["public"]["Enums"]["tipo_contenido_entrevista"]
-          titulo?: string
+          imagen_miniatura_url?: string | null
+          modificado_por_uid?: string | null
+          palabras_clave_saber?: string[] | null
+          plataforma_video_externo?:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          plataforma_video_propio?:
+            | Database["public"]["Enums"]["plataforma_video_enum"]
+            | null
+          recopilado_por_uids?: string[] | null
+          tipo_contenido?:
+            | Database["public"]["Enums"]["tipo_contenido_entrevista_enum"]
+            | null
+          titulo_saber?: string
+          transcripcion_file_url?: string | null
+          transcripcion_texto_completo?: string | null
           updated_at?: string | null
+          url_video_externo?: string | null
+          video_propio_url?: string | null
         }
         Relationships: []
       }
@@ -158,39 +176,66 @@ export type Database = {
       }
       noticias: {
         Row: {
+          autor_noticia: string | null
           contenido: string | null
+          creado_por_uid: string | null
           created_at: string | null
           eliminado_en: string | null
           eliminado_por_uid: string | null
+          es_destacada: boolean | null
           esta_eliminada: boolean | null
+          esta_publicada: boolean | null
+          fecha_publicacion: string | null
+          fuente_externa: string | null
           id: string
           imagen_url: string | null
+          modificado_por_uid: string | null
+          resumen_o_contexto_interno: string | null
+          subtitulo: string | null
           tipo: Database["public"]["Enums"]["tipo_noticia"]
           titulo: string
           updated_at: string | null
           url_externa: string | null
         }
         Insert: {
+          autor_noticia?: string | null
           contenido?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
+          es_destacada?: boolean | null
           esta_eliminada?: boolean | null
+          esta_publicada?: boolean | null
+          fecha_publicacion?: string | null
+          fuente_externa?: string | null
           id?: string
           imagen_url?: string | null
+          modificado_por_uid?: string | null
+          resumen_o_contexto_interno?: string | null
+          subtitulo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_noticia"]
           titulo: string
           updated_at?: string | null
           url_externa?: string | null
         }
         Update: {
+          autor_noticia?: string | null
           contenido?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
+          es_destacada?: boolean | null
           esta_eliminada?: boolean | null
+          esta_publicada?: boolean | null
+          fecha_publicacion?: string | null
+          fuente_externa?: string | null
           id?: string
           imagen_url?: string | null
+          modificado_por_uid?: string | null
+          resumen_o_contexto_interno?: string | null
+          subtitulo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_noticia"]
           titulo?: string
           updated_at?: string | null
@@ -242,39 +287,69 @@ export type Database = {
       }
       organizaciones: {
         Row: {
+          abierta_a_colaboraciones: boolean | null
+          actualizado_en: string | null
+          areas_de_interes: string[] | null
           created_at: string | null
           descripcion: string | null
           eliminado_en: string | null
           eliminado_por_uid: string | null
+          email_contacto: string | null
           esta_eliminada: boolean | null
           id: string
-          logo_url: string | null
-          nombre: string
+          ingresado_por_uid: string | null
+          logourl: string | null
+          modificado_por_uid: string | null
+          nombre_fantasia: string | null
+          nombre_oficial: string
           sitio_web: string | null
+          telefono_contacto: string | null
+          tipo: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          ubicacion: Json | null
           updated_at: string | null
         }
         Insert: {
+          abierta_a_colaboraciones?: boolean | null
+          actualizado_en?: string | null
+          areas_de_interes?: string[] | null
           created_at?: string | null
           descripcion?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
+          email_contacto?: string | null
           esta_eliminada?: boolean | null
           id?: string
-          logo_url?: string | null
-          nombre: string
+          ingresado_por_uid?: string | null
+          logourl?: string | null
+          modificado_por_uid?: string | null
+          nombre_fantasia?: string | null
+          nombre_oficial: string
           sitio_web?: string | null
+          telefono_contacto?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          ubicacion?: Json | null
           updated_at?: string | null
         }
         Update: {
+          abierta_a_colaboraciones?: boolean | null
+          actualizado_en?: string | null
+          areas_de_interes?: string[] | null
           created_at?: string | null
           descripcion?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
+          email_contacto?: string | null
           esta_eliminada?: boolean | null
           id?: string
-          logo_url?: string | null
-          nombre?: string
+          ingresado_por_uid?: string | null
+          logourl?: string | null
+          modificado_por_uid?: string | null
+          nombre_fantasia?: string | null
+          nombre_oficial?: string
           sitio_web?: string | null
+          telefono_contacto?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          ubicacion?: Json | null
           updated_at?: string | null
         }
         Relationships: []
@@ -494,6 +569,45 @@ export type Database = {
           },
         ]
       }
+      proyecto_relaciones: {
+        Row: {
+          creado_en: string | null
+          descripcion: string | null
+          proyecto_origen_id: string
+          proyecto_referencia_id: string
+          tipo_relacion: Database["public"]["Enums"]["tipo_relacion_proyecto_enum"]
+        }
+        Insert: {
+          creado_en?: string | null
+          descripcion?: string | null
+          proyecto_origen_id: string
+          proyecto_referencia_id: string
+          tipo_relacion: Database["public"]["Enums"]["tipo_relacion_proyecto_enum"]
+        }
+        Update: {
+          creado_en?: string | null
+          descripcion?: string | null
+          proyecto_origen_id?: string
+          proyecto_referencia_id?: string
+          tipo_relacion?: Database["public"]["Enums"]["tipo_relacion_proyecto_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proyecto_relaciones_proyecto_origen_id_fkey"
+            columns: ["proyecto_origen_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proyecto_relaciones_proyecto_referencia_id_fkey"
+            columns: ["proyecto_referencia_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proyecto_tema: {
         Row: {
           proyecto_id: string
@@ -526,38 +640,65 @@ export type Database = {
       }
       proyectos: {
         Row: {
+          actualizado_por_uid: string | null
+          ano_proyecto: number | null
           archivo_principal_url: string | null
+          creado_por_uid: string | null
           created_at: string | null
-          descripcion: string | null
+          descripcion_general: string | null
           eliminado_en: string | null
           eliminado_por_uid: string | null
-          esta_eliminado: boolean | null
+          es_eliminado: boolean | null
+          estado_actual: Database["public"]["Enums"]["estado_proyecto"] | null
+          fecha_finalizacion_estimada: string | null
+          fecha_finalizacion_real: string | null
+          fecha_inicio: string | null
+          fecha_presentacion: string | null
           id: string
-          status: Database["public"]["Enums"]["estado_proyecto"] | null
+          nombre_archivo_principal: string | null
+          resumen_ejecutivo: string | null
           titulo: string
           updated_at: string | null
         }
         Insert: {
+          actualizado_por_uid?: string | null
+          ano_proyecto?: number | null
           archivo_principal_url?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
-          descripcion?: string | null
+          descripcion_general?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
-          esta_eliminado?: boolean | null
+          es_eliminado?: boolean | null
+          estado_actual?: Database["public"]["Enums"]["estado_proyecto"] | null
+          fecha_finalizacion_estimada?: string | null
+          fecha_finalizacion_real?: string | null
+          fecha_inicio?: string | null
+          fecha_presentacion?: string | null
           id?: string
-          status?: Database["public"]["Enums"]["estado_proyecto"] | null
+          nombre_archivo_principal?: string | null
+          resumen_ejecutivo?: string | null
           titulo: string
           updated_at?: string | null
         }
         Update: {
+          actualizado_por_uid?: string | null
+          ano_proyecto?: number | null
           archivo_principal_url?: string | null
+          creado_por_uid?: string | null
           created_at?: string | null
-          descripcion?: string | null
+          descripcion_general?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
-          esta_eliminado?: boolean | null
+          es_eliminado?: boolean | null
+          estado_actual?: Database["public"]["Enums"]["estado_proyecto"] | null
+          fecha_finalizacion_estimada?: string | null
+          fecha_finalizacion_real?: string | null
+          fecha_inicio?: string | null
+          fecha_presentacion?: string | null
           id?: string
-          status?: Database["public"]["Enums"]["estado_proyecto"] | null
+          nombre_archivo_principal?: string | null
+          resumen_ejecutivo?: string | null
           titulo?: string
           updated_at?: string | null
         }
@@ -565,62 +706,53 @@ export type Database = {
       }
       temas: {
         Row: {
-          actualizadoen: string | null
-          categoriatema:
+          actualizado_en: string | null
+          categoria_tema:
             | Database["public"]["Enums"]["tema_categoria_enum"]
             | null
-          creadoen: string | null
+          creado_en: string | null
           created_at: string | null
           descripcion: string | null
           eliminado_en: string | null
           eliminado_por_uid: string | null
-          eliminadoen: string | null
-          eliminadoporuid: string | null
-          esta_eliminado: boolean | null
-          estaeliminada: boolean | null
+          esta_eliminada: boolean | null
           id: string
-          ingresadoporuid: string | null
-          modificadoporuid: string | null
+          ingresado_por_uid: string | null
+          modificado_por_uid: string | null
           nombre: string
           updated_at: string | null
         }
         Insert: {
-          actualizadoen?: string | null
-          categoriatema?:
+          actualizado_en?: string | null
+          categoria_tema?:
             | Database["public"]["Enums"]["tema_categoria_enum"]
             | null
-          creadoen?: string | null
+          creado_en?: string | null
           created_at?: string | null
           descripcion?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
-          eliminadoen?: string | null
-          eliminadoporuid?: string | null
-          esta_eliminado?: boolean | null
-          estaeliminada?: boolean | null
+          esta_eliminada?: boolean | null
           id?: string
-          ingresadoporuid?: string | null
-          modificadoporuid?: string | null
+          ingresado_por_uid?: string | null
+          modificado_por_uid?: string | null
           nombre: string
           updated_at?: string | null
         }
         Update: {
-          actualizadoen?: string | null
-          categoriatema?:
+          actualizado_en?: string | null
+          categoria_tema?:
             | Database["public"]["Enums"]["tema_categoria_enum"]
             | null
-          creadoen?: string | null
+          creado_en?: string | null
           created_at?: string | null
           descripcion?: string | null
           eliminado_en?: string | null
           eliminado_por_uid?: string | null
-          eliminadoen?: string | null
-          eliminadoporuid?: string | null
-          esta_eliminado?: boolean | null
-          estaeliminada?: boolean | null
+          esta_eliminada?: boolean | null
           id?: string
-          ingresadoporuid?: string | null
-          modificadoporuid?: string | null
+          ingresado_por_uid?: string | null
+          modificado_por_uid?: string | null
           nombre?: string
           updated_at?: string | null
         }
@@ -698,6 +830,13 @@ export type Database = {
         | "estancia_productiva"
         | "organismo_gubernamental"
         | "otro"
+      tipo_relacion_proyecto_enum:
+        | "referencia"
+        | "continuacion"
+        | "mejora"
+        | "inspirado_en"
+        | "utiliza_componentes_de"
+        | "antecedente_directo"
       user_role: "admin" | "user"
       visibilidad_perfil_enum:
         | "publico"
@@ -888,6 +1027,14 @@ export const Constants = {
         "estancia_productiva",
         "organismo_gubernamental",
         "otro",
+      ],
+      tipo_relacion_proyecto_enum: [
+        "referencia",
+        "continuacion",
+        "mejora",
+        "inspirado_en",
+        "utiliza_componentes_de",
+        "antecedente_directo",
       ],
       user_role: ["admin", "user"],
       visibilidad_perfil_enum: [

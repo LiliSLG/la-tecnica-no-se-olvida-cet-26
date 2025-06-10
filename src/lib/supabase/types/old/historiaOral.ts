@@ -1,4 +1,4 @@
-import { Database } from './database.types';
+import { Database } from '../database.types';
 
 export type TipoContenidoEntrevista = "video" | "audio" | "texto";
 export type PlataformaVideo = "YouTube" | "Vimeo" | "Otro";
@@ -34,6 +34,6 @@ export type MappedHistoriaOral = {
   estaPublicada?: boolean;
 };
 
-export type HistoriaOralRow = Database['public']['Tables']['entrevistas']['Row'];
-export type HistoriaOralInsert = Database['public']['Tables']['entrevistas']['Insert'];
-export type HistoriaOralUpdate = Database['public']['Tables']['entrevistas']['Update']; 
+export type HistoriaOralRow = Database['public']['Tables']['historias_orales']['Row'];
+export type HistoriaOralInsert = Database['public']['Tables']['historias_orales']['Insert'];
+export type HistoriaOralUpdate = Database['public']['Tables']['historias_orales']['Update']; 

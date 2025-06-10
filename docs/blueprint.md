@@ -9,7 +9,7 @@
   Organizes student technical projects in a clear, filterable manner (by year/topic/etc.). Publicly viewable list, with more details potentially requiring login.
 
 - **Oral History Archive:**  
-  Presents interviews (video, audio, transcriptions) with rural families and local knowledge holders.
+  Presents oral histories (interviews, video, audio, transcriptions) with rural families and local knowledge holders.
 
 - **News & Updates Section:**  
   Allows admins to post news about the CET, the platform, or relevant community events.

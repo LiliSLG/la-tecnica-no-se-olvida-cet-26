@@ -3,25 +3,20 @@ import { VISIBILIDAD_PERFIL, PROVINCIAS } from "@/lib/constants/persona";
 
 // Schema for residential location
 const ubicacionResidencialSchema = z.object({
-  direccion: z.string().min(1, "La dirección es requerida"),
-  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]], {
-    required_error: "La provincia es requerida"
-  }),
-  localidad: z.string().min(1, "La localidad es requerida"),
-  codigo_postal: z.string().min(1, "El código postal es requerido"),
-  lat: z.union([
-    z.number(),
-    z.string().transform((val) => val === "" ? undefined : Number(val)),
-    z.undefined(),
-    z.null()
-  ]).optional(),
-  lng: z.union([
-    z.number(),
-    z.string().transform((val) => val === "" ? undefined : Number(val)),
-    z.undefined(),
-    z.null()
-  ]).optional(),
-});
+  direccion: z.string().optional().nullable(),
+  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]]).optional().nullable(),
+  localidad: z.string().optional().nullable(),
+  codigo_postal: z.string().optional().nullable(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+})
+.transform((data) => {
+  const isEmpty = !data?.direccion && !data?.provincia && !data?.localidad && !data?.codigo_postal && !data?.lat && !data?.lng;
+  return isEmpty ? undefined : data;
+})
+.optional()
+.nullable();
+
 
 export const personaSchema = z.object({
   id: z.string().optional(),
@@ -34,7 +29,12 @@ export const personaSchema = z.object({
   categoria: z.string().optional(),
   proyectoFinalCETId: z.string().nullable(),
   situacionLaboral: z.string().optional(),
-  ubicacionResidencial: ubicacionResidencialSchema,
+  ubicacionResidencial: ubicacionResidencialSchema.optional().nullable().transform(val => {
+    if (!val) return undefined;
+    const { direccion, provincia, localidad, codigo_postal } = val;
+    if (!direccion && !provincia && !localidad && !codigo_postal) return undefined;
+    return val;
+  }),
   linksProfesionales: z.array(z.object({
     plataforma: z.string(),
     url: z.string().url("URL inválida")
@@ -59,6 +59,7 @@ export const personaSchema = z.object({
   eliminadoEn: z.string().nullable(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
+  temas: z.array(z.string().uuid()).default([]),
 });
 
 export type PersonaFormData = z.infer<typeof personaSchema>; 

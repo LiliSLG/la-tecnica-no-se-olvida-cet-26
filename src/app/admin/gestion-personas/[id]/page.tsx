@@ -107,15 +107,6 @@ export default function VerPersonaPage() {
             </div>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Ubicación</h2>
-            <div className="space-y-2">
-              <p><span className="font-medium">Ciudad:</span> {persona.ubicacion_residencial?.ciudad || "-"}</p>
-              <p><span className="font-medium">Provincia:</span> {persona.ubicacion_residencial?.provincia || "-"}</p>
-              <p><span className="font-medium">Dirección:</span> {persona.ubicacion_residencial?.direccion || "-"}</p>
-              <p><span className="font-medium">Código Postal:</span> {persona.ubicacion_residencial?.codigo_postal || "-"}</p>
-            </div>
-          </div>
         </div>
 
         <div className="space-y-4">

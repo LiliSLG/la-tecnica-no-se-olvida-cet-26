@@ -9,12 +9,15 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { useDataTableState } from "@/lib/hooks/useDataTableState";
 import { PersonasService, MappedPersona } from "@/lib/supabase/services/personasService";
+import { TemasService, MappedTema } from "@/lib/supabase/services/temasService";
 import { supabase } from "@/lib/supabase/supabaseClient";
 
 const personasService = new PersonasService(supabase);
+const temasService = new TemasService(supabase);
 
 export default function PersonasPublicPage() {
   const [personas, setPersonas] = useState<MappedPersona[]>([]);
+  const [temas, setTemas] = useState<MappedTema[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,27 +35,47 @@ export default function PersonasPublicPage() {
           { value: 'ninguno', label: 'No es alumno' },
         ],
       },
+      {
+        key: 'temas',
+        label: 'Temas',
+        type: 'select',
+        options: temas.map(tema => ({
+          value: tema.id,
+          label: tema.nombre,
+        })),
+      },
     ],
     sortableColumns: ['nombre', 'apellido'],
   });
 
   useEffect(() => {
-    const fetchPersonas = async () => {
+    const fetchData = async () => {
       try {
-        const result = await personasService.getPublicMapped();
-        if (!result.success) {
-          throw new Error(result.error?.message || "Error al cargar las personas");
+        // Fetch temas first
+        const temasResult = await temasService.getPublicMapped();
+        if (!temasResult.success) {
+          throw new Error(temasResult.error?.message || "Error al cargar los temas");
         }
-        setPersonas(result.data || []);
+        setTemas(temasResult.data || []);
+
+        // Fetch personas with tema filter if selected
+        const selectedTemaId = tableState.filters.temas;
+        const personasResult = await personasService.getPublicMapped({
+          temaId: selectedTemaId !== 'all' ? selectedTemaId : undefined
+        });
+        if (!personasResult.success) {
+          throw new Error(personasResult.error?.message || "Error al cargar las personas");
+        }
+        setPersonas(personasResult.data || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al cargar las personas");
+        setError(err instanceof Error ? err.message : "Error al cargar los datos");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPersonas();
-  }, []);
+    fetchData();
+  }, [tableState.filters.temas]); // Re-fetch when tema filter changes
 
   if (isLoading) {
     return (
@@ -161,6 +184,15 @@ export default function PersonasPublicPage() {
               { value: 'exalumno_cet', label: 'Ex-alumno CET' },
               { value: 'ninguno', label: 'No es alumno' },
             ],
+          },
+          {
+            key: 'temas',
+            label: 'Temas',
+            type: 'select',
+            options: temas.map(tema => ({
+              value: tema.id,
+              label: tema.nombre,
+            })),
           },
         ],
         sortableColumns: ['nombre', 'apellido'],
