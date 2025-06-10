@@ -1,6 +1,7 @@
-import { supabase } from '../supabaseClient';
+import { Database } from '../types/database.types';
+import { ServiceResult } from '../types/serviceResult';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
-import { ServiceResult } from '../types/service';
+import { supabase } from '../supabaseClient';
 import { storageConfig } from '../supabaseStorage';
 
 export class StorageService {

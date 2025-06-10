@@ -416,3 +416,115 @@ Implications:
 - Requires adaptation of the AI-based search and public filters
 
 Current status: documented idea. It is recommended to evaluate this improvement during the optimization phase of search and AI, once the current CRUD is consolidated and the public frontend is operational.
+
+## Backend Caching Strategy
+
+### Overview
+
+This section outlines the planned caching strategy for the backend services to improve performance and reduce database load.
+
+### Current State
+
+Currently, all services make direct calls to the Supabase database for every operation. While this approach is simple and straightforward, it can lead to:
+
+1. Increased database load
+2. Higher latency for frequently accessed data
+3. Unnecessary network requests
+4. Potential rate limiting issues
+
+### Planned Improvements
+
+#### 1. Service-Level Caching
+
+Each service will implement its own caching layer with the following characteristics:
+
+- In-memory cache using a lightweight solution (e.g., `node-cache` or `lru-cache`)
+- Configurable TTL (Time To Live) for different types of data
+- Automatic cache invalidation on write operations
+- Cache warming for frequently accessed data
+
+#### 2. Caching Priorities
+
+Data will be prioritized for caching based on:
+
+1. **High Priority (TTL: 5 minutes)**
+   - User profiles
+   - Frequently accessed settings
+   - System-wide configurations
+
+2. **Medium Priority (TTL: 15 minutes)**
+   - List of temas
+   - List of personas
+   - Relationship data
+
+3. **Low Priority (TTL: 30 minutes)**
+   - Historical data
+   - Less frequently accessed content
+   - Archive data
+
+#### 3. Cache Invalidation Strategy
+
+Cache entries will be invalidated:
+
+- Immediately after write operations
+- On explicit cache clear requests
+- When TTL expires
+- When related data changes
+
+#### 4. Implementation Plan
+
+1. **Phase 1: Basic Caching**
+   - Implement in-memory caching for read operations
+   - Add cache invalidation for write operations
+   - Monitor performance improvements
+
+2. **Phase 2: Advanced Features**
+   - Add cache warming
+   - Implement cache statistics
+   - Add cache persistence
+   - Monitor memory usage
+
+3. **Phase 3: Distributed Caching**
+   - Evaluate need for distributed caching
+   - Consider Redis or similar solutions
+   - Implement if required by scale
+
+### Monitoring and Metrics
+
+The following metrics will be tracked:
+
+- Cache hit/miss rates
+- Memory usage
+- Response times
+- Database load
+- Network requests
+
+### Future Considerations
+
+1. **Distributed Caching**
+   - Evaluate Redis or Memcached for distributed caching
+   - Consider cloud-based caching solutions
+
+2. **Cache Persistence**
+   - Implement cache persistence for faster cold starts
+   - Consider cache warming strategies
+
+3. **Cache Synchronization**
+   - Implement cache synchronization across multiple instances
+   - Handle cache consistency in distributed environments
+
+### Implementation Notes
+
+When implementing caching:
+
+1. Always consider data consistency
+2. Implement proper error handling
+3. Add monitoring and logging
+4. Document cache configuration
+5. Test thoroughly with different load patterns
+
+### References
+
+- [Node Cache Documentation](https://github.com/node-cache/node-cache)
+- [LRU Cache Documentation](https://github.com/isaacs/node-lru-cache)
+- [Redis Documentation](https://redis.io/documentation)

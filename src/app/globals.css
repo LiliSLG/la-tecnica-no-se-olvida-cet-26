@@ -1,35 +1,55 @@
+/* en globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 47.4% 11.2%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 47.4% 11.2%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 100% 50%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
-  --radius: 0.5rem;
+@layer base {
+  :root {
+    /* Colores primarios del blueprint.md */
+    --background: 206 70% 97%; /* #EBF4FA - Azul muy claro */
+    --foreground: 222.2 47.4% 11.2%; /* Color de texto oscuro por defecto */
+    
+    --card: 206 70% 100%; /* Blanco para tarjetas */
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --popover: 206 70% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    /* Color primario: violeta para botones y elementos activos */
+    --primary: 261 47% 72%; /* #A994D9 - Violeta */
+    --primary-foreground: 0 0% 10%; /* Texto oscuro sobre violeta */
+
+    /* Color secundario: verde para acentos */
+    --secondary: 128 47% 73%; /* #98D9A2 - Verde desaturado */
+    --secondary-foreground: 0 0% 10%; /* Texto oscuro sobre verde */
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    /* Color de acento: se puede usar el mismo verde o violeta */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 261 47% 72%; /* Anillo de foco en violeta */
+
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    /* Aquí irían los colores para el modo oscuro si lo implementas en el futuro */
+  }
 }
 
-html, body {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: sans-serif;
-}
-
-* {
-    box-sizing: inherit;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

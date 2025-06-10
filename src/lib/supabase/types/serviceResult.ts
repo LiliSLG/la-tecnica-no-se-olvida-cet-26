@@ -21,6 +21,22 @@ export interface ServiceResult<T> {
 }
 
 /**
+ * Options for querying data from services
+ */
+export interface QueryOptions {
+  /** The page number for pagination (1-based) */
+  page?: number;
+  /** The number of items per page */
+  pageSize?: number;
+  /** The field to sort by */
+  sortBy?: string;
+  /** The sort order */
+  sortOrder?: 'asc' | 'desc';
+  /** Additional filters to apply */
+  filters?: Record<string, any>;
+}
+
+/**
  * Creates a successful service result
  * @template T The type of data returned by the service
  * @param data The data to return, or null if no data

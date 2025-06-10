@@ -1,50 +1,21 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { ServiceResult } from '../types/service';
-import { createSuccessResult, createErrorResult } from '../types/serviceResult';
-import { PersonasService } from './personasService';
-
-// TODO: If PersonasService mapping changes, update this helper accordingly
-function mapPersonaToDomain(persona: Database['public']['Tables']['personas']['Row']) {
-  return {
-    id: persona.id,
-    nombre: persona.nombre,
-    email: persona.email,
-    fotoURL: persona.foto_url,
-    biografia: persona.biografia,
-    categoriaPrincipal: persona.categoria_principal,
-    capacidadesPlataforma: persona.capacidades_plataforma,
-    esAdmin: persona.es_admin,
-    activo: !persona.esta_eliminada,
-    eliminadoPorUid: persona.eliminado_por_uid,
-    eliminadoEn: persona.eliminado_en,
-    creadoEn: persona.created_at,
-    actualizadoEn: persona.updated_at
-  };
-}
-
-export type MappedPersona = ReturnType<typeof mapPersonaToDomain>;
+import { ServiceResult } from '../types/serviceResult';
+import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
+import { personasService } from './personasService';
+import { supabase } from '../supabaseClient';
 
 type Persona = Database['public']['Tables']['personas']['Row'];
 
-export class AuthService {
-  private personasService: PersonasService;
-  private supabase: SupabaseClient<Database>;
-
-  constructor(supabase: SupabaseClient<Database>) {
-    this.supabase = supabase;
-    this.personasService = new PersonasService(supabase);
-  }
-
-  async signIn(email: string, password: string): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
+class AuthService {
+  async signIn(email: string, password: string): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
-      const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: authError.message,
           code: 'AUTH_ERROR',
@@ -53,7 +24,7 @@ export class AuthService {
       }
 
       if (!authData.user) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: 'No user data returned',
           code: 'AUTH_ERROR',
@@ -62,9 +33,9 @@ export class AuthService {
       }
 
       // Get user profile
-      const result = await this.personasService.getById(authData.user.id);
+      const result = await personasService.getById(authData.user.id);
       if (result.error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: result.error.message,
           code: 'DB_ERROR',
@@ -73,7 +44,7 @@ export class AuthService {
       }
 
       if (!result.data) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: 'User profile not found',
           code: 'DB_ERROR',
@@ -81,12 +52,12 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult({
-        user: mapPersonaToDomain(result.data),
+      return createSuccess({
+        user: result.data,
         session: authData.session,
       });
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -95,15 +66,15 @@ export class AuthService {
     }
   }
 
-  async signUp(email: string, password: string, userData: Partial<MappedPersona>): Promise<ServiceResult<{ user: MappedPersona; session: any }>> {
+  async signUp(email: string, password: string, userData: { nombre?: string }): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
-      const { data: authData, error: authError } = await this.supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (authError) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: authError.message,
           code: 'AUTH_ERROR',
@@ -112,7 +83,7 @@ export class AuthService {
       }
 
       if (!authData.user) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: 'No user data returned',
           code: 'AUTH_ERROR',
@@ -120,46 +91,15 @@ export class AuthService {
         });
       }
 
-      // Create user profile
-      const persona: Omit<Persona, 'id'> = {
-        nombre: userData?.nombre ?? "",
-        apellido: "",
-        email: userData?.email ?? "",
-        foto_url: null,
-        biografia: null,
-        categoria_principal: "ninguno_asignado",
-        capacidades_plataforma: [],
-        es_admin: false,
-        esta_eliminada: false,
-        eliminado_por_uid: null,
-        eliminado_en: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        activo: true,
-        titulo_profesional: "",
-        descripcion_personal_o_profesional: "",
-        areas_de_interes_o_expertise: [],
-        estado_situacion_laboral: "no_especificado",
-        empresa_o_institucion_actual: "",
-        cargo_actual: "",
-        buscando_oportunidades: false,
-        disponible_para_proyectos: false,
-        ofrece_colaboracion_como: [],
-        telefono_contacto: "",
-        links_profesionales: [],
-        ubicacion_residencial: { ciudad: "", provincia: "rio_negro" },
-        es_ex_alumno_cet: false,
-        ano_cursada_actual_cet: null,
-        ano_egreso_cet: null,
-        titulacion_obtenida_cet: "",
-        proyecto_final_cet_id: null,
-        historia_de_exito_o_resumen_trayectoria: "",
-        visibilidad_perfil: "privado"
-      };
+      // Create user profile with minimal required data
+      const result = await personasService.create({
+        id: authData.user.id,
+        nombre: userData?.nombre || 'Nuevo Usuario',
+        email: authData.user.email!,
+      });
 
-      const result = await this.personasService.create(persona);
       if (result.error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: result.error.message,
           code: 'DB_ERROR',
@@ -168,7 +108,7 @@ export class AuthService {
       }
 
       if (!result.data) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: 'Failed to create user profile',
           code: 'DB_ERROR',
@@ -176,12 +116,12 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult({
-        user: mapPersonaToDomain(result.data),
+      return createSuccess({
+        user: result.data,
         session: authData.session,
       });
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -192,9 +132,9 @@ export class AuthService {
 
   async signOut(): Promise<ServiceResult<void>> {
     try {
-      const { error } = await this.supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       if (error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: error.message,
           code: 'AUTH_ERROR',
@@ -202,9 +142,9 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -215,9 +155,9 @@ export class AuthService {
 
   async resetPassword(email: string): Promise<ServiceResult<void>> {
     try {
-      const { error } = await this.supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: error.message,
           code: 'AUTH_ERROR',
@@ -225,9 +165,9 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -238,9 +178,9 @@ export class AuthService {
 
   async updatePassword(password: string): Promise<ServiceResult<void>> {
     try {
-      const { error } = await this.supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: error.message,
           code: 'AUTH_ERROR',
@@ -248,9 +188,9 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult(undefined);
+      return createSuccess(undefined);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -259,11 +199,11 @@ export class AuthService {
     }
   }
 
-  async getCurrentUser(): Promise<ServiceResult<MappedPersona | null>> {
+  async getCurrentUser(): Promise<ServiceResult<Persona | null>> {
     try {
-      const { data: { user }, error: authError } = await this.supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: authError.message,
           code: 'AUTH_ERROR',
@@ -272,12 +212,12 @@ export class AuthService {
       }
 
       if (!user) {
-        return createSuccessResult(null);
+        return createSuccess(null);
       }
 
-      const result = await this.personasService.getById(user.id);
+      const result = await personasService.getById(user.id);
       if (result.error) {
-        return createErrorResult({
+        return createError({
           name: 'ServiceError',
           message: result.error.message,
           code: 'DB_ERROR',
@@ -285,9 +225,9 @@ export class AuthService {
         });
       }
 
-      return createSuccessResult(result.data ? mapPersonaToDomain(result.data) : null);
+      return createSuccess(result.data);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: 'ServiceError',
         message: error instanceof Error ? error.message : 'Unknown error',
         code: 'AUTH_ERROR',
@@ -295,4 +235,6 @@ export class AuthService {
       });
     }
   }
-} 
+}
+
+export const authService = new AuthService(); 

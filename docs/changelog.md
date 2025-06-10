@@ -1,5 +1,13 @@
 # Changelog
 
+## [2025-06-10] Finalización de la Refactorización de la Capa de Servicios
+- Se ha completado una refactorización exhaustiva de toda la capa de servicios, adoptando un patrón de clases/objetos explícitos e independientes.
+- **Eliminación de Abstracciones:** Se han eliminado por completo las clases base (`BaseService`, `CacheableService`, `RelationshipService`) que causaban complejidad y errores de tipo.
+- **Servicios de Entidad (`temasService`, `personasService`):** Ahora son clases independientes con métodos CRUD explícitos, siguiendo un patrón consistente.
+- **Servicios de Relación (`personaTemaService`):** Se ha adoptado un patrón de objetos simples para manejar las tablas de unión.
+- **`authService`:** Se ha limpiado para delegar toda la lógica de perfiles a `personasService`, eliminando la duplicación de código.
+- **Limpieza de Tipos:** Se han eliminado los archivos de tipos obsoletos y se han consolidado las definiciones compartidas en `serviceResult.ts`.
+- **La capa de servicios se considera ahora estable, completa y lista para el desarrollo del frontend.**
 ## [2025-06-08] Diseño de Relaciones entre Proyectos
 - Diseñada e implementada en el esquema de la base de datos la funcionalidad para relacionar proyectos entre sí.
 - Creada la tabla `proyecto_relaciones` para modelar relaciones N:M direccionales.
