@@ -262,6 +262,23 @@ class PersonasService {
       });
     }
   }
+
+  async getByTemaId(temaId: string): Promise<ServiceResult<Persona[] | null>> {
+    try {
+      if (!temaId) return createError({ name: 'ValidationError', message: 'Tema ID is required', code: 'VALIDATION_ERROR' });
+
+      const { data, error } = await supabase
+        .from('personas')
+        .select('*, persona_tema!inner(tema_id)')
+        .eq('persona_tema.tema_id', temaId)
+        .eq('esta_eliminada', false);
+
+      if (error) throw error;
+      return createSuccess(data);
+    } catch (error) {
+      return createError({ name: 'ServiceError', message: 'Error fetching personas by tema', code: 'DB_ERROR', details: error });
+    }
+  }
 }
 
 export const personasService = new PersonasService(); 

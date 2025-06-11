@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
+import { Toaster } from "sonner";
 
 const sidebarLinks = [
   { id: 'dashboard', href: "/admin", label: "Dashboard" },
@@ -15,7 +16,7 @@ const sidebarLinks = [
   { id: 'news', href: "#", label: "Noticias" },
   { id: 'histories', href: "#", label: "Historias Orales" },
   { id: 'organizations', href: "#", label: "Organizaciones" },
-  { id: 'topics', href: "/admin/gestion-temas", label: "Temáticas" },
+  { id: 'topics', href: "/admin/temas", label: "Temáticas" },
   { id: 'courses', href: "#", label: "Cursos" },
   { id: 'bolsa', href: "#", label: "Bolsa de Trabajo" },
   { id: 'settings', href: "#", label: "Configuración" },
@@ -44,6 +45,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
+      <Toaster />
       <header className="h-16 border-b flex items-center px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <Button

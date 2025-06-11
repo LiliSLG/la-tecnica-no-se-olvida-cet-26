@@ -1,5 +1,30 @@
 # Changelog
 
+## [2025-06-13] Finalización del Módulo de Gestión de Temas
+- **CRUD Completo:** Implementada la funcionalidad de Crear, Leer, Actualizar y Borrar (CRUD) para la gestión de Temas en el panel de administración.
+- **Arquitectura Frontend:** Establecido el patrón de `Server Component` para la carga inicial de datos y `Client Component` para la interactividad, utilizando el hook `useDataTableState` y el componente `AdminDataTable`.
+- **UI/UX Profesional:** Mejorada la interfaz con iconos, tooltips, diálogos de confirmación y notificaciones, creando un estándar para futuras páginas de administración.
+- **Página Pública de Detalles:** Creada la página pública en `/temas/[id]` para mostrar los detalles de un tema y sus entidades relacionadas (personas y proyectos).
+- **Corrección de Bugs y Tipos:** Resueltos todos los bugs de estado del cliente y errores de TypeScript, resultando en una funcionalidad robusta y type-safe de principio a fin.
+- **El módulo de Temas se considera completo y es el prototipo para el resto de los módulos de gestión.**
+## [2025-06-12] Finalización del CRUD de Temas y Mejoras de UI/UX
+- **CRUD Completo:** Implementada la funcionalidad de Crear, Editar y Borrar para la gestión de Temas en el panel de administración.
+- **Formulario Reutilizable:** Creado el componente `TemaForm` con validación (Zod) y manejo de estado (`react-hook-form`), integrado en un modal de `shadcn/ui`.
+- **Corrección de Bug de Estado:** Solucionado un bug en la lógica de borrado que eliminaba ítems del estado del cliente incorrectamente. Ahora se actualiza el flag `esta_eliminada` para mantener la consistencia con el filtro "Mostrar eliminados".
+- **Mejoras de UI/UX:**
+  - Reemplazados los botones de texto de las acciones por botones de iconos (`lucide-react`) con tooltips para mejorar la claridad y accesibilidad.
+  - Añadido un botón para limpiar el campo de búsqueda en el `AdminDataTable`.
+- La página de gestión de temas se considera el prototipo final para todas las futuras páginas de administración de datos.
+## [2025-06-11] Implementación del CRUD en Admin Panel
+- **Página de Gestión de Temas (`/admin/temas`):** Creada la primera página de administración funcional.
+  - Utiliza un patrón de Server Component para la carga inicial de datos y un Client Component para la interactividad.
+  - Integrado con el hook `useDataTableState` para manejar la lógica de búsqueda, filtrado y paginación en el cliente.
+  - Implementado el componente reutilizable `AdminDataTable` para mostrar los datos.
+- **Funcionalidad de Borrado (Soft Delete):**
+  - Añadida la funcionalidad de borrado lógico para los temas.
+  - Implementado un diálogo de confirmación (`AlertDialog`) para prevenir borrados accidentales.
+  - Se utilizan notificaciones (`sonner`) para dar feedback al usuario sobre el resultado de la operación.
+  - La UI se actualiza instantáneamente tras un borrado exitoso.
 ## [2025-06-10] Finalización de la Refactorización de la Capa de Servicios
 - Se ha completado una refactorización exhaustiva de toda la capa de servicios, adoptando un patrón de clases/objetos explícitos e independientes.
 - **Eliminación de Abstracciones:** Se han eliminado por completo las clases base (`BaseService`, `CacheableService`, `RelationshipService`) que causaban complejidad y errores de tipo.

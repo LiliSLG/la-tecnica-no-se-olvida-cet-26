@@ -1,4 +1,4 @@
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ArrowUpDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,15 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DataTableState, DataTableConfig } from "@/lib/hooks/useDataTableState";
+import { DataTableState, DataTableConfig } from "@/hooks/useDataTableState";
 
-export type ColumnConfig<T> = {
-  key: keyof T;
+export interface ColumnConfig<T> {
+  key: keyof T | `virtual_${string}`;
   label: string;
   sortable?: boolean;
-  render?: (item: T) => React.ReactNode;
-  className?: string;
-};
+  render?: (row: T) => React.ReactNode;
+}
 
 interface FilterField {
   key: string;
@@ -37,7 +36,6 @@ interface FilterField {
 
 interface AdminDataTableProps<T extends object> {
   title?: string;
-  data: T[];
   columns: ColumnConfig<T>[];
   config: {
     searchFields: (keyof T)[];
@@ -60,7 +58,6 @@ interface AdminDataTableProps<T extends object> {
 
 export function AdminDataTable<T extends object>({
   title,
-  data,
   columns,
   config,
   state,
@@ -69,9 +66,6 @@ export function AdminDataTable<T extends object>({
   emptyState,
   pageSizes = [10, 25, 50, 100],
 }: AdminDataTableProps<T>) {
-  console.log('AdminDataTable received data:', data);
-  console.log('AdminDataTable state:', state);
-
   const {
     search,
     filters,
@@ -88,25 +82,19 @@ export function AdminDataTable<T extends object>({
     setPageSize,
   } = state;
 
-  console.log('AdminDataTable paginatedData:', paginatedData);
-
   const handlePageSizeChange = (newSize: number) => {
-    state.setPageSize(newSize);
-    state.setCurrentPage(1);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    state.setCurrentPage(newPage);
+    setPageSize(newSize);
+    setCurrentPage(1);
   };
 
   const handlePreviousPage = () => {
     const newPage = Math.max(1, currentPage - 1);
-    state.setCurrentPage(newPage);
+    setCurrentPage(newPage);
   };
 
   const handleNextPage = () => {
     const newPage = Math.min(totalPages, currentPage + 1);
-    state.setCurrentPage(newPage);
+    setCurrentPage(newPage);
   };
 
   return (
@@ -120,8 +108,18 @@ export function AdminDataTable<T extends object>({
               placeholder="Buscar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-9"
             />
+            {search.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                onClick={() => setSearch('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           {config.filterFields.map((field) => (
             field.type === 'select' ? (

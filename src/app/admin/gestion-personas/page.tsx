@@ -19,14 +19,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
-import { useDataTableState } from "@/lib/hooks/useDataTableState";
-import { PersonasService } from "@/lib/supabase/services/personasService";
+import { useDataTableState } from "@/hooks/useDataTableState";
+//import { PersonasService } from "@/lib/supabase/services/personasService";
 import { supabase } from "@/lib/supabase/supabaseClient";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Persona = Database['public']['Tables']['personas']['Row'];
 
-const personasService = new PersonasService(supabase);
+/*const personasService = new PersonasService(supabase);
 
 export default function PersonasListPage() {
   const router = useRouter();
@@ -339,4 +339,4 @@ export default function PersonasListPage() {
       </AlertDialog>
     </>
   );
-} 
+} */
