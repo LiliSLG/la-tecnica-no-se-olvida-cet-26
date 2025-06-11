@@ -1,53 +1,53 @@
-# Documentación de funcionalidades
+# Feature Documentation
 
-Con el objetivo de facilitar el mantenimiento del proyecto, el entrenamiento de futuros asistentes (chatbot), y el onboarding de nuevos desarrolladores, se establece el siguiente patrón de documentación por funcionalidades (features).
+To facilitate project maintenance, training of future assistants (chatbot), and onboarding of new developers, the following feature documentation pattern is established.
 
-## Ubicación
+## Location
 
-La documentación de cada funcionalidad se ubicará en:
+Each feature's documentation will be located at:
 
-/docs/features/<nombre_feature>.md
+/docs/features/<feature_name>.md
 
 
-Ejemplo:
+Example:
 
 /docs/features/personas.md
 /docs/features/proyectos.md
 /docs/features/cursos.md
 
 
-## Estructura mínima de cada archivo
+## Minimum Structure for Each File
 
-Cada archivo de feature deberá incluir como mínimo las siguientes secciones:
+Each feature file must include at minimum the following sections:
 
 
-- <Nombre de la funcionalidad>
+- <Feature Name>
 
-- ¿Qué hace esta funcionalidad?
+- What does this feature do?
 
-Breve descripción de su propósito dentro del sistema.
+Brief description of its purpose within the system.
 
-- Entidades involucradas
+- Entities Involved
 
-Listado de tablas, enums y relaciones relevantes.
+List of relevant tables, enums, and relationships.
 
-- Casos de uso principales
+- Main Use Cases
 
-Listado de casos de uso que cubre la funcionalidad.
+List of use cases covered by the feature.
 
-- Flujos especiales
+- Special Flows
 
-Descripción de flujos o particularidades específicas (si aplica).
+Description of specific flows or particularities (if applicable).
 
-- Consideraciones para el chatbot
+- Chatbot Considerations
 
-Listado de posibles preguntas que el chatbot debería poder responder en relación a esta funcionalidad.
+List of possible questions that the chatbot should be able to answer regarding this feature.
 
-- Estado actual
+- Current Status
 
-Breve resumen del estado actual de la implementación (qué está hecho, qué está pendiente).
+Brief summary of the current implementation status (what's done, what's pending).
 
-## Notas
-✅ La documentación debe mantenerse actualizada a medida que se desarrollan o modifican las funcionalidades.
-✅ La estructura puede ampliarse si se requiere más detalle, pero siempre debe contener como mínimo las secciones definidas.
-✅ Esta documentación será la base para futuros asistentes conversacionales y para la generación de documentación automática.
+## Notes
+✅ Documentation must be kept up to date as features are developed or modified.
+✅ The structure can be expanded if more detail is required, but it must always contain at minimum the defined sections.
+✅ This documentation will be the foundation for future conversational assistants and automated documentation generation.

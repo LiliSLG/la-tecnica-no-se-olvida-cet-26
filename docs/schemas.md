@@ -1,205 +1,201 @@
-# Base de datos Supabase
+# Supabase Database
 
-## Tablas principales
+## Main Tables
 
 ### personas
 - id (UUID, PK)
-- nombre
-- apellido
+- nombre (name)
+- apellido (surname)
 - email (unique)
-- fotoURL
-- categoriaPrincipal (categoria_principal_persona_enum)
-- capacidadesPlataforma (array text[])
-- activo (boolean)
-- esAdmin (boolean)
-- tituloProfesional
-- descripcionPersonalOProfesional
-- areasDeInteresOExpertise (array text[])
-- disponibleParaProyectos (boolean)
-- esExAlumnoCET (boolean)
-- anoCursadaActualCET (integer)
-- anoEgresoCET (integer)
-- titulacionObtenidaCET
-- proyectoFinalCETId (UUID, FK opcional a proyectos)
-- buscandoOportunidades (boolean)
-- estadoSituacionLaboral (estado_situacion_laboral_enum)
-- historiaDeExitoOResumenTrayectoria
-- empresaOInstitucionActual
-- cargoActual
-- ofreceColaboracionComo (array text[])
-- telefonoContacto
-- linksProfesionales (jsonb)
-- ubicacionResidencial (jsonb) ver abajo
-- visibilidadPerfil (visibilidad_perfil_enum)
-- ingresadoPor
-- creadoEn (timestamp)
-- modificadoPor
-- actualizadoEn (timestamp)
-- estaEliminada (boolean)
-- eliminadoEn (timestamp)
-- eliminadoPorUid
-
+- fotoURL (profile picture URL)
+- categoriaPrincipal (main category, categoria_principal_persona_enum)
+- capacidadesPlataforma (platform capabilities, array text[])
+- activo (active, boolean)
+- esAdmin (is admin, boolean)
+- tituloProfesional (professional title)
+- descripcionPersonalOProfesional (personal or professional description)
+- areasDeInteresOExpertise (areas of interest or expertise, array text[])
+- disponibleParaProyectos (available for projects, boolean)
+- esExAlumnoCET (is CET alumni, boolean)
+- anoCursadaActualCET (current CET year, integer)
+- anoEgresoCET (CET graduation year, integer)
+- titulacionObtenidaCET (CET degree obtained)
+- proyectoFinalCETId (CET final project ID, UUID, optional FK to proyectos)
+- buscandoOportunidades (looking for opportunities, boolean)
+- estadoSituacionLaboral (employment status, estado_situacion_laboral_enum)
+- historiaDeExitoOResumenTrayectoria (success story or career summary)
+- empresaOInstitucionActual (current company or institution)
+- cargoActual (current position)
+- ofreceColaboracionComo (offers collaboration as, array text[])
+- telefonoContacto (contact phone)
+- linksProfesionales (professional links, jsonb)
+- ubicacionResidencial (residential location, jsonb) see below
+- visibilidadPerfil (profile visibility, visibilidad_perfil_enum)
+- ingresadoPor (created by)
+- creadoEn (created at, timestamp)
+- modificadoPor (modified by)
+- actualizadoEn (updated at, timestamp)
+- estaEliminada (is deleted, boolean)
+- eliminadoEn (deleted at, timestamp)
+- eliminadoPorUid (deleted by user ID)
 
 ---
 
+The `ubicacionResidencial` field represents a person's residential address. It is stored as a structured object in JSONB format with the following fields:
 
-El campo `ubicacionResidencial` representa la dirección residencial de una persona. Se guarda como un objeto estructurado en formato JSONB con los siguientes campos:
+- `direccion`: street and number (string)
+- `provincia`: province (string)
+- `localidad`: city or town (string)
+- `codigo_postal`: postal code (string)
+- `lat` (optional): geographic latitude (number)
+- `lng` (optional): geographic longitude (number)
 
-- `direccion`: calle y número (string)
-- `provincia`: provincia (string)
-- `localidad`: ciudad o localidad (string)
-- `codigo_postal`: código postal (string)
-- `lat` (opcional): latitud geográfica (number)
-- `lng` (opcional): longitud geográfica (number)
+This field is interpreted by forms as a nested object. It is recommended to validate at least the text fields as required and keep `lat` and `lng` as optional for future map visualizations.
 
-Este campo es interpretado por los formularios como un objeto anidado. Se recomienda validar al menos los campos de texto como obligatorios y mantener `lat` y `lng` como opcionales para futuras visualizaciones en mapas.
-📌 Nota:
-Se planea en el futuro vincular estos campos a un selector de ubicación con mapa interactivo, permitiendo que el usuario elija su posición directamente desde una interfaz visual. Mientras tanto, estos valores pueden ingresarse manualmente o dejarse en blanco.
-
+📌 Note:
+It is planned to link these fields to an interactive map location selector in the future, allowing users to choose their position directly from a visual interface. Meanwhile, these values can be entered manually or left blank.
 
 ### proyectos
 - id (UUID, PK)
-- titulo
-- descripcionGeneral
-- resumenEjecutivo
-- anoProyecto (integer)
-- estadoActual (estado_proyecto_enum)
-- fechaInicio (timestamp)
-- fechaFinalizacionEstimada (timestamp)
-- fechaFinalizacionReal (timestamp)
-- fechaPresentacion (timestamp)
-- archivoPrincipalURL
-- nombreArchivoPrincipal
-- esEliminado (boolean)
-- creadoPorUid
-- creadoEn (timestamp)
-- actualizadoPorUid
-- actualizadoEn (timestamp)
-- eliminadoEn (timestamp)
-- eliminadoPorUid
+- titulo (title)
+- descripcionGeneral (general description)
+- resumenEjecutivo (executive summary)
+- anoProyecto (project year, integer)
+- estadoActual (current status, estado_proyecto_enum)
+- fechaInicio (start date, timestamp)
+- fechaFinalizacionEstimada (estimated completion date, timestamp)
+- fechaFinalizacionReal (actual completion date, timestamp)
+- fechaPresentacion (presentation date, timestamp)
+- archivoPrincipalURL (main file URL)
+- nombreArchivoPrincipal (main file name)
+- esEliminado (is deleted, boolean)
+- creadoPorUid (created by user ID)
+- creadoEn (created at, timestamp)
+- actualizadoPorUid (updated by user ID)
+- actualizadoEn (updated at, timestamp)
+- eliminadoEn (deleted at, timestamp)
+- eliminadoPorUid (deleted by user ID)
 
 ### historias_orales
 - id (UUID, PK)
-- tipoContenido (tipo_contenido_historia_oral_enum)
-- tituloSaber
-- descripcionSaber
-- videoPropioURL
-- plataformaVideoPropio (plataforma_video_enum)
-- urlVideoExterno
-- plataformaVideoExterno (plataforma_video_enum)
-- fuenteVideoExterno
-- fechaGrabacionORecopilacion (timestamp)
-- ambitoSaber
-- palabrasClaveSaber (array text[])
-- fuentesInformacion (array text[])
-- recopiladoPorUids (array text[])
-- transcripcionTextoCompleto
-- transcripcionFileURL
-- imagenMiniaturaURL
-- duracionMediaMinutos (integer)
-- estaPublicada (boolean)
-- creadoPorUid
-- creadoEn (timestamp)
-- modificadoPorUid
-- actualizadoEn (timestamp)
-- estaEliminada (boolean)
-- eliminadoEn (timestamp)
-- eliminadoPorUid
+- tipoContenido (content type, tipo_contenido_historia_oral_enum)
+- tituloSaber (knowledge title)
+- descripcionSaber (knowledge description)
+- videoPropioURL (own video URL)
+- plataformaVideoPropio (own video platform, plataforma_video_enum)
+- urlVideoExterno (external video URL)
+- plataformaVideoExterno (external video platform, plataforma_video_enum)
+- fuenteVideoExterno (external video source)
+- fechaGrabacionORecopilacion (recording or collection date, timestamp)
+- ambitoSaber (knowledge scope)
+- palabrasClaveSaber (knowledge keywords, array text[])
+- fuentesInformacion (information sources, array text[])
+- recopiladoPorUids (collected by user IDs, array text[])
+- transcripcionTextoCompleto (full transcription text)
+- transcripcionFileURL (transcription file URL)
+- imagenMiniaturaURL (thumbnail image URL)
+- duracionMediaMinutos (media duration in minutes, integer)
+- estaPublicada (is published, boolean)
+- creadoPorUid (created by user ID)
+- creadoEn (created at, timestamp)
+- modificadoPorUid (modified by user ID)
+- actualizadoEn (updated at, timestamp)
+- estaEliminada (is deleted, boolean)
+- eliminadoEn (deleted at, timestamp)
+- eliminadoPorUid (deleted by user ID)
 
 ### noticias
 - id (UUID, PK)
-- tipoContenido (tipo_contenido_noticia_enum)
-- titulo
-- subtitulo
-- contenido
-- urlExterna
-- fuenteExterna
-- resumenOContextoInterno
-- fechaPublicacion (timestamp)
-- autorNoticia
-- imagenPrincipalURL
-- esDestacada (boolean)
-- estaPublicada (boolean)
-- creadoPorUid
-- actualizadoEn (timestamp)
-- modificadoPorUid
-- estaEliminada (boolean)
-- eliminadoEn (timestamp)
-- eliminadoPorUid
+- tipoContenido (content type, tipo_contenido_noticia_enum)
+- titulo (title)
+- subtitulo (subtitle)
+- contenido (content)
+- urlExterna (external URL)
+- fuenteExterna (external source)
+- resumenOContextoInterno (internal summary or context)
+- fechaPublicacion (publication date, timestamp)
+- autorNoticia (news author)
+- imagenPrincipalURL (main image URL)
+- esDestacada (is featured, boolean)
+- estaPublicada (is published, boolean)
+- creadoPorUid (created by user ID)
+- actualizadoEn (updated at, timestamp)
+- modificadoPorUid (modified by user ID)
+- estaEliminada (is deleted, boolean)
+- eliminadoEn (deleted at, timestamp)
+- eliminadoPorUid (deleted by user ID)
 
 ### organizaciones
 - id (UUID, PK)
-- nombreOficial
-- nombreFantasia
-- tipo (tipo_organizacion_enum)
-- descripcion
-- logoURL
-- sitioWeb
-- emailContacto
-- telefonoContacto
-- areasDeInteres (array text[])
-- abiertaAColaboraciones (boolean)
-- ubicacion (jsonb)
-- ingresadoPorUid
-- creadoEn (timestamp)
-- actualizadoEn (timestamp)
-- modificadoPorUid
-- estaEliminada (boolean)
-- eliminadaEn (timestamp)
-- eliminadaPorUid
+- nombreOficial (official name)
+- nombreFantasia (trading name)
+- tipo (type, tipo_organizacion_enum)
+- descripcion (description)
+- logoURL (logo URL)
+- sitioWeb (website)
+- emailContacto (contact email)
+- telefonoContacto (contact phone)
+- areasDeInteres (areas of interest, array text[])
+- abiertaAColaboraciones (open to collaborations, boolean)
+- ubicacion (location, jsonb)
+- ingresadoPorUid (created by user ID)
+- creadoEn (created at, timestamp)
+- actualizadoEn (updated at, timestamp)
+- modificadoPorUid (modified by user ID)
+- estaEliminada (is deleted, boolean)
+- eliminadaEn (deleted at, timestamp)
+- eliminadaPorUid (deleted by user ID)
 
 ### temas
 - id (UUID, PK)
-- nombre
-- descripcion
-- categoriaTema (tema_categoria_enum)
-- ingresadoPorUid
-- creadoEn (timestamp)
-- actualizadoEn (timestamp)
-- modificadoPorUid
-- estaEliminada (boolean)
-- eliminadoEn (timestamp)
-- eliminadoPorUid
+- nombre (name)
+- descripcion (description)
+- categoriaTema (topic category, tema_categoria_enum)
+- ingresadoPorUid (created by user ID)
+- creadoEn (created at, timestamp)
+- actualizadoEn (updated at, timestamp)
+- modificadoPorUid (modified by user ID)
+- estaEliminada (is deleted, boolean)
+- eliminadoEn (deleted at, timestamp)
+- eliminadoPorUid (deleted by user ID)
 
 ---
 
 ### ofertas_laborales
 - id (UUID, PK)
-- titulo
-- descripcion
-- empresa
-- ubicacion
-- estado (text)
-- estaEliminada (boolean)
-- eliminadoPorUid
-- eliminadoEn (timestamp)
-- creadoEn (timestamp)
-- actualizadoEn (timestamp)
+- titulo (title)
+- descripcion (description)
+- empresa (company)
+- ubicacion (location)
+- estado (status, text)
+- estaEliminada (is deleted, boolean)
+- eliminadoPorUid (deleted by user ID)
+- eliminadoEn (deleted at, timestamp)
+- creadoEn (created at, timestamp)
+- actualizadoEn (updated at, timestamp)
 
 ### historias_orales
 - id (UUID, PK)
-- titulo
-- descripcion
-- archivoPrincipalURL
-- estado (text)
-- estaEliminada (boolean)
-- eliminadoPorUid
-- eliminadoEn (timestamp)
-- creadoEn (timestamp)
-- actualizadoEn (timestamp)
+- titulo (title)
+- descripcion (description)
+- archivoPrincipalURL (main file URL)
+- estado (status, text)
+- estaEliminada (is deleted, boolean)
+- eliminadoPorUid (deleted by user ID)
+- eliminadoEn (deleted at, timestamp)
+- creadoEn (created at, timestamp)
+- actualizadoEn (updated at, timestamp)
 
 ### cursos
 - id (UUID, PK)
-- titulo
-- descripcion
-- nivel (nivel_curso_enum)
-- duracion (integer)
-- estado (text)
-- estaEliminada (boolean)
-- eliminadoPorUid
-- eliminadoEn (timestamp)
-- creadoEn (timestamp)
-- actualizadoEn (timestamp)
+- titulo (title)
+- descripcion (description)
+- nivel (level, nivel_curso_enum)
+- duracion (duration, integer)
+- estado (status, text)
+- estaEliminada (is deleted, boolean)
+- eliminadoPorUid (deleted by user ID)
+- eliminadoEn (deleted at, timestamp)
 
 ## Tablas relacionales (many-to-many)
 

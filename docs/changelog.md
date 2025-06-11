@@ -1,45 +1,49 @@
 # Changelog
 
-## [2025-06-13] Finalización del Módulo de Gestión de Temas
-- **CRUD Completo:** Implementada la funcionalidad de Crear, Leer, Actualizar y Borrar (CRUD) para la gestión de Temas en el panel de administración.
-- **Arquitectura Frontend:** Establecido el patrón de `Server Component` para la carga inicial de datos y `Client Component` para la interactividad, utilizando el hook `useDataTableState` y el componente `AdminDataTable`.
-- **UI/UX Profesional:** Mejorada la interfaz con iconos, tooltips, diálogos de confirmación y notificaciones, creando un estándar para futuras páginas de administración.
-- **Página Pública de Detalles:** Creada la página pública en `/temas/[id]` para mostrar los detalles de un tema y sus entidades relacionadas (personas y proyectos).
-- **Corrección de Bugs y Tipos:** Resueltos todos los bugs de estado del cliente y errores de TypeScript, resultando en una funcionalidad robusta y type-safe de principio a fin.
-- **El módulo de Temas se considera completo y es el prototipo para el resto de los módulos de gestión.**
-## [2025-06-12] Finalización del CRUD de Temas y Mejoras de UI/UX
-- **CRUD Completo:** Implementada la funcionalidad de Crear, Editar y Borrar para la gestión de Temas en el panel de administración.
-- **Formulario Reutilizable:** Creado el componente `TemaForm` con validación (Zod) y manejo de estado (`react-hook-form`), integrado en un modal de `shadcn/ui`.
-- **Corrección de Bug de Estado:** Solucionado un bug en la lógica de borrado que eliminaba ítems del estado del cliente incorrectamente. Ahora se actualiza el flag `esta_eliminada` para mantener la consistencia con el filtro "Mostrar eliminados".
-- **Mejoras de UI/UX:**
-  - Reemplazados los botones de texto de las acciones por botones de iconos (`lucide-react`) con tooltips para mejorar la claridad y accesibilidad.
-  - Añadido un botón para limpiar el campo de búsqueda en el `AdminDataTable`.
-- La página de gestión de temas se considera el prototipo final para todas las futuras páginas de administración de datos.
-## [2025-06-11] Implementación del CRUD en Admin Panel
-- **Página de Gestión de Temas (`/admin/temas`):** Creada la primera página de administración funcional.
-  - Utiliza un patrón de Server Component para la carga inicial de datos y un Client Component para la interactividad.
-  - Integrado con el hook `useDataTableState` para manejar la lógica de búsqueda, filtrado y paginación en el cliente.
-  - Implementado el componente reutilizable `AdminDataTable` para mostrar los datos.
-- **Funcionalidad de Borrado (Soft Delete):**
-  - Añadida la funcionalidad de borrado lógico para los temas.
-  - Implementado un diálogo de confirmación (`AlertDialog`) para prevenir borrados accidentales.
-  - Se utilizan notificaciones (`sonner`) para dar feedback al usuario sobre el resultado de la operación.
-  - La UI se actualiza instantáneamente tras un borrado exitoso.
-## [2025-06-10] Finalización de la Refactorización de la Capa de Servicios
-- Se ha completado una refactorización exhaustiva de toda la capa de servicios, adoptando un patrón de clases/objetos explícitos e independientes.
-- **Eliminación de Abstracciones:** Se han eliminado por completo las clases base (`BaseService`, `CacheableService`, `RelationshipService`) que causaban complejidad y errores de tipo.
-- **Servicios de Entidad (`temasService`, `personasService`):** Ahora son clases independientes con métodos CRUD explícitos, siguiendo un patrón consistente.
-- **Servicios de Relación (`personaTemaService`):** Se ha adoptado un patrón de objetos simples para manejar las tablas de unión.
-- **`authService`:** Se ha limpiado para delegar toda la lógica de perfiles a `personasService`, eliminando la duplicación de código.
-- **Limpieza de Tipos:** Se han eliminado los archivos de tipos obsoletos y se han consolidado las definiciones compartidas en `serviceResult.ts`.
-- **La capa de servicios se considera ahora estable, completa y lista para el desarrollo del frontend.**
-## [2025-06-08] Diseño de Relaciones entre Proyectos
-- Diseñada e implementada en el esquema de la base de datos la funcionalidad para relacionar proyectos entre sí.
-- Creada la tabla `proyecto_relaciones` para modelar relaciones N:M direccionales.
-- Añadido el enum `tipo_relacion_proyecto_enum` para estandarizar los tipos de relación ('referencia', 'mejora', etc.).
-- Incluido un campo `descripcion` para añadir contexto a cada relación.
-- Actualizada la documentación (`schemas.md`, `blueprint.md`, `future-developments.md`) para reflejar este nuevo diseño.
-###- Estandarizado el nombre de la entidad `entrevistas` a `historias_orales` en toda la base de datos y documentación para mayor claridad conceptual.
+## [2025-06-13] Topics Management Module Completion
+- **Complete CRUD:** Implemented Create, Read, Update, and Delete (CRUD) functionality for Topics management in the admin panel.
+- **Frontend Architecture:** Established the `Server Component` pattern for initial data loading and `Client Component` for interactivity, using the `useDataTableState` hook and `AdminDataTable` component.
+- **Professional UI/UX:** Enhanced the interface with icons, tooltips, confirmation dialogs, and notifications, creating a standard for future admin pages.
+- **Public Detail Page:** Created the public page at `/temas/[id]` to display topic details and related entities (people and projects).
+- **Bug and Type Fixes:** Resolved all client state bugs and TypeScript errors, resulting in robust and type-safe functionality from start to finish.
+- **The Topics module is considered complete and serves as the prototype for all other management modules.**
+
+## [2025-06-12] Topics CRUD Completion and UI/UX Improvements
+- **Complete CRUD:** Implemented Create, Edit, and Delete functionality for Topics management in the admin panel.
+- **Reusable Form:** Created the `TemaForm` component with validation (Zod) and state management (`react-hook-form`), integrated into a `shadcn/ui` modal.
+- **State Bug Fix:** Fixed a bug in the delete logic that incorrectly removed items from client state. Now it updates the `esta_eliminada` flag to maintain consistency with the "Show deleted" filter.
+- **UI/UX Improvements:**
+  - Replaced text action buttons with icon buttons (`lucide-react`) with tooltips for better clarity and accessibility.
+  - Added a clear button for the search field in `AdminDataTable`.
+- The topics management page is considered the final prototype for all future data admin pages.
+
+## [2025-06-11] CRUD Implementation in Admin Panel
+- **Topics Management Page (`/admin/temas`):** Created the first functional admin page.
+  - Uses a Server Component pattern for initial data loading and a Client Component for interactivity.
+  - Integrated with the `useDataTableState` hook to handle search, filtering, and pagination logic on the client.
+  - Implemented the reusable `AdminDataTable` component to display data.
+- **Delete Functionality (Soft Delete):**
+  - Added logical delete functionality for topics.
+  - Implemented a confirmation dialog (`AlertDialog`) to prevent accidental deletions.
+  - Uses notifications (`sonner`) to provide user feedback on operation results.
+  - UI updates instantly after successful deletion.
+
+## [2025-06-10] Service Layer Refactoring Completion
+- Completed a comprehensive refactoring of the entire service layer, adopting a pattern of explicit and independent classes/objects.
+- **Removed Abstractions:** Completely eliminated base classes (`BaseService`, `CacheableService`, `RelationshipService`) that caused complexity and type errors.
+- **Entity Services (`temasService`, `personasService`):** Now independent classes with explicit CRUD methods, following a consistent pattern.
+- **Relationship Services (`personaTemaService`):** Adopted a simple object pattern for handling junction tables.
+- **`authService`:** Cleaned up to delegate all profile logic to `personasService`, eliminating code duplication.
+- **Type Cleanup:** Removed obsolete type files and consolidated shared definitions in `serviceResult.ts`.
+- **The service layer is now considered stable, complete, and ready for frontend development.**
+
+## [2025-06-08] Project Relationships Design
+- Designed and implemented in the database schema the functionality to relate projects to each other.
+- Created the `proyecto_relaciones` table to model directional N:M relationships.
+- Added the `tipo_relacion_proyecto_enum` enum to standardize relationship types ('reference', 'improvement', etc.).
+- Included a `descripcion` field to add context to each relationship.
+- Updated documentation (`schemas.md`, `blueprint.md`, `future-developments.md`) to reflect this new design.
+- Standardized the entity name from `entrevistas` to `historias_orales` throughout the database and documentation for better conceptual clarity.
 
 ## [2025-06-07] Basic Authentication Implementation
 - Updated `supabaseClient.ts` to use `createBrowserClient` from `@supabase/ssr` to ensure compatibility with Next.js 15 App Router and Client Components. This change prevents the known `@supabase/node-fetch` error when using `supabaseClient` in `AuthProvider.tsx` and other client components. No changes were needed in `authService.ts` or `supabaseStorage.ts`.
@@ -65,29 +69,28 @@
   - `proyectoPersonaRolService.ts`
   - `entrevistaOrganizacionRolService.ts`
   - `entrevistaPersonaRolService.ts`
-  
-## [2025-06-01] Migración Firestore → Supabase (Fase 1 y Fase 2)
 
-- Migración completa de servicios:
-    - Personas → `personasService.ts`
-    - Proyectos → `proyectosService.ts`
-    - Entrevistas → `historiasOralesService.ts`
-    - Noticias → `noticiasService.ts`
-    - Organizaciones → `organizacionesService.ts`
-    - Temas → `temasService.ts`
-- Creación de tablas relacionales en Supabase:
+## [2025-06-01] Firestore → Supabase Migration (Phase 1 and 2)
+
+- Complete service migration:
+    - People → `personasService.ts`
+    - Projects → `proyectosService.ts`
+    - Interviews → `historiasOralesService.ts`
+    - News → `noticiasService.ts`
+    - Organizations → `organizacionesService.ts`
+    - Topics → `temasService.ts`
+- Created relational tables in Supabase:
     - `persona_tema`
     - `proyecto_tema`
     - `entrevista_tema`
     - `noticia_tema`
     - `proyecto_persona_rol`
     - `proyecto_organizacion_rol`
-- Ajuste en `src/lib/supabase/supabaseClient.ts`
-- Estándar de timestamps → `new Date().toISOString()`
-- Eliminación de `serverTimestamp` y conversión de Firestore `Timestamp` a `string`
-- Uso de `logical delete` unificado en todos los servicios (`estaEliminada`, `eliminadoPorUid`, `eliminadoEn`)
-- Eliminación de hacks Firestore (chunking de 30 IDs, `documentId`, `array-contains`, etc.)
-
+- Adjusted `src/lib/supabase/supabaseClient.ts`
+- Standardized timestamps → `new Date().toISOString()`
+- Removed `serverTimestamp` and converted Firestore `Timestamp` to `string`
+- Unified `logical delete` across all services (`estaEliminada`, `eliminadoPorUid`, `eliminadoEn`)
+- Removed Firestore hacks (30 ID chunking, `documentId`, `array-contains`, etc.)
 
 ## 31/05/2025
 - Started centralizing project context for AI (Firebase Studio) interaction.
@@ -95,15 +98,14 @@
 - Outlined `docs/future-developments.md`.
 - Established `rules.md` for guiding AI development.
 - **Previous major changes to note for AI:**
-    - Implemented CRUD for `participantes` (Personas) in Admin Panel, including profile picture upload (to Firebase Storage on form save) and refined role management (`categoriaPrincipal`, `capacidadesPlataforma` (with `es_admin_sistema` synced to `esAdmin` boolean)). Placeholder creation from Project form now uses a modal (`AddPersonaModal.tsx`) and assigns `categoriaPrincipal`.
+    - Implemented CRUD for `participantes` (People) in Admin Panel, including profile picture upload (to Firebase Storage on form save) and refined role management (`categoriaPrincipal`, `capacidadesPlataforma` (with `es_admin_sistema` synced to `esAdmin` boolean)). Placeholder creation from Project form now uses a modal (`AddPersonaModal.tsx`) and assigns `categoriaPrincipal`.
     - Implemented CRUD for `organizaciones` in Admin Panel, including logo upload (to Firebase Storage on form save).
     - Implemented CRUD for `noticias` in Admin Panel, supporting both original articles and links to external news, including image upload for original articles.
     - Implemented initial structure for `entrevistas` (oral history) CRUD in Admin Panel and public view, supporting video links/embeds.
-    - Refined "Red de Tutores y Acompañantes" and started "Red de Egresados CET 26" public pages to use updated `Persona` fields and card-based design.
+    - Refined "Network of Tutors and Mentors" and started "CET 26 Alumni Network" public pages to use updated `Persona` fields and card-based design.
     - Implemented "smart redirection" and conditional "Update" button (based on `isDirty`) in forms.
     - Addressed various Firestore and Storage permission issues.
     - Standardized on logical deletes (`estaEliminado`, `estaEliminada`) with restore options in admin panels.
-
 
 ## Firebase Migration Audit (Phase 1)
 

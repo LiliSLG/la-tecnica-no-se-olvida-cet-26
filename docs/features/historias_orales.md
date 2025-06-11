@@ -1,39 +1,40 @@
-# Funcionalidad: Historias Orales
+# Feature: Oral Histories (Historias Orales)
 
-## ¿Qué hace esta funcionalidad?
-Gestiona el Archivo de Historia Oral, una de las piedras angulares del proyecto. Permite preservar y compartir el conocimiento local y las experiencias de la comunidad rural a través de entrevistas, testimonios y saberes, principalmente en formato de video, audio y texto.
+## What does this feature do?
+This feature manages the Oral History Archive, one of the cornerstones of the project. It allows preserving and sharing local knowledge and rural community experiences through interviews, testimonies, and wisdom, primarily in video, audio, and text formats.
 
-## Entidades involucradas
-- **Tablas Principales:**
-  - `historias_orales`: Almacena la información de cada registro, incluyendo metadatos, transcripciones y enlaces a los archivos multimedia.
-- **Tablas Relacionales:**
-  - `historia_oral_tema`: Vincula cada historia oral con los temas de conocimiento relevantes.
-  - `historia_oral_persona_rol`: Asigna personas (entrevistado, entrevistador, etc.) a un registro. (Nota: esta tabla hay que crearla).
-  - `historia_oral_organizacion_rol`: Asigna organizaciones colaboradoras. (Nota: esta tabla hay que crearla).
-  - `proyecto_historia_oral`: Relaciona una historia oral con un proyecto técnico que la utilice como fuente o referencia.
+## Entities Involved
+- **Primary Tables:**
+  - `historias_orales`: Stores information for each record, including metadata, transcriptions, and links to multimedia files.
+- **Junction Tables:**
+  - `historia_oral_tema`: Links each oral history with relevant knowledge topics.
+  - `historia_oral_persona_rol`: Assigns people (interviewee, interviewer, etc.) to a record. (Note: this table needs to be created).
+  - `historia_oral_organizacion_rol`: Assigns collaborating organizations. (Note: this table needs to be created).
+  - `proyecto_historia_oral`: Links an oral history with a technical project that uses it as a source or reference.
 
-## Casos de uso principales
-- **Administradores:**
-  - Crear, leer, actualizar y eliminar registros del archivo (CRUD).
-  - Subir archivos de video/audio o enlazar a plataformas externas (YouTube, Vimeo).
-  - Transcribir el contenido y subir el texto.
-  - Asignar temas y participantes a cada historia oral.
-  - Marcar una historia oral como "publicada" para que sea visible públicamente.
-- **Usuarios Públicos:**
-  - Navegar por el archivo de historias orales.
-  - Filtrar por tema, participante o palabra clave.
-  - Visualizar/escuchar el contenido directamente en la plataforma.
-  - Leer las transcripciones.
+## Main Use Cases
+- **Admin Users:**
+  - Create, read, update, and delete archive records (CRUD).
+  - Upload video/audio files or link to external platforms (YouTube, Vimeo).
+  - Transcribe content and upload text.
+  - Assign topics and participants to each oral history.
+  - Mark an oral history as "published" to make it publicly visible.
+- **Public Users:**
+  - Browse the oral history archive.
+  - Filter by topic, participant, or keyword.
+  - View/listen to content directly on the platform.
+  - Read transcriptions.
 
-## Flujos especiales
-- **Manejo de Contenido Multimedia:** El sistema debe soportar tanto videos/audios alojados en el Storage de Supabase como videos embebidos de plataformas externas.
-- **Transcripciones:** La plataforma debe permitir visualizar el texto de la transcripción junto al reproductor multimedia para facilitar el seguimiento.
+## Special Flows
+- **Multimedia Content Handling:** The system must support both videos/audios hosted in Supabase Storage and embedded videos from external platforms.
+- **Transcriptions:** The platform must allow viewing the transcription text alongside the media player for easier follow-up.
 
-## Consideraciones para el chatbot
-- "¿Quién fue entrevistado en la historia oral sobre 'manejo de ganado'?"
-- "Muéstrame las historias orales relacionadas con el tema 'agroecología'."
-- "Busca la transcripción de la entrevista a [nombre de persona]."
+## Chatbot Considerations
+The chatbot should be able to answer questions like:
+- "Who was interviewed in the oral history about 'livestock management'?"
+- "Show me oral histories related to the topic 'agroecology'."
+- "Search for the transcription of the interview with [person's name]."
 
-## Estado actual
-- **Backend:** El esquema de la tabla `historias_orales` ha sido corregido y estandarizado. Faltan por crear las tablas de relación con personas y organizaciones.
-- **Frontend:** El panel de administración y la interfaz pública están pendientes de desarrollo.
+## Current Status
+- **Backend:** The `historias_orales` table schema has been corrected and standardized. The relationship tables with people and organizations still need to be created.
+- **Frontend:** The admin panel and public interface are pending development.

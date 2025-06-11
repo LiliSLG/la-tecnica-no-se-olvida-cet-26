@@ -1,41 +1,42 @@
-# Funcionalidad: Proyectos
+# Feature: Projects (Proyectos)
 
-## ¿Qué hace esta funcionalidad?
-Permite la gestión completa de los proyectos técnicos desarrollados en el CET N°26. Esto incluye su creación, edición, catalogación y visualización pública. Es una de las características centrales de la plataforma, diseñada para preservar y dar a conocer el trabajo de los estudiantes.
+## What does this feature do?
+This feature enables the complete management of technical projects developed at CET N°26. This includes their creation, editing, cataloging, and public display. It is one of the central features of the platform, designed to preserve and showcase the work of students.
 
-## Entidades involucradas
-- **Tablas Principales:**
-  - `proyectos`: Almacena toda la información central de cada proyecto.
-- **Tablas Relacionales:**
-  - `proyecto_tema`: Vincula proyectos con uno o más temas de conocimiento.
-  - `proyecto_persona_rol`: Asigna personas (autores, tutores, etc.) a un proyecto con un rol específico.
-  - `proyecto_organizacion_rol`: Asigna organizaciones a un proyecto con un rol específico.
-  - `proyecto_relaciones`: Vincula un proyecto con otros proyectos, definiendo una relación direccional (p.ej., "mejora", "continuación").
-  - `proyecto_archivo`: Almacena archivos adicionales asociados a un proyecto.
-  - `proyecto_historia_oral`: Vincula un proyecto con un registro del archivo de historia oral.
+## Entities Involved
+- **Primary Tables:**
+  - `proyectos`: Stores all core information for each project.
+- **Junction Tables:**
+  - `proyecto_tema`: Links projects with one or more knowledge topics.
+  - `proyecto_persona_rol`: Assigns people (authors, tutors, etc.) to a project with a specific role.
+  - `proyecto_organizacion_rol`: Assigns organizations to a project with a specific role.
+  - `proyecto_relaciones`: Links a project with other projects, defining a directional relationship (e.g., "improves", "continues").
+  - `proyecto_archivo`: Stores additional files associated with a project.
+  - `proyecto_historia_oral`: Links a project with an oral history archive record.
 
-## Casos de uso principales
-- **Administradores:**
-  - Crear, leer, actualizar y eliminar proyectos (CRUD).
-  - Asignar temas, autores, tutores y organizaciones a un proyecto.
-  - Subir archivos adjuntos a un proyecto.
-  - Relacionar un proyecto con otros proyectos existentes en la plataforma.
-- **Usuarios Públicos:**
-  - Ver un listado de todos los proyectos publicados.
-  - Filtrar los proyectos por año, tema o palabra clave.
-  - Ver la página de detalle de un proyecto, incluyendo su descripción, autores, tutores, archivos y los proyectos con los que se relaciona.
+## Main Use Cases
+- **Admin Users:**
+  - Create, read, update, and delete projects (CRUD).
+  - Assign topics, authors, tutors, and organizations to a project.
+  - Upload attachments to a project.
+  - Relate a project with other existing projects on the platform.
+- **Public Users:**
+  - View a list of all published projects.
+  - Filter projects by year, topic, or keyword.
+  - View a project's detail page, including its description, authors, tutors, files, and related projects.
 
-## Flujos especiales
-- **Relación entre proyectos:** El sistema permite crear un grafo de conocimiento al vincular proyectos. Una relación es direccional (Proyecto B "mejora" al Proyecto A) y se describe con un tipo y un texto explicativo. La interfaz pública debe poder mostrar estas relaciones en ambos sentidos ("Basado en..." y "Referenciado por...").
-- **Creación de Personas desde el Formulario:** Si un autor o tutor no existe, el formulario de proyectos debe permitir crearlo de forma rápida (a través de un modal) sin abandonar el flujo principal.
+## Special Flows
+- **Project Relationships:** The system allows creating a knowledge graph by linking projects. A relationship is directional (Project B "improves" Project A) and is described with a type and explanatory text. The public interface must be able to show these relationships in both directions ("Based on..." and "Referenced by...").
+- **Person Creation from Form:** If an author or tutor doesn't exist, the project form must allow quick creation (through a modal) without leaving the main flow.
 
-## Consideraciones para el chatbot
-- "¿Cuáles son los proyectos del año 2023?"
-- "Muéstrame los proyectos relacionados con 'energías renovables'."
-- "Busca el proyecto sobre 'invernaderos automatizados'."
-- "En el proyecto 'Invernadero Automatizado', ¿quiénes fueron los autores?"
-- "¿Qué proyectos son una continuación del proyecto 'Diseño de Dron Agrícola'?"
+## Chatbot Considerations
+The chatbot should be able to answer questions like:
+- "What are the projects from 2023?"
+- "Show me projects related to 'renewable energy'."
+- "Search for the project about 'automated greenhouses'."
+- "Who were the authors of the 'Automated Greenhouse' project?"
+- "What projects are a continuation of the 'Agricultural Drone Design' project?"
 
-## Estado actual
-- **Backend:** El esquema de la base de datos está completamente definido, incluyendo la lógica de relaciones. Los servicios de Supabase están por revisarse y completarse.
-- **Frontend:** El panel de administración para el CRUD de proyectos y la página pública de listado/detalle están pendientes de desarrollo en la nueva versión del frontend.
+## Current Status
+- **Backend:** The database schema is fully defined, including relationship logic. Supabase services need to be reviewed and completed.
+- **Frontend:** The admin panel for project CRUD and the public listing/detail pages are pending development in the new frontend version.
