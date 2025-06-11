@@ -1,5 +1,22 @@
 # Changelog
 
+## [2025-06-13] refactor(core)!: Complete architectural overhaul of the entire service layer
+This monumental commit concludes a comprehensive architectural overhaul of the application's entire service layer and supporting infrastructure, migrating from a complex, inheritance-based model to a simple, explicit, and robust pattern.
+
+**Architectural Changes:**
+- **Standalone Services:** All data services are now simple, standalone classes with no inheritance, making them explicit, maintainable, and fully type-safe. The `BaseService` abstraction has been completely removed.
+- **Simplified Relationship Management:** Junction table interactions are now handled by simple, dedicated service objects, removing unnecessary complexity.
+- **Decoupled Auth:** The `AuthService` has been streamlined to focus solely on authentication, delegating all user profile management to `PersonasService`.
+- **Consistent Data Flow:** A clear Server Component (data fetching) -> Client Component (state management) pattern has been established for all data-driven pages.
+
+**Key Fixes & Cleanups:**
+- Resolved all deep-seated TypeScript and generics-related errors.
+- Eliminated all obsolete service files, types, and architectural patterns.
+- Unified all project documentation into a single, consistent source of truth (`/docs` and root `rules.md`), now written in English for clarity.
+- Standardized the project's file structure according to the `blueprint.md`.
+
+The application is now stable, fully type-safe, and rests on a solid, professional-grade architectural foundation, ready for future feature development.
+
 ## [2025-06-13] Topics Management Module Completion
 - **Complete CRUD:** Implemented Create, Read, Update, and Delete (CRUD) functionality for Topics management in the admin panel.
 - **Frontend Architecture:** Established the `Server Component` pattern for initial data loading and `Client Component` for interactivity, using the `useDataTableState` hook and `AdminDataTable` component.
