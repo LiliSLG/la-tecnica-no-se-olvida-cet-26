@@ -119,24 +119,24 @@ export function TemasClientPage({ allTemas }: TemasClientPageProps) {
 
   const columns: ColumnConfig<Tema>[] = [
     {
-      key: "nombre",
-      label: "Nombre",
+      key: 'nombre',
+      label: 'Nombre',
       sortable: true,
     },
     {
-      key: "categoria_tema",
-      label: "Categoría",
+      key: 'categoria_tema',
+      label: 'Categoría',
       sortable: true,
     },
     {
-      key: "virtual_actions",
-      label: "Acciones",
-      render: (row: Tema) => (
+      key: 'action_buttons',
+      label: 'Acciones',
+      render: (tema) => (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleView(row.id)}
+            onClick={() => handleView(tema.id)}
             title="Ver detalles"
           >
             <Eye className="h-4 w-4" />
@@ -145,7 +145,7 @@ export function TemasClientPage({ allTemas }: TemasClientPageProps) {
             variant="ghost"
             size="icon"
             onClick={() => {
-              setEditingTema(row);
+              setEditingTema(tema);
               setIsModalOpen(true);
             }}
             title="Editar"
@@ -155,7 +155,7 @@ export function TemasClientPage({ allTemas }: TemasClientPageProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTemaToDelete(row)}
+            onClick={() => setTemaToDelete(tema)}
             title="Eliminar"
           >
             <Trash2 className="h-4 w-4" />

@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      analisis_satelitales: {
+        Row: {
+          actualizado_en: string | null
+          creado_en: string | null
+          creado_por_uid: string | null
+          datos_tabla: Json | null
+          id: string
+          imagen_grafico_url: string | null
+          parametros_gee: Json | null
+          proyecto_id: string
+          resumen: string | null
+          tipo_analisis: string
+          titulo: string
+        }
+        Insert: {
+          actualizado_en?: string | null
+          creado_en?: string | null
+          creado_por_uid?: string | null
+          datos_tabla?: Json | null
+          id?: string
+          imagen_grafico_url?: string | null
+          parametros_gee?: Json | null
+          proyecto_id: string
+          resumen?: string | null
+          tipo_analisis: string
+          titulo: string
+        }
+        Update: {
+          actualizado_en?: string | null
+          creado_en?: string | null
+          creado_por_uid?: string | null
+          datos_tabla?: Json | null
+          id?: string
+          imagen_grafico_url?: string | null
+          parametros_gee?: Json | null
+          proyecto_id?: string
+          resumen?: string | null
+          tipo_analisis?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analisis_satelitales_proyecto_id_fkey"
+            columns: ["proyecto_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historia_oral_tema: {
         Row: {
           historia_oral_id: string

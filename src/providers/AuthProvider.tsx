@@ -1,89 +1,129 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ServiceResult } from '@/lib/supabase/types/service';
-import { MappedPersona } from '@/lib/supabase/services/authService';
-import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
+import { Database } from '@/lib/supabase/types/database.types';
+import { authService } from '@/lib/supabase/services/authService';
+import { useToast } from '@/components/ui/use-toast';
 
-type SignUpResult = {
-  user: MappedPersona;
-  session: Session | null;
-};
+type Persona = Database['public']['Tables']['personas']['Row'];
 
 interface AuthContextType {
-  user: User | null;
   session: Session | null;
+  user: Persona | null;
+  isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<Persona | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Get initial session and user data
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+
+        if (session?.user) {
+          const { data: persona } = await authService.getCurrentUser();
+          setUser(persona);
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+
+      if (session?.user) {
+        const { data: persona } = await authService.getCurrentUser();
+        setUser(persona);
+      } else {
+        setUser(null);
+      }
+
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    router.push('/admin');
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      const { error } = await authService.signIn(email, password);
+      if (error) throw error;
+
+      const { data: persona } = await authService.getCurrentUser();
+      setUser(persona);
+
+      toast({
+        title: 'Bienvenido',
+        description: 'Has iniciado sesión correctamente.',
+      });
+
+      router.push('/admin');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo iniciar sesión. Por favor, verifica tus credenciales.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
   };
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-      },
-    });
-    return { error };
-  };
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    router.push('/login');
+      setUser(null);
+      setSession(null);
+
+      toast({
+        title: 'Sesión cerrada',
+        description: 'Has cerrado sesión correctamente.',
+      });
+
+      router.push('/login');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo cerrar sesión. Por favor, intenta de nuevo.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
   };
 
   const value = {
-    user,
     session,
-    signIn,
-    signUp,
-    signOut,
+    user,
+    isLoading,
+    signIn: handleSignIn,
+    signOut: handleSignOut,
   };
 
-  if (loading) {
+  if (isLoading) {
     return null; // or a loading spinner
   }
 

@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { ServiceResult } from '@/lib/supabase/types/service';
+import { ServiceResult } from '@/lib/supabase/types/serviceResult';
 import { createSuccessResult, createErrorResult } from '@/lib/supabase/types/serviceResult';
 import { REDIS_KEYS } from './config';
 import { redisClient } from './client';

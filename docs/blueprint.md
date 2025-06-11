@@ -6,6 +6,14 @@
 
 Digital platform for preserving and disseminating rural knowledge and technical projects of CET N°26 students from Ingeniero Jacobacci.
 
+## 🎯 Core Features
+
+### Project Catalog
+- Comprehensive project database with detailed information
+- Integration of technical analyses, such as satellite data monitoring (NDVI)
+- Project relationships and dependencies tracking
+- File attachments and documentation management
+
 ---
 
 ## 🛠️ Tech Stack & Architecture

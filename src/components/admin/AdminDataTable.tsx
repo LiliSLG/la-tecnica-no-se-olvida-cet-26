@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +21,24 @@ import {
 } from "@/components/ui/table";
 import { DataTableState, DataTableConfig } from "@/hooks/useDataTableState";
 
-export interface ColumnConfig<T> {
-  key: keyof T | `virtual_${string}`;
+// For columns that map directly to data properties
+export type DataColumnConfig<T> = {
+  key: keyof T;
   label: string;
   sortable?: boolean;
-  render?: (row: T) => React.ReactNode;
-}
+  className?: string;
+};
+
+// For virtual columns like "Actions"
+export type ActionColumnConfig<T> = {
+  key: `action_${string}`; // Must start with action_
+  label: string;
+  render: (item: T) => React.ReactNode;
+  className?: string;
+};
+
+// The columns prop will now accept an array of either type
+export type ColumnConfig<T> = DataColumnConfig<T> | ActionColumnConfig<T>;
 
 interface FilterField {
   key: string;
@@ -95,6 +108,14 @@ export function AdminDataTable<T extends object>({
   const handleNextPage = () => {
     const newPage = Math.min(totalPages, currentPage + 1);
     setCurrentPage(newPage);
+  };
+
+  const handleSort = (key: keyof T) => {
+    setSort(key);
+  };
+
+  const isDataColumn = (column: ColumnConfig<T>): column is DataColumnConfig<T> => {
+    return !column.key.toString().startsWith('action_');
   };
 
   return (
@@ -167,14 +188,18 @@ export function AdminDataTable<T extends object>({
                 {columns.map((column) => (
                   <TableHead
                     key={String(column.key)}
-                    className={`py-3 px-4 ${column.className || ''} ${
-                      column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
+                    className={`py-3 px-4 ${
+                      isDataColumn(column) && column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
                     }`}
-                    onClick={() => column.sortable && setSort(column.key)}
+                    onClick={() => {
+                      if (isDataColumn(column) && column.sortable) {
+                        handleSort(column.key);
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       {column.label}
-                      {column.sortable && sort.column === column.key && (
+                      {isDataColumn(column) && column.sortable && sort.column === column.key && (
                         <ArrowUpDown className="h-4 w-4" />
                       )}
                     </div>
@@ -211,7 +236,7 @@ export function AdminDataTable<T extends object>({
                   <TableRow key={index} className="hover:bg-muted/50 transition-colors duration-200">
                     {columns.map((column) => (
                       <TableCell key={String(column.key)} className={`py-3 px-4 ${column.className || ''}`}>
-                        {column.render ? column.render(item) : String(item[column.key] || '-')}
+                        {isDataColumn(column) ? String(item[column.key] || '-') : column.render(item)}
                       </TableCell>
                     ))}
                   </TableRow>

@@ -528,3 +528,29 @@ When implementing caching:
 - [Node Cache Documentation](https://github.com/node-cache/node-cache)
 - [LRU Cache Documentation](https://github.com/isaacs/node-lru-cache)
 - [Redis Documentation](https://redis.io/documentation)
+
+## GEE Integration for Satellite Analysis
+
+### Phase 1 (MVP)
+- [ ] Create the admin interface to manually add satellite analysis results
+  - [ ] Form for adding title, summary, chart image, and table data
+  - [ ] Integration with existing project selection
+  - [ ] Basic validation and error handling
+  - [ ] Preview functionality for uploaded images
+
+### Phase 2 (Semi-Automation)
+- [ ] Develop Supabase Edge Function for GEE integration
+  - [ ] Create parameter validation system
+  - [ ] Implement GEE script execution
+  - [ ] Add result processing and storage
+  - [ ] Set up error handling and logging
+  - [ ] Implement rate limiting and quotas
+
+### Phase 3 (Interactive Tool)
+- [ ] Design and build map-based user interface
+  - [ ] Implement interactive map selection
+  - [ ] Create date range picker
+  - [ ] Add index type selector
+  - [ ] Build real-time preview system
+  - [ ] Implement result visualization
+  - [ ] Add export functionality

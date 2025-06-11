@@ -197,6 +197,19 @@ It is planned to link these fields to an interactive map location selector in th
 - eliminadoPorUid (deleted by user ID)
 - eliminadoEn (deleted at, timestamp)
 
+### analisis_satelitales
+- id (UUID, PK, default: uuid_generate_v4())
+- proyecto_id (UUID, FK to proyectos, not null)
+- titulo (TEXT, not null)
+- tipo_analisis (TEXT, not null, enum: 'NDVI', 'NDWI', 'NDMI', 'EVI', 'SAVI', 'MSAVI', 'NDSI', 'NDBI')
+- resumen (TEXT)
+- parametros_gee (JSONB, stores GEE script parameters)
+- imagen_grafico_url (TEXT, stores chart image URL)
+- datos_tabla (JSONB, stores tabular data results)
+- creado_en (TIMESTAMPTZ, default: now())
+- actualizado_en (TIMESTAMPTZ, default: now())
+- creado_por_uid (UUID, FK to auth.users)
+
 ## Tablas relacionales (many-to-many)
 
 ### persona_tema
