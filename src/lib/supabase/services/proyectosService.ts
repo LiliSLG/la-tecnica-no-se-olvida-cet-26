@@ -80,8 +80,8 @@ class ProyectosService {
         .from('proyectos')
         .update({
           es_eliminado: true,
-          deleted_by: deletedByUid,
-          deleted_at: new Date().toISOString()
+          eliminado_por_uid: deletedByUid,
+          eliminado_en: new Date().toISOString()
         })
         .eq('id', id);
 

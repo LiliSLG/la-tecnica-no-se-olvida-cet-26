@@ -1,5 +1,5 @@
 import { proyectosService } from '@/lib/supabase/services/proyectosService';
-import { ProyectoAdminDetailClient } from '../components/ProyectoAdminDetailClient';
+import { ProyectoAdminClientPage } from '@/components/admin/proyectos/ProyectoAdminClientPage';
 import { notFound } from 'next/navigation';
 
 interface PageProps {
@@ -15,5 +15,5 @@ export default async function ProyectoAdminPage({ params }: PageProps) {
     notFound();
   }
 
-  return <ProyectoAdminDetailClient proyecto={proyecto} />;
+  return <ProyectoAdminClientPage proyecto={proyecto} />;
 } 

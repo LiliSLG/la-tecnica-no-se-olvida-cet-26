@@ -375,6 +375,8 @@ This update will:
 
 ## Authentication Improvements
 
+- [ ] **Form Validation: Check for Existing Email:** In the "Create Persona" form, implement a validation check that queries the database in real-time (with debouncing) to ensure the entered email does not already exist before allowing the form to be submitted.
+
 ### Server-Side Auth Protection
 - [ ] Implement proper Supabase SSR auth helpers in middleware
   - Move auth protection back to middleware using server-side session validation

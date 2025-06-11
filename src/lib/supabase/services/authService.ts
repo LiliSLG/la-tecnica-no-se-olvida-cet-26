@@ -1,60 +1,104 @@
+import { supabase } from '../client';
 import { Database } from '../types/database.types';
 import { ServiceResult } from '../types/serviceResult';
 import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
 import { personasService } from './personasService';
-import { supabase } from '../supabaseClient';
 
 type Persona = Database['public']['Tables']['personas']['Row'];
+type CreatePersona = Database['public']['Tables']['personas']['Insert'];
 
 class AuthService {
+  async getCurrentUser(): Promise<{ data: Persona | null; error: Error | null }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        return { data: null, error: null };
+      }
+
+      const { data, error } = await supabase
+        .from('personas')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
   async signIn(email: string, password: string): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
+      if (error) {
         return createError({
           name: 'ServiceError',
-          message: authError.message,
+          message: error.message,
           code: 'AUTH_ERROR',
-          details: authError
+          details: error
         });
       }
 
-      if (!authData.user) {
+      if (!data.user) {
         return createError({
           name: 'ServiceError',
-          message: 'No user data returned',
-          code: 'AUTH_ERROR',
-          details: null
+          message: 'No user data returned from authentication',
+          code: 'AUTH_ERROR'
         });
       }
 
-      // Get user profile
-      const result = await personasService.getById(authData.user.id);
-      if (result.error) {
+      // First, try to get the existing profile
+      const result = await personasService.getById(data.user.id);
+
+      // If profile exists, return it
+      if (result.data) {
+        return createSuccess({
+          user: result.data,
+          session: data.session,
+        });
+      }
+
+      // If profile doesn't exist, create a new one
+      const newProfileData: CreatePersona = {
+        id: data.user.id,
+        email: data.user.email!,
+        nombre: data.user.email!.split('@')[0],
+        activo: true,
+        visibilidad_perfil: 'publico'
+      };
+
+      const createResult = await personasService.create(newProfileData);
+      if (createResult.error) {
         return createError({
           name: 'ServiceError',
-          message: result.error.message,
+          message: createResult.error.message,
           code: 'DB_ERROR',
-          details: result.error
+          details: createResult.error
         });
       }
 
-      if (!result.data) {
+      // Fetch the newly created profile
+      const newProfile = await personasService.getById(data.user.id);
+      if (newProfile.error || !newProfile.data) {
         return createError({
           name: 'ServiceError',
-          message: 'User profile not found',
+          message: newProfile.error?.message || 'Failed to fetch newly created profile',
           code: 'DB_ERROR',
-          details: null
+          details: newProfile.error
         });
       }
 
       return createSuccess({
-        user: result.data,
-        session: authData.session,
+        user: newProfile.data,
+        session: data.session,
       });
     } catch (error) {
       return createError({
@@ -85,39 +129,34 @@ class AuthService {
       if (!authData.user) {
         return createError({
           name: 'ServiceError',
-          message: 'No user data returned',
-          code: 'AUTH_ERROR',
-          details: null
+          message: 'No user data returned from signup',
+          code: 'AUTH_ERROR'
         });
       }
 
-      // Create user profile with minimal required data
-      const result = await personasService.create({
-        id: authData.user.id,
-        nombre: userData?.nombre || 'Nuevo Usuario',
-        email: authData.user.email!,
-      });
+      // Create user profile
+      const { data: persona, error: personaError } = await supabase
+        .from('personas')
+        .insert({
+          id: authData.user.id,
+          email: email,
+          nombre: userData.nombre || email.split('@')[0],
+          rol: 'usuario'
+        })
+        .select()
+        .single();
 
-      if (result.error) {
+      if (personaError || !persona) {
         return createError({
           name: 'ServiceError',
-          message: result.error.message,
+          message: personaError?.message || 'Failed to create user profile',
           code: 'DB_ERROR',
-          details: result.error
-        });
-      }
-
-      if (!result.data) {
-        return createError({
-          name: 'ServiceError',
-          message: 'Failed to create user profile',
-          code: 'DB_ERROR',
-          details: null
+          details: personaError
         });
       }
 
       return createSuccess({
-        user: result.data,
+        user: persona,
         session: authData.session,
       });
     } catch (error) {
@@ -141,7 +180,6 @@ class AuthService {
           details: error
         });
       }
-
       return createSuccess(undefined);
     } catch (error) {
       return createError({
@@ -164,7 +202,6 @@ class AuthService {
           details: error
         });
       }
-
       return createSuccess(undefined);
     } catch (error) {
       return createError({
@@ -187,45 +224,7 @@ class AuthService {
           details: error
         });
       }
-
       return createSuccess(undefined);
-    } catch (error) {
-      return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        code: 'AUTH_ERROR',
-        details: error
-      });
-    }
-  }
-
-  async getCurrentUser(): Promise<ServiceResult<Persona | null>> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        return createError({
-          name: 'ServiceError',
-          message: authError.message,
-          code: 'AUTH_ERROR',
-          details: authError
-        });
-      }
-
-      if (!user) {
-        return createSuccess(null);
-      }
-
-      const result = await personasService.getById(user.id);
-      if (result.error) {
-        return createError({
-          name: 'ServiceError',
-          message: result.error.message,
-          code: 'DB_ERROR',
-          details: result.error
-        });
-      }
-
-      return createSuccess(result.data);
     } catch (error) {
       return createError({
         name: 'ServiceError',

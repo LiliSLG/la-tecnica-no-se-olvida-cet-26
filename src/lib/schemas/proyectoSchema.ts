@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const estadoProyectoEnum = z.enum(['draft', 'published', 'archived']);
+const estadoProyectoEnum = z.enum(['borrador', 'publicado', 'archivado']);
 
 // Base schema that matches database structure
 export const proyectoSchema = z.object({

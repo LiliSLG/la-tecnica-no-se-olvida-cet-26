@@ -20,14 +20,14 @@ export type DataTableState<T> = {
   sort: SortState<T>;
   currentPage: number;
   pageSize: number;
-  
+
   // Computed
   filteredData: T[];
   sortedData: T[];
   paginatedData: T[];
   totalPages: number;
   totalItems: number;
-  
+
   // Handlers
   setSearch: (search: string) => void;
   setFilters: (filters: Partial<FilterState<T>>) => void;
@@ -49,9 +49,9 @@ export type DataTableConfig<T extends object> = {
   initialFilters?: Partial<FilterState<T>>;
   initialSort?: SortState<T>;
   initialPageSize?: number;
-  searchFields: (keyof T)[];
+  searchFields: (keyof T)[]; // <-- Volvemos al tipo estricto
   filterFields: FilterField<T>[];
-  sortableColumns: (keyof T)[];
+  sortableColumns: (keyof T)[]; // <-- Volvemos al tipo estricto
   defaultSort?: SortState<T>;
 };
 
@@ -113,32 +113,54 @@ export function useDataTableState<T extends object>({
 
   // Filter data
   const filteredData = useMemo(() => {
-    return data.filter(item => {
-      // Search filter
+    // Primero filtramos por la búsqueda de texto
+    const searchedData = data.filter(item => {
       const searchTerm = search.toLowerCase();
-      const matchesSearch = !searchTerm || searchFields.some(field => {
+      if (!searchTerm) return true; // Si no hay búsqueda, pasan todos
+
+      // Usamos 'as' porque ya hemos relajado el tipo en la config, aquí lo volvemos a asegurar
+      return searchFields.some(field => {
         const value = item[field];
         return value && String(value).toLowerCase().includes(searchTerm);
       });
-
-      // Custom filters
-      const matchesCustomFilters = filterFields.every(field => {
-        const filterValue = filters[field.key as string];
-        if (filterValue === undefined || filterValue === null || filterValue === 'all') return true;
-        
-        const itemValue = field.key in item ? item[field.key as keyof T] : null;
-        
-        // Handle boolean values
-        if (typeof filterValue === 'boolean') {
-          return itemValue === filterValue;
-        }
-        
-        // Handle string values
-        return String(itemValue) === String(filterValue);
-      });
-
-      return matchesSearch && matchesCustomFilters;
     });
+
+    // Ahora, sobre los datos ya buscados, aplicamos los filtros de los campos
+    const fullyFilteredData = searchedData.filter(item => {
+      // Usamos .every() para asegurarnos de que el item pasa TODOS los filtros activos
+      return filterFields.every(field => {
+        const filterValue = filters[field.key as string];
+        const itemValue = (item as any)[field.key];
+
+        // Si el filtro no tiene valor o es 'all', no se aplica este filtro
+        if (filterValue === undefined || filterValue === null || filterValue === 'all') {
+          return true;
+        }
+
+        // Lógica para el switch de borrados
+        if (field.type === 'switch') {
+          const showDeleted = filterValue; // filterValue es true o false
+
+          // Si el switch está ON, no hacemos nada, el item pasa.
+          if (showDeleted) {
+            return true;
+          }
+          // Si el switch está OFF, solo pasan los items que NO están eliminados.
+          return itemValue === false;
+        }
+
+        // Lógica para filtros de select
+        if (field.type === 'select') {
+          return String(itemValue) === String(filterValue);
+        }
+
+        // Si se añade otro tipo de filtro en el futuro
+        return true;
+      });
+    });
+
+    return fullyFilteredData;
+
   }, [data, search, filters, searchFields, filterFields]);
 
   // Sort data
@@ -175,14 +197,14 @@ export function useDataTableState<T extends object>({
     sort,
     currentPage,
     pageSize,
-    
+
     // Computed
     filteredData,
     sortedData,
     paginatedData,
     totalPages,
     totalItems,
-    
+
     // Handlers
     setSearch: handleSetSearch,
     setFilters: handleSetFilters,

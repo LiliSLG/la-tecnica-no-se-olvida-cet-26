@@ -1,5 +1,5 @@
 import { temasService } from "@/lib/supabase/services/temasService";
-import { TemasClientPage } from "./components/TemasClientPage";
+import { TemasClientPage } from "../../../components/admin/temas/TemasClientPage";
 
 export default async function TemasPage() {
   const result = await temasService.getAll(true);

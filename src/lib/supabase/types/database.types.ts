@@ -829,8 +829,14 @@ export type Database = {
         | "tutor_invitado"
         | "colaborador_invitado"
         | "autor_invitado"
-      estado_entrevista: "scheduled" | "completed" | "cancelled"
-      estado_proyecto: "draft" | "published" | "archived"
+      estado_entrevista: "agendada" | "completada" | "cancelada"
+      estado_proyecto:
+        | "idea"
+        | "en_desarrollo"
+        | "finalizado"
+        | "presentado"
+        | "archivado"
+        | "cancelado"
       estado_proyecto_enum:
         | "idea"
         | "en_desarrollo"
@@ -846,8 +852,7 @@ export type Database = {
         | "no_especificado"
         | "jubilado"
         | "otro"
-      interview_status: "scheduled" | "completed" | "cancelled"
-      news_type: "article" | "link"
+      interview_status: "agendada" | "completada" | "cancelada"
       plataforma_video_enum:
         | "firebase_storage"
         | "youtube_propio"
@@ -855,7 +860,6 @@ export type Database = {
         | "facebook"
         | "vimeo"
         | "otro"
-      project_status: "draft" | "published" | "archived"
       tema_categoria_enum:
         | "agropecuario"
         | "tecnologico"
@@ -872,7 +876,7 @@ export type Database = {
       tipo_contenido_entrevista: "video" | "audio" | "texto"
       tipo_contenido_entrevista_enum: "video_propio" | "enlace_video_externo"
       tipo_contenido_noticia_enum: "articulo_propio" | "enlace_externo"
-      tipo_noticia: "article" | "link"
+      tipo_noticia: "articulo" | "link"
       tipo_organizacion_enum:
         | "empresa"
         | "institucion_educativa"
@@ -1022,8 +1026,15 @@ export const Constants = {
         "colaborador_invitado",
         "autor_invitado",
       ],
-      estado_entrevista: ["scheduled", "completed", "cancelled"],
-      estado_proyecto: ["draft", "published", "archived"],
+      estado_entrevista: ["agendada", "completada", "cancelada"],
+      estado_proyecto: [
+        "idea",
+        "en_desarrollo",
+        "finalizado",
+        "presentado",
+        "archivado",
+        "cancelado",
+      ],
       estado_proyecto_enum: [
         "idea",
         "en_desarrollo",
@@ -1041,8 +1052,7 @@ export const Constants = {
         "jubilado",
         "otro",
       ],
-      interview_status: ["scheduled", "completed", "cancelled"],
-      news_type: ["article", "link"],
+      interview_status: ["agendada", "completada", "cancelada"],
       plataforma_video_enum: [
         "firebase_storage",
         "youtube_propio",
@@ -1051,7 +1061,6 @@ export const Constants = {
         "vimeo",
         "otro",
       ],
-      project_status: ["draft", "published", "archived"],
       tema_categoria_enum: [
         "agropecuario",
         "tecnologico",
@@ -1069,7 +1078,7 @@ export const Constants = {
       tipo_contenido_entrevista: ["video", "audio", "texto"],
       tipo_contenido_entrevista_enum: ["video_propio", "enlace_video_externo"],
       tipo_contenido_noticia_enum: ["articulo_propio", "enlace_externo"],
-      tipo_noticia: ["article", "link"],
+      tipo_noticia: ["articulo", "link"],
       tipo_organizacion_enum: [
         "empresa",
         "institucion_educativa",

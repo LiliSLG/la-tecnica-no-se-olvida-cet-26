@@ -1,5 +1,12 @@
 # Changelog
 
+## [2025-06-13] Finalización del Módulo de Gestión de Proyectos
+- **CRUD Completo:** Implementada la funcionalidad completa de Crear, Leer, Actualizar y Borrar (CRUD) para la gestión de Proyectos en el panel de administración.
+- **Patrón de Página Dedicada:** Establecido el patrón de usar páginas dedicadas (`/new`, `/[id]/edit`) para los formularios, ideal para entidades complejas.
+- **Lógica de Tabla Perfeccionada:** Refinado el hook `useDataTableState` para manejar correctamente el estado inicial de los filtros y la lógica del switch "Mostrar eliminados".
+- **Robustez de Tipos:** Solucionados todos los errores de TypeScript relacionados con la configuración de `AdminDataTable`, resultando en un componente de tabla 100% type-safe.
+- El módulo de Proyectos está completo y sirve como un segundo pilar para el desarrollo del resto del panel de administración.
+
 ## [2025-06-13] refactor(core)!: Complete architectural overhaul of the entire service layer
 This monumental commit concludes a comprehensive architectural overhaul of the application's entire service layer and supporting infrastructure, migrating from a complex, inheritance-based model to a simple, explicit, and robust pattern.
 

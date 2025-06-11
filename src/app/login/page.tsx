@@ -1,85 +1,43 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useAuth } from '@/providers/AuthProvider';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
-import { useRouter } from 'next/navigation';
-import { authService } from '@/lib/supabase/services/authService';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import { authService } from "@/lib/supabase/services/authService";
+
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { signIn } = useAuth();
   const { toast } = useToast();
-  const router = useRouter();
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-
     try {
-      if (isSignUp) {
-        // Step 1: Sign Up using authService directly
-        const { error } = await authService.signUp(email, password, {});
-        
-        if (error) {
-          // Handle specific password validation errors
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes('password')) {
-            toast({
-              title: 'Invalid password',
-              description: 'Password must be at least 6 characters long.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Error creating account',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
-          return;
-        }
-
-        // Step 2: Automatic Sign In after successful Sign Up
-        try {
-          await signIn(email, password);
-          toast({
-            title: 'Success',
-            description: 'Account created and signed in successfully.',
-          });
-          // Step 3: Redirect to admin
-          router.push('/admin');
-        } catch (signInError) {
-          // If automatic sign in fails, show error and reset form
-          toast({
-            title: 'Error signing in',
-            description: 'Account created but automatic sign in failed. Please try signing in manually.',
-            variant: 'destructive',
-          });
-          setIsSignUp(false);
-          setPassword(''); // Clear password for manual sign in
-        }
-      } else {
-        // Handle regular Sign In
-        await signIn(email, password);
-        toast({
-          title: 'Success',
-          description: 'Signed in successfully.',
-        });
-        router.push('/admin/gestion-personas');
-      }
-    } catch (error) {
-      // Handle any unexpected errors
+      await authService.signIn(data.email, data.password);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Authentication failed',
-        variant: 'destructive',
+        title: "Bienvenido",
+        description: "Has iniciado sesión correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar sesión. Por favor, verifica tus credenciales.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -90,61 +48,38 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{isSignUp ? 'Create Account' : 'Login'}</CardTitle>
+          <CardTitle>Iniciar Sesión</CardTitle>
           <CardDescription>
-            {isSignUp 
-              ? 'Create a new account to access the admin area'
-              : 'Enter your credentials to access the admin area'}
+            Ingresa tus credenciales para acceder al sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Enter your email"
-                disabled={isLoading}
+                placeholder="tu@email.com"
+                {...register("email")}
               />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                disabled={isLoading}
-                minLength={6}
+                {...register("password")}
               />
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
-              {isLoading 
-                ? (isSignUp ? 'Creating account...' : 'Signing in...') 
-                : (isSignUp ? 'Create account' : 'Sign in')}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setIsSignUp(!isSignUp)}
-              disabled={isLoading}
-            >
-              {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </Button>
           </form>
         </CardContent>

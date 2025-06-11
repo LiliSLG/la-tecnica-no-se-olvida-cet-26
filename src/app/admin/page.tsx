@@ -17,56 +17,56 @@ export default function AdminDashboard() {
       title: "Comunidad",
       //description: "Gestión de Comunidad",
       description: "Gestionar las personas que integran la comunidad: estudiantes, ex estudiantes, tutores, colaboradores, docentes e invitados.",
-      href: "/admin/gestion-personas",
+      href: "/admin/personas",
       isActive: true
     },
     {
       title: "Proyectos",
       //description: "Gestión de Proyectos",
       description: "Gestionar los proyectos desarrollados por la comunidad y sus participantes asociados.",
-      href: "/admin/gestion-proyectos",
-      isActive: false
+      href: "/admin/proyectos",
+      isActive: true
     },
     {
       title: "Noticias",
       //description: "Gestión de Noticias",
       description: "Administrar las noticias y novedades que se mostrarán en la web",
-      href: "/admin/gestion-noticias",
+      href: "/admin/noticias",
       isActive: false
     },
     {
       title: "Historias Orales",
       //description: "Gestión de Historias Orales",
       description: "Gestionar las historias orales y testimonios recopilados por la comunidad.",
-      href: "/admin/gestion-historias-orales",
+      href: "/admin/historias-orales",
       isActive: false
     },
     {
       title: "Organizaciones Vinculadas",
       //description: "Gestión de Organizaciones Vinculadas",
       description: "Administrar las organizaciones que colaboran o se vinculan con la comunidad.",
-      href: "/admin/gestion-organizaciones",
+      href: "/admin/organizaciones",
       isActive: false
     },
     {
       title: "Temáticas / Ejes",
       //description: "Gestión de Temáticas / Ejes",
       description: "Definir y gestionar las temáticas o ejes que estructuran los contenidos y proyectos de la comunidad.",
-      href: "/admin/temas",
+      href: "temas",
       isActive: true
     },
     {
       title: "Cursos",
       //description: "Gestión de Cursos",
       description: "Gestionar los cursos ofrecidos a los alumnos del CET, así como sus detalles y participantes.",
-      href: "/admin/gestion-cursos",
+      href: "/admin/cursos",
       isActive: false
     },
     {
       title: "Bolsa de Trabajo",
       //description: "Gestión de Ofertas de trabajo",
       description: "Gestión de Ofertas de trabajo para los alumnos del CET",
-      href: "/admin/gestion-ofertasTrabajo",
+      href: "/admin/ofertasTrabajo",
       isActive: false
     }
   ];
