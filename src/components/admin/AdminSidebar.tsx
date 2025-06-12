@@ -1,10 +1,9 @@
+// /src/components/admin/AdminSidebar.tsx
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Database } from "@/lib/supabase/types/database.types";
 
@@ -29,90 +28,48 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ user, onSignOut }: AdminSidebarProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  const handleLogout = async () => {
-    try {
-      await onSignOut();
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
-
   return (
-    <>
-      <header className="h-16 border-b flex items-center px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            aria-label="Toggle sidebar"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="text-lg font-semibold">Panel de administrador</div>
+    <aside className="hidden border-r bg-background md:block">
+      <div className="flex h-full max-h-screen flex-col gap-2">
+        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+          <Link href="/admin" className="flex items-center gap-2 font-semibold">
+            {/* Aquí podrías poner un logo */}
+            <span className="">Panel Admin</span>
+          </Link>
         </div>
-      </header>
-
-      <aside 
-        className={cn(
-          "w-64 border-r p-4 bg-background flex flex-col justify-between",
-          "fixed md:static inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out",
-          "md:translate-x-0",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <nav className="space-y-1">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.id}
-              href={link.href}
-              className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                "hover:bg-accent hover:text-accent-foreground",
-                "transition-colors duration-200",
-                link.href === "#" && "opacity-50 cursor-not-allowed",
-                link.href === pathname && "bg-accent text-accent-foreground"
-              )}
-              aria-current={link.href === pathname ? "page" : undefined}
-              aria-disabled={link.href === "#" ? "true" : undefined}
-              role={link.href === "#" ? "link" : undefined}
-              tabIndex={link.href === "#" ? -1 : undefined}
-              onClick={(e) => {
-                if (link.href === "#") {
-                  e.preventDefault();
-                }
-                setIsSidebarOpen(false);
-              }}
+        <div className="flex-1">
+          <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+            {sidebarLinks.map((link) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  pathname === link.href && "bg-muted text-primary",
+                  link.href === "#" && "cursor-not-allowed opacity-50"
+                )}
+                onClick={(e) => link.href === "#" && e.preventDefault()}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="mt-auto p-4 border-t">
+           <div className="text-sm font-medium text-muted-foreground mb-2">
+              {user?.email}
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={onSignOut}
+              className="w-full justify-start text-sm"
             >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto border-t pt-4">
-          <div className="text-sm font-medium text-muted-foreground mb-2">
-            {user?.email}
-          </div>
-          <Button 
-            variant="ghost" 
-            onClick={handleLogout}
-            className="w-full justify-start text-sm"
-          >
-            Logout
-          </Button>
+              Cerrar Sesión
+            </Button>
         </div>
-      </aside>
-
-      {/* Overlay for mobile */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-    </>
+      </div>
+    </aside>
   );
-} 
+}

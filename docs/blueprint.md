@@ -66,7 +66,6 @@ After a complete refactoring, the project uses an explicit, inheritance-free ser
 ---
 
 ## 🎨 Style and Design Guide
-
 -   **Primary Color:** Muted violet (`#A994D9`). Represents creativity and wisdom.
 -   **Background Color:** Very light blue (`#EBF4FA`). Creates a calm and reliable base.
 -   **Accent Color:** Desaturated green (`#98D9A2`). Evokes rural origins.

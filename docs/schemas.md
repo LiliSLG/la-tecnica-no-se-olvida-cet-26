@@ -106,7 +106,7 @@ It is planned to link these fields to an interactive map location selector in th
 
 ### noticias
 - id (UUID, PK)
-- tipoContenido (content type, tipo_contenido_noticia_enum)
+- tipoContenido (tipo_contenido_noticia_enum: video_propio, enlace_video_externo)
 - titulo (title)
 - subtitulo (subtitle)
 - contenido (content)

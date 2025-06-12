@@ -1,36 +1,41 @@
+// /app/admin/layout.tsx
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, ReactNode } from "react";
 import { useAuth } from "@/providers/AuthProvider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminHeader } from "@/components/admin/AdminHeader";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user, isLoading, signOut } = useAuth();
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { user, signOut, isLoading } = useAuth();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Only redirect if we're not loading and there's no user
     if (!isLoading && !user) {
-      router.push("/login");
+      router.push('/login');
     }
   }, [user, isLoading, router]);
 
-  // Show nothing while loading or if not authenticated
   if (isLoading || !user) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Cargando...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <AdminSidebar user={user} onSignOut={signOut} />
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
-      </main>
+      <div className="flex flex-col">
+        <AdminHeader onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <main className="flex-1 p-4 sm:p-6 bg-muted/40">
+          {children}
+        </main>
+      </div>
     </div>
   );
-} 
+}
