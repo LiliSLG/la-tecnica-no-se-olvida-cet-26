@@ -92,6 +92,40 @@ class ProyectosService {
     }
   }
 
+  // En temasService.ts, dentro de la clase TemasService
+
+  async restore(id: string): Promise<ServiceResult<boolean>> {
+    try {
+      if (!id) {
+        return createErrorResult({
+          name: 'ValidationError',
+          message: 'ID is required',
+          code: 'VALIDATION_ERROR',
+          details: { id }
+        });
+      }
+
+      const { error } = await supabase
+        .from("proyectos")
+        .update({
+          es_eliminado: false,
+          // Opcional: podrías querer limpiar también eliminado_en y eliminado_por_uid
+          // eliminado_en: null,
+          // eliminado_por_uid: null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      return createSuccessResult(true);
+    } catch (error) {
+      return createErrorResult({
+        name: 'ServiceError',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        code: 'DB_ERROR',
+        details: error
+      });
+    }
+  }
   // --- Relationship Methods ---
 
   async getByTemaId(temaId: string): Promise<ServiceResult<Proyecto[] | null>> {

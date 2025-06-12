@@ -1,13 +1,15 @@
-"use client";
+// /src/components/admin/temas/TemasClientPage.tsx
+
+'use client';
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDataTableState } from "@/hooks/useDataTableState";
-import { AdminDataTable, ColumnConfig } from "@/components/admin/AdminDataTable";
+import { useDataTableState, type DataTableConfig } from "@/hooks/useDataTableState";
+import { AdminDataTable, type ColumnConfig } from "@/components/admin/AdminDataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Undo2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TemaForm } from "./TemaForm";
 import { useAuth } from "@/providers/AuthProvider";
@@ -32,182 +34,123 @@ interface TemasClientPageProps {
 export function TemasClientPage({ allTemas }: TemasClientPageProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const [temas, setTemas] = useState<Tema[]>(allTemas);
+  const { toast } = useToast();
+
+  // ¡YA NO NECESITAMOS ESTADO LOCAL PARA LA LISTA! 
+  // Confiamos en los datos que vienen de las props.
   const [temaToDelete, setTemaToDelete] = useState<Tema | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTema, setEditingTema] = useState<Tema | null>(null);
 
-  const handleDelete = async (tema: Tema) => {
-    if (!user) {
-      toast.error("Debes iniciar sesión para eliminar temas");
-      return;
-    }
-
-    try {
-      await temasService.delete(tema.id, user.id);
-      setTemas(temas.map(t => 
-        t.id === tema.id ? { ...t, esta_eliminada: true } : t
-      ));
-      toast.success("Tema eliminado correctamente");
-    } catch (error) {
-      console.error("Error deleting tema:", error);
-      toast.error("Error al eliminar el tema");
-    } finally {
-      setTemaToDelete(null);
-    }
+  const dataTableConfig: DataTableConfig<Tema> = {
+    data: allTemas, // Usamos directamente los datos de las props
+    initialFilters: { esta_eliminada: false },
+    searchFields: ['nombre', 'descripcion'],
+    filterFields: [
+      { key: 'esta_eliminada', label: 'Mostrar eliminados', type: 'switch' }
+    ],
+    sortableColumns: ['nombre', 'categoria_tema'],
   };
+
+  const tableState = useDataTableState<Tema>(dataTableConfig);
 
   const handleSubmit = async (data: any) => {
     if (!user) {
-      toast.error("Debes iniciar sesión para guardar temas");
+      toast({ title: "Error", description: "Debes iniciar sesión.", variant: "destructive" });
       return;
     }
-
     try {
       if (editingTema) {
-        const result = await temasService.update(editingTema.id, {
-          ...data,
-          modificado_por_uid: user.id,
-          actualizado_en: new Date().toISOString(),
-        });
-        if (result.data) {
-          setTemas(temas.map(t => t.id === editingTema.id ? result.data! : t));
-          toast.success("Tema actualizado correctamente");
-        }
+        await temasService.update(editingTema.id, { ...data, modificado_por_uid: user.id });
+        toast({ title: "Éxito", description: "Tema actualizado." });
       } else {
-        const result = await temasService.create({
-          ...data,
-          ingresado_por_uid: user.id,
-          creado_en: new Date().toISOString(),
-        });
-        if (result.data) {
-          setTemas([...temas, result.data]);
-          toast.success("Tema creado correctamente");
-        }
+        await temasService.create({ ...data, ingresado_por_uid: user.id });
+        toast({ title: "Éxito", description: "Tema creado." });
       }
       setIsModalOpen(false);
       setEditingTema(null);
+      router.refresh(); // La única fuente de verdad para actualizar la lista
     } catch (error) {
       console.error("Error saving tema:", error);
-      toast.error("Error al guardar el tema");
+      toast({ title: "Error", description: "No se pudo guardar el tema.", variant: "destructive" });
     }
   };
 
-  const handleView = (temaId: string) => {
-    router.push(`/temas/${temaId}`);
-  };
-
-  const tableState = useDataTableState({
-    data: temas,
-    searchFields: ['nombre', 'descripcion'],
-    filterFields: [
-      {
-        key: "categoria_tema",
-        label: "Categoría",
-        type: "select",
-        options: [
-          { value: "all", label: "Todas" },
-          { value: "TECNICA", label: "Técnica" },
-          { value: "HISTORIA", label: "Historia" },
-          { value: "CULTURA", label: "Cultura" },
-          { value: "COMUNIDAD", label: "Comunidad" },
-        ],
-      },
-    ],
-    sortableColumns: ['nombre', 'categoria_tema']
-  });
-
   const columns: ColumnConfig<Tema>[] = [
-    {
-      key: 'nombre',
-      label: 'Nombre',
-      sortable: true,
-    },
-    {
-      key: 'categoria_tema',
-      label: 'Categoría',
-      sortable: true,
-    },
+    { key: 'nombre', label: 'Nombre', sortable: true },
+    { key: 'categoria_tema', label: 'Categoría', sortable: true },
     {
       key: 'action_buttons',
       label: 'Acciones',
-      render: (tema) => (
+      render: (row: Tema) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleView(tema.id)}
-            title="Ver detalles"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setEditingTema(tema);
-              setIsModalOpen(true);
-            }}
-            title="Editar"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTemaToDelete(tema)}
-            title="Eliminar"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {/* Mostramos este bloque si el tema NO está eliminado */}
+          {!row.esta_eliminada ? (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => router.push(`/temas/${row.id}`)} title="Ver">
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => { setEditingTema(row); setIsModalOpen(true); }} title="Editar">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setTemaToDelete(row)} title="Eliminar">
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
+            </>
+          ) : (
+            // Y mostramos este otro bloque si el tema SÍ está eliminado
+            <>
+              <Button variant="ghost" size="icon" onClick={async () => {
+                if (!user) return toast({ title: "Error", description: "Debes iniciar sesión." });
+                try {
+                  await temasService.restore(row.id);
+                  toast({ title: "Éxito", description: "El tema ha sido restaurado." });
+                  router.refresh();
+                } catch (error) {
+                  toast({ title: "Error", description: "No se pudo restaurar el tema.", variant: "destructive" });
+                }
+              }} title="Restaurar">
+                <Undo2 className="h-4 w-4 text-green-600" />
+              </Button>
+            </>
+          )}
         </div>
-      ),
-    },
+      )
+    }
   ];
 
   return (
     <>
       <AdminDataTable
-        title="Gestión de Temas"
+        title="Gestión de Temáticas"
         columns={columns}
-        config={{
-          searchFields: ['nombre', 'descripcion'],
-          filterFields: [
-            {
-              key: "categoria_tema",
-              label: "Categoría",
-              type: "select",
-              options: [
-                { value: "all", label: "Todas" },
-                { value: "TECNICA", label: "Técnica" },
-                { value: "HISTORIA", label: "Historia" },
-                { value: "CULTURA", label: "Cultura" },
-                { value: "COMUNIDAD", label: "Comunidad" },
-              ],
-            },
-          ],
-          sortableColumns: ['nombre', 'categoria_tema']
-        }}
+        config={dataTableConfig}
         state={tableState}
-        onAdd={() => {
-          setEditingTema(null);
-          setIsModalOpen(true);
-        }}
-        addLabel="Agregar Tema"
+        onAdd={() => { setEditingTema(null); setIsModalOpen(true); }}
+        addLabel="Nueva Temática"
       />
 
       <AlertDialog open={!!temaToDelete} onOpenChange={() => setTemaToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El tema será marcado como eliminado.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Esta acción marcará el tema como eliminado.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => temaToDelete && handleDelete(temaToDelete)}>
-              Eliminar
+            <AlertDialogAction onClick={async () => { // <--- LÓGICA DE BORRADO DIRECTA
+              if (!temaToDelete || !user) return;
+              try {
+                await temasService.delete(temaToDelete.id, user.id);
+                toast({ title: "Tema eliminado" });
+                router.refresh();
+                setTemaToDelete(null);
+              } catch (error) {
+                console.error("Error deleting tema:", error);
+                toast({ title: "Error", description: "No se pudo eliminar el tema.", variant: "destructive" });
+              }
+            }}>
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -216,16 +159,11 @@ export function TemasClientPage({ allTemas }: TemasClientPageProps) {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingTema ? "Editar Tema" : "Crear Nuevo Tema"}
-            </DialogTitle>
+            <DialogTitle>{editingTema ? "Editar Temática" : "Crear Nueva Temática"}</DialogTitle>
           </DialogHeader>
-          <TemaForm
-            onSubmit={handleSubmit}
-            initialData={editingTema || undefined}
-          />
+          <TemaForm onSubmit={handleSubmit} initialData={editingTema || undefined} />
         </DialogContent>
       </Dialog>
     </>
   );
-} 
+}

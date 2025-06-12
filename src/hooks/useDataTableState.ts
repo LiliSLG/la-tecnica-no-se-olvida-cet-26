@@ -139,14 +139,11 @@ export function useDataTableState<T extends object>({
 
         // Lógica para el switch de borrados
         if (field.type === 'switch') {
-          const showDeleted = filterValue; // filterValue es true o false
+          const showDeleted = filterValue as boolean; // filterValue es true o false
 
-          // Si el switch está ON, no hacemos nada, el item pasa.
-          if (showDeleted) {
-            return true;
-          }
-          // Si el switch está OFF, solo pasan los items que NO están eliminados.
-          return itemValue === false;
+          // Si el switch está ON, muestra SÓLO los eliminados.
+          // Si el switch está OFF, muestra SÓLO los NO eliminados.
+          return itemValue === showDeleted;
         }
 
         // Lógica para filtros de select
