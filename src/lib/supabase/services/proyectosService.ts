@@ -1,6 +1,6 @@
 import { Database } from '../types/database.types';
 import { ServiceResult, createSuccessResult, createErrorResult } from '../types/serviceResult';
-import { supabase } from '../supabaseClient';
+import { supabase } from "../client";
 
 type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 type CreateProyecto = Database['public']['Tables']['proyectos']['Insert'];
@@ -104,7 +104,6 @@ class ProyectosService {
           details: { id }
         });
       }
-
       const { error } = await supabase
         .from("proyectos")
         .update({
@@ -131,7 +130,6 @@ class ProyectosService {
   async getByTemaId(temaId: string): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!temaId) return createErrorResult({ name: 'ValidationError', message: 'Tema ID is required', code: 'VALIDATION_ERROR' });
-
       const { data, error } = await supabase
         .from('proyectos')
         .select('*, proyecto_tema!inner(tema_id)')

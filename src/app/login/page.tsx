@@ -7,9 +7,15 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { authService } from "@/lib/supabase/services/authService";
+import { useAuth } from "@/providers/AuthProvider";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -21,24 +27,22 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+  const { signIn } = useAuth();
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await authService.signIn(data.email, data.password);
-      toast({
-        title: "Bienvenido",
-        description: "Has iniciado sesión correctamente.",
-      });
+      await signIn(data.email, data.password); // <-- ¡Llamamos a la del contexto!
+      // No necesitamos toast aquí, el provider lo maneja
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo iniciar sesión. Por favor, verifica tus credenciales.",
-        variant: "destructive",
-      });
+      // ...
     } finally {
       setIsLoading(false);
     }
@@ -69,13 +73,11 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-              />
+              <Input id="password" type="password" {...register("password")} />
               {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.password.message}
+                </p>
               )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -86,4 +88,4 @@ export default function LoginPage() {
       </Card>
     </div>
   );
-} 
+}

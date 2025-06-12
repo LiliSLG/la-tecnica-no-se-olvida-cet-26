@@ -32,7 +32,7 @@ export default function AdminDashboard() {
       //description: "Gestión de Noticias",
       description: "Administrar las noticias y novedades que se mostrarán en la web",
       href: "/admin/noticias",
-      isActive: false
+      isActive: true
     },
     {
       title: "Historias Orales",

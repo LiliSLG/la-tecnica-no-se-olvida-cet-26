@@ -1,13 +1,20 @@
+// /src/providers/AuthProvider.tsx
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import { Database } from '@/lib/supabase/types/database.types';
-import { useRouter, usePathname } from 'next/navigation';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import type { Session } from "@supabase/supabase-js";
+import { useToast } from "@/components/ui/use-toast";
+import { Database } from "@/lib/supabase/types/database.types";
+import { useRouter, usePathname } from "next/navigation";
+import { authService } from "@/lib/supabase/services/authService";
 
-type Persona = Database['public']['Tables']['personas']['Row'];
+type Persona = Database["public"]["Tables"]["personas"]["Row"];
 
 interface AuthContextType {
   session: Session | null;
@@ -27,95 +34,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    // Get initial session and user data
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-
-        if (session?.user) {
-          const { data: persona } = await supabase
-            .from('personas')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          setUser(persona);
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-      setSession(session);
-
-      if (session?.user) {
-        const { data: persona } = await supabase
-          .from('personas')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setUser(persona);
-      } else {
-        setUser(null);
-      }
-
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+  const checkUser = useCallback(async () => {
+    const { data: userProfile, error } = await authService.getCurrentUser();
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      setUser(null);
+    } else {
+      setUser(userProfile);
+    }
   }, []);
 
-  // Handle redirection based on auth state
   useEffect(() => {
-    if (!isLoading) {
-      // If we have a user and we are currently on the login page, redirect to admin
-      if (user && pathname === '/login') {
-        router.push('/admin');
-      }
-    }
-  }, [user, pathname, isLoading, router]);
+    setIsLoading(true);
+    const getInitialSession = async () => {
+      await checkUser();
+      const { data } = await authService.getSession();
+      setSession(data.session);
+      setIsLoading(false);
+    };
+    getInitialSession();
+  }, [checkUser]);
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error during sign in:', error);
-      throw error;
-    }
+    const result = await authService.signIn(email, password);
+    if (result.error) throw new Error(result.error.message);
+
+    await checkUser();
+    const { data } = await authService.getSession();
+    setSession(data.session);
+
+    toast({ title: "Bienvenido/a" });
+    router.push("/admin");
   };
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      router.push('/login');
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      throw error;
-    }
+    await authService.signOut();
+    setUser(null);
+    setSession(null);
+    router.push("/login");
   };
 
-  const value = {
-    session,
-    user,
-    isLoading,
-    signIn,
-    signOut,
-  };
+  const value = { session, user, isLoading, signIn, signOut };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -123,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-} 
+}

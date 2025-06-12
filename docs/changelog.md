@@ -1,5 +1,9 @@
 # Changelog
-
+## [2025-06-13] Admin Modules & Architecture Solidified
+- **Feature: News Module:** Successfully implemented the full CRUD functionality for the "News" entity, replicating the dedicated-page form pattern from the Projects module. This confirms the robustness and reusability of our admin architecture.
+- **Feature: Restore Functionality:** Added a "Restore" action for soft-deleted items in both the Topics and Projects modules, providing a complete logical-delete workflow.
+- **Bug Fix & Polish:** Resolved all outstanding UI refresh bugs, client-state inconsistencies, and TypeScript errors across the Topics and Projects modules. The `useDataTableState` hook logic for filtering has been perfected.
+- **Architectural Decision:** Confirmed and implemented two distinct, valid patterns for CRUD operations: modal-based forms for simple entities (Topics) and dedicated-page forms for complex entities (Projects, News).
 ## [2025-06-13] Finalización del Módulo de Gestión de Proyectos
 - **CRUD Completo:** Implementada la funcionalidad completa de Crear, Leer, Actualizar y Borrar (CRUD) para la gestión de Proyectos en el panel de administración.
 - **Patrón de Página Dedicada:** Establecido el patrón de usar páginas dedicadas (`/new`, `/[id]/edit`) para los formularios, ideal para entidades complejas.

@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, isLoading, router]);
 
@@ -32,9 +32,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <AdminSidebar user={user} onSignOut={signOut} />
       <div className="flex flex-col">
         <AdminHeader onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <main className="flex-1 p-4 sm:p-6 bg-muted/40">
-          {children}
-        </main>
+        <main className="flex-1 p-4 sm:p-6 bg-muted/40">{children}</main>
       </div>
     </div>
   );

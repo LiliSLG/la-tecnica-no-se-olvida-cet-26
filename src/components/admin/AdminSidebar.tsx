@@ -10,16 +10,16 @@ import { type Database } from "@/lib/supabase/types/database.types";
 type Persona = Database['public']['Tables']['personas']['Row'];
 
 const sidebarLinks = [
-  { id: 'dashboard', href: "/admin", label: "Dashboard" },
-  { id: 'people', href: "/admin/personas", label: "Comunidad" },
-  { id: 'projects', href: "/admin/proyectos", label: "Proyectos" },
-  { id: 'news', href: "#", label: "Noticias" },
-  { id: 'histories', href: "#", label: "Historias Orales" },
-  { id: 'organizations', href: "#", label: "Organizaciones" },
-  { id: 'topics', href: "/admin/temas", label: "Temáticas" },
-  { id: 'courses', href: "#", label: "Cursos" },
-  { id: 'bolsa', href: "#", label: "Bolsa de Trabajo" },
-  { id: 'settings', href: "#", label: "Configuración" },
+  { id: "dashboard", href: "/admin", label: "Dashboard" },
+  { id: "people", href: "/admin/personas", label: "Comunidad" },
+  { id: "projects", href: "/admin/proyectos", label: "Proyectos" },
+  { id: "news", href: "/admin/noticias", label: "Noticias" },
+  { id: "histories", href: "#", label: "Historias Orales" },
+  { id: "organizations", href: "#", label: "Organizaciones" },
+  { id: "topics", href: "/admin/temas", label: "Temáticas" },
+  { id: "courses", href: "#", label: "Cursos" },
+  { id: "bolsa", href: "#", label: "Bolsa de Trabajo" },
+  { id: "settings", href: "#", label: "Configuración" },
 ];
 
 interface AdminSidebarProps {

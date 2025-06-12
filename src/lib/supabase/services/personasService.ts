@@ -1,17 +1,20 @@
-import { Database } from '../types/database.types';
-import { ServiceResult } from '../types/serviceResult';
-import { createSuccessResult as createSuccess, createErrorResult as createError } from '../types/serviceResult';
-import { supabase } from '../supabaseClient';
+import { Database } from "../types/database.types";
+import { ServiceResult } from "../types/serviceResult";
+import {
+  createSuccessResult as createSuccess,
+  createErrorResult as createError,
+} from "../types/serviceResult";
+import { supabase } from "../client";
 
-type Persona = Database['public']['Tables']['personas']['Row'];
-type CreatePersona = Database['public']['Tables']['personas']['Insert'];
-type UpdatePersona = Database['public']['Tables']['personas']['Update'];
+type Persona = Database["public"]["Tables"]["personas"]["Row"];
+type CreatePersona = Database["public"]["Tables"]["personas"]["Insert"];
+type UpdatePersona = Database["public"]["Tables"]["personas"]["Update"];
 
 class PersonasService {
   async create(data: CreatePersona): Promise<ServiceResult<Persona | null>> {
     try {
       const { data: result, error } = await supabase
-        .from('personas')
+        .from("personas")
         .insert(data)
         .select()
         .single();
@@ -20,29 +23,35 @@ class PersonasService {
       return createSuccess(result);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }
 
-  async update(id: string, data: UpdatePersona): Promise<ServiceResult<Persona | null>> {
+  async update(
+    id: string,
+    data: UpdatePersona
+  ): Promise<ServiceResult<Persona | null>> {
     try {
       if (!id) {
         return createError({
-          name: 'ValidationError',
-          message: 'ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { id }
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
         });
       }
 
       const { data: result, error } = await supabase
-        .from('personas')
+        .from("personas")
         .update(data)
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
@@ -50,10 +59,13 @@ class PersonasService {
       return createSuccess(result);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }
@@ -62,21 +74,21 @@ class PersonasService {
     try {
       if (!id) {
         return createError({
-          name: 'ValidationError',
-          message: 'ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { id }
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
         });
       }
 
       const { data, error } = await supabase
-        .from('personas')
-        .select('*')
-        .eq('id', id)
+        .from("personas")
+        .select("*")
+        .eq("id", id)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return createSuccess(null); // Not found is not an error
         }
         throw error;
@@ -85,23 +97,28 @@ class PersonasService {
       return createSuccess(data);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }
 
-  async getAll(includeDeleted: boolean = false): Promise<ServiceResult<Persona[] | null>> {
+  async getAll(
+    includeDeleted: boolean = false
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       let query = supabase
-        .from('personas')
-        .select('*')
-        .order('nombre', { ascending: true });
+        .from("personas")
+        .select("*")
+        .order("nombre", { ascending: true });
 
       if (!includeDeleted) {
-        query = query.eq('esta_eliminada', false);
+        query = query.eq("esta_eliminada", false);
       }
 
       const { data, error } = await query;
@@ -112,68 +129,81 @@ class PersonasService {
       return createSuccess(data);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }
 
-  async delete(id: string, deletedByUid: string): Promise<ServiceResult<boolean>> {
+  async delete(
+    id: string,
+    deletedByUid: string
+  ): Promise<ServiceResult<boolean>> {
     try {
       if (!id) {
         return createError({
-          name: 'ValidationError',
-          message: 'ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { id }
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
         });
       }
 
       const { error } = await supabase
-        .from('personas')
+        .from("personas")
         .update({
           esta_eliminada: true,
           eliminado_en: new Date().toISOString(),
-          eliminado_por_uid: deletedByUid
+          eliminado_por_uid: deletedByUid,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
       return createSuccess(true);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: error
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }
 
-  async getByProyecto(proyectoId: string): Promise<ServiceResult<Persona[] | null>> {
+  async getByProyecto(
+    proyectoId: string
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!proyectoId) {
         return createError({
-          name: 'ValidationError',
-          message: 'Proyecto ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { proyectoId }
+          name: "ValidationError",
+          message: "Proyecto ID is required",
+          code: "VALIDATION_ERROR",
+          details: { proyectoId },
         });
       }
 
       const { data, error } = await supabase
-        .from('personas')
-        .select(`
+        .from("personas")
+        .select(
+          `
           *,
           proyecto_persona!inner (
             proyecto_id
           )
-        `)
-        .eq('proyecto_persona.proyecto_id', proyectoId)
-        .eq('esta_eliminada', false)
-        .order('nombre', { ascending: true });
+        `
+        )
+        .eq("proyecto_persona.proyecto_id", proyectoId)
+        .eq("esta_eliminada", false)
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
       if (!data) return createSuccess(null);
@@ -181,36 +211,43 @@ class PersonasService {
       return createSuccess(data);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: { operation: 'getByProyecto', proyectoId, error }
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: { operation: "getByProyecto", proyectoId, error },
       });
     }
   }
 
-  async getByHistoriaOral(historiaOralId: string): Promise<ServiceResult<Persona[] | null>> {
+  async getByHistoriaOral(
+    historiaOralId: string
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!historiaOralId) {
         return createError({
-          name: 'ValidationError',
-          message: 'Historia Oral ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { historiaOralId }
+          name: "ValidationError",
+          message: "Historia Oral ID is required",
+          code: "VALIDATION_ERROR",
+          details: { historiaOralId },
         });
       }
 
       const { data, error } = await supabase
-        .from('personas')
-        .select(`
+        .from("personas")
+        .select(
+          `
           *,
           historia_oral_persona!inner (
             historia_oral_id
           )
-        `)
-        .eq('historia_oral_persona.historia_oral_id', historiaOralId)
-        .eq('esta_eliminada', false)
-        .order('nombre', { ascending: true });
+        `
+        )
+        .eq("historia_oral_persona.historia_oral_id", historiaOralId)
+        .eq("esta_eliminada", false)
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
       if (!data) return createSuccess(null);
@@ -218,36 +255,43 @@ class PersonasService {
       return createSuccess(data);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: { operation: 'getByHistoriaOral', historiaOralId, error }
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: { operation: "getByHistoriaOral", historiaOralId, error },
       });
     }
   }
 
-  async getByNoticia(noticiaId: string): Promise<ServiceResult<Persona[] | null>> {
+  async getByNoticia(
+    noticiaId: string
+  ): Promise<ServiceResult<Persona[] | null>> {
     try {
       if (!noticiaId) {
         return createError({
-          name: 'ValidationError',
-          message: 'Noticia ID is required',
-          code: 'VALIDATION_ERROR',
-          details: { noticiaId }
+          name: "ValidationError",
+          message: "Noticia ID is required",
+          code: "VALIDATION_ERROR",
+          details: { noticiaId },
         });
       }
 
       const { data, error } = await supabase
-        .from('personas')
-        .select(`
+        .from("personas")
+        .select(
+          `
           *,
           noticia_persona!inner (
             noticia_id
           )
-        `)
-        .eq('noticia_persona.noticia_id', noticiaId)
-        .eq('esta_eliminada', false)
-        .order('nombre', { ascending: true });
+        `
+        )
+        .eq("noticia_persona.noticia_id", noticiaId)
+        .eq("esta_eliminada", false)
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
       if (!data) return createSuccess(null);
@@ -255,30 +299,43 @@ class PersonasService {
       return createSuccess(data);
     } catch (error) {
       return createError({
-        name: 'ServiceError',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        code: 'DB_ERROR',
-        details: { operation: 'getByNoticia', noticiaId, error }
+        name: "ServiceError",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "DB_ERROR",
+        details: { operation: "getByNoticia", noticiaId, error },
       });
     }
   }
 
   async getByTemaId(temaId: string): Promise<ServiceResult<Persona[] | null>> {
     try {
-      if (!temaId) return createError({ name: 'ValidationError', message: 'Tema ID is required', code: 'VALIDATION_ERROR' });
+      if (!temaId)
+        return createError({
+          name: "ValidationError",
+          message: "Tema ID is required",
+          code: "VALIDATION_ERROR",
+        });
 
       const { data, error } = await supabase
-        .from('personas')
-        .select('*, persona_tema!inner(tema_id)')
-        .eq('persona_tema.tema_id', temaId)
-        .eq('esta_eliminada', false);
+        .from("personas")
+        .select("*, persona_tema!inner(tema_id)")
+        .eq("persona_tema.tema_id", temaId)
+        .eq("esta_eliminada", false);
 
       if (error) throw error;
       return createSuccess(data);
     } catch (error) {
-      return createError({ name: 'ServiceError', message: 'Error fetching personas by tema', code: 'DB_ERROR', details: error });
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching personas by tema",
+        code: "DB_ERROR",
+        details: error,
+      });
     }
   }
 }
 
-export const personasService = new PersonasService(); 
+export const personasService = new PersonasService();
