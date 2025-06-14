@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 
-export type SortDirection = 'asc' | 'desc';
+export type SortDirection = "asc" | "desc";
 
 export type SortState<T> = {
   column: keyof T | null;
@@ -40,7 +40,7 @@ export type DataTableState<T> = {
 export type FilterField<T> = {
   key: keyof T | string;
   label: string;
-  type: 'select' | 'switch';
+  type: "select" | "switch";
   options?: { value: string; label: string }[];
 };
 
@@ -58,7 +58,7 @@ export type DataTableConfig<T extends object> = {
 export function useDataTableState<T extends object>({
   data,
   initialFilters = {},
-  initialSort = { column: null, direction: 'asc' },
+  initialSort = { column: null, direction: "asc" },
   initialPageSize = 10,
   searchFields,
   filterFields,
@@ -66,9 +66,9 @@ export function useDataTableState<T extends object>({
   defaultSort,
 }: DataTableConfig<T>): DataTableState<T> {
   // State
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<FilterState<T>>({
-    search: '',
+    search: "",
     showDeleted: false,
     ...initialFilters,
   });
@@ -86,14 +86,15 @@ export function useDataTableState<T extends object>({
   };
 
   const handleSetFilters = (newFilters: Partial<FilterState<T>>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters }));
     resetPage();
   };
 
   const handleSetSort = (column: keyof T) => {
-    setSort(prev => ({
+    setSort((prev) => ({
       column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+      direction:
+        prev.column === column && prev.direction === "asc" ? "desc" : "asc",
     }));
     resetPage();
   };
@@ -104,9 +105,9 @@ export function useDataTableState<T extends object>({
   };
 
   const resetState = () => {
-    setSearch('');
-    setFilters({ search: '', showDeleted: false, ...initialFilters });
-    setSort(defaultSort || { column: null, direction: 'asc' });
+    setSearch("");
+    setFilters({ search: "", showDeleted: false, ...initialFilters });
+    setSort(defaultSort || { column: null, direction: "asc" });
     setCurrentPage(1);
     setPageSize(initialPageSize);
   };
@@ -114,40 +115,48 @@ export function useDataTableState<T extends object>({
   // Filter data
   const filteredData = useMemo(() => {
     // Primero filtramos por la búsqueda de texto
-    const searchedData = data.filter(item => {
+    const searchedData = data.filter((item) => {
       const searchTerm = search.toLowerCase();
       if (!searchTerm) return true; // Si no hay búsqueda, pasan todos
 
       // Usamos 'as' porque ya hemos relajado el tipo en la config, aquí lo volvemos a asegurar
-      return searchFields.some(field => {
+      return searchFields.some((field) => {
         const value = item[field];
         return value && String(value).toLowerCase().includes(searchTerm);
       });
     });
 
     // Ahora, sobre los datos ya buscados, aplicamos los filtros de los campos
-    const fullyFilteredData = searchedData.filter(item => {
+    const fullyFilteredData = searchedData.filter((item) => {
       // Usamos .every() para asegurarnos de que el item pasa TODOS los filtros activos
-      return filterFields.every(field => {
+      return filterFields.every((field) => {
         const filterValue = filters[field.key as string];
         const itemValue = (item as any)[field.key];
 
         // Si el filtro no tiene valor o es 'all', no se aplica este filtro
-        if (filterValue === undefined || filterValue === null || filterValue === 'all') {
+        if (
+          filterValue === undefined ||
+          filterValue === null ||
+          filterValue === "all"
+        ) {
           return true;
         }
 
         // Lógica para el switch de borrados
-        if (field.type === 'switch') {
-          const showDeleted = filterValue as boolean; // filterValue es true o false
+        if (field.type === "switch") {
+          // El valor del filtro (del switch) es 'true' (ON) o 'false' (OFF)
+          const shouldShowOnlyDeleted = filterValue as boolean;
 
-          // Si el switch está ON, muestra SÓLO los eliminados.
-          // Si el switch está OFF, muestra SÓLO los NO eliminados.
-          return itemValue === showDeleted;
+          // El valor del item es 'true' si está borrado, o 'false' si está activo
+          const itemIsDeleted = (item as any)[field.key] === true;
+
+          // La lógica es simple: el estado del item (borrado/no borrado)
+          // debe coincidir con el estado que el switch quiere mostrar.
+          return itemIsDeleted === shouldShowOnlyDeleted;
         }
 
         // Lógica para filtros de select
-        if (field.type === 'select') {
+        if (field.type === "select") {
           return String(itemValue) === String(filterValue);
         }
 
@@ -157,7 +166,6 @@ export function useDataTableState<T extends object>({
     });
 
     return fullyFilteredData;
-
   }, [data, search, filters, searchFields, filterFields]);
 
   // Sort data
@@ -172,7 +180,7 @@ export function useDataTableState<T extends object>({
       if (bValue === null) return -1;
 
       const comparison = String(aValue).localeCompare(String(bValue));
-      return sort.direction === 'asc' ? comparison : -comparison;
+      return sort.direction === "asc" ? comparison : -comparison;
     });
   }, [filteredData, sort]);
 
@@ -210,4 +218,4 @@ export function useDataTableState<T extends object>({
     setPageSize: handleSetPageSize,
     resetState,
   };
-} 
+}

@@ -1,5 +1,11 @@
-import { useState } from 'react';
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useState } from "react";
+import {
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +49,7 @@ export type ColumnConfig<T> = DataColumnConfig<T> | ActionColumnConfig<T>;
 interface FilterField {
   key: string;
   label: string;
-  type: 'select' | 'switch';
+  type: "select" | "switch";
   options?: { value: string; label: string }[];
 }
 
@@ -114,8 +120,10 @@ export function AdminDataTable<T extends object>({
     setSort(key);
   };
 
-  const isDataColumn = (column: ColumnConfig<T>): column is DataColumnConfig<T> => {
-    return !column.key.toString().startsWith('action_');
+  const isDataColumn = (
+    column: ColumnConfig<T>
+  ): column is DataColumnConfig<T> => {
+    return !column.key.toString().startsWith("action_");
   };
 
   return (
@@ -136,18 +144,20 @@ export function AdminDataTable<T extends object>({
                 variant="ghost"
                 size="icon"
                 className="absolute right-0 top-1/2 transform -translate-y-1/2 h-8 w-8"
-                onClick={() => setSearch('')}
+                onClick={() => setSearch("")}
               >
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-          {config.filterFields.map((field) => (
-            field.type === 'select' ? (
+          {config.filterFields.map((field) =>
+            field.type === "select" ? (
               <Select
                 key={String(field.key)}
-                value={filters[field.key as string] || 'all'}
-                onValueChange={(value) => setFilters({ [field.key as string]: value })}
+                value={filters[field.key as string] || "all"}
+                onValueChange={(value) =>
+                  setFilters({ [field.key as string]: value })
+                }
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={field.label} />
@@ -162,16 +172,21 @@ export function AdminDataTable<T extends object>({
                 </SelectContent>
               </Select>
             ) : (
-              <div key={String(field.key)} className="flex items-center space-x-2">
+              <div
+                key={String(field.key)}
+                className="flex items-center space-x-2"
+              >
                 <Switch
                   id={String(field.key)}
                   checked={filters[field.key as string] || false}
-                  onCheckedChange={(checked) => setFilters({ [field.key as string]: checked })}
+                  onCheckedChange={(checked) =>
+                    setFilters({ [field.key as string]: checked })
+                  }
                 />
                 <Label htmlFor={String(field.key)}>{field.label}</Label>
               </div>
             )
-          ))}
+          )}
         </div>
         {onAdd && (
           <Button onClick={onAdd} className="w-full sm:w-auto">
@@ -189,7 +204,9 @@ export function AdminDataTable<T extends object>({
                   <TableHead
                     key={String(column.key)}
                     className={`py-3 px-4 ${
-                      isDataColumn(column) && column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
+                      isDataColumn(column) && column.sortable
+                        ? "cursor-pointer hover:bg-muted/50"
+                        : ""
                     }`}
                     onClick={() => {
                       if (isDataColumn(column) && column.sortable) {
@@ -199,9 +216,11 @@ export function AdminDataTable<T extends object>({
                   >
                     <div className="flex items-center gap-2">
                       {column.label}
-                      {isDataColumn(column) && column.sortable && sort.column === column.key && (
-                        <ArrowUpDown className="h-4 w-4" />
-                      )}
+                      {isDataColumn(column) &&
+                        column.sortable &&
+                        sort.column === column.key && (
+                          <ArrowUpDown className="h-4 w-4" />
+                        )}
                     </div>
                   </TableHead>
                 ))}
@@ -210,13 +229,17 @@ export function AdminDataTable<T extends object>({
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center py-8">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-32 text-center py-8"
+                  >
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <p className="text-lg font-medium mb-2">
                         {emptyState?.title || "No hay resultados"}
                       </p>
                       <p className="text-sm">
-                        {emptyState?.description || "Intenta ajustar los filtros de búsqueda"}
+                        {emptyState?.description ||
+                          "Intenta ajustar los filtros de búsqueda"}
                       </p>
                       {emptyState?.action && (
                         <Button
@@ -233,10 +256,18 @@ export function AdminDataTable<T extends object>({
                 </TableRow>
               ) : (
                 paginatedData.map((item, index) => (
-                  <TableRow key={index} className="hover:bg-muted/50 transition-colors duration-200">
+                  <TableRow
+                    key={index}
+                    className="hover:bg-muted/50 transition-colors duration-200"
+                  >
                     {columns.map((column) => (
-                      <TableCell key={String(column.key)} className={`py-3 px-4 ${column.className || ''}`}>
-                        {isDataColumn(column) ? String(item[column.key] || '-') : column.render(item)}
+                      <TableCell
+                        key={String(column.key)}
+                        className={`py-3 px-4 ${column.className || ""}`}
+                      >
+                        {isDataColumn(column)
+                          ? String(item[column.key] || "-")
+                          : column.render(item)}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -252,7 +283,9 @@ export function AdminDataTable<T extends object>({
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
             <p className="text-sm text-muted-foreground">
-              Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalItems)} de {totalItems} resultados
+              Mostrando {(currentPage - 1) * pageSize + 1} -{" "}
+              {Math.min(currentPage * pageSize, totalItems)} de {totalItems}{" "}
+              resultados
             </p>
             <Select
               value={pageSize.toString()}
@@ -262,7 +295,7 @@ export function AdminDataTable<T extends object>({
                 <SelectValue placeholder="Por página" />
               </SelectTrigger>
               <SelectContent>
-                {pageSizes.map(size => (
+                {pageSizes.map((size) => (
                   <SelectItem key={size} value={size.toString()}>
                     {size} por página
                   </SelectItem>
@@ -294,4 +327,4 @@ export function AdminDataTable<T extends object>({
       )}
     </div>
   );
-} 
+}

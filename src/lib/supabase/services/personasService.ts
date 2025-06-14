@@ -118,7 +118,7 @@ class PersonasService {
         .order("nombre", { ascending: true });
 
       if (!includeDeleted) {
-        query = query.eq("esta_eliminada", false);
+        query = query.eq("is_deleted", false);
       }
 
       const { data, error } = await query;
@@ -157,9 +157,9 @@ class PersonasService {
       const { error } = await supabase
         .from("personas")
         .update({
-          esta_eliminada: true,
-          eliminado_en: new Date().toISOString(),
-          eliminado_por_uid: deletedByUid,
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_uid: deletedByUid,
         })
         .eq("id", id);
 
@@ -202,7 +202,7 @@ class PersonasService {
         `
         )
         .eq("proyecto_persona.proyecto_id", proyectoId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -246,7 +246,7 @@ class PersonasService {
         `
         )
         .eq("historia_oral_persona.historia_oral_id", historiaOralId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -290,7 +290,7 @@ class PersonasService {
         `
         )
         .eq("noticia_persona.noticia_id", noticiaId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -323,7 +323,7 @@ class PersonasService {
         .from("personas")
         .select("*, persona_tema!inner(tema_id)")
         .eq("persona_tema.tema_id", temaId)
-        .eq("esta_eliminada", false);
+        .eq("is_deleted", false);
 
       if (error) throw error;
       return createSuccess(data);

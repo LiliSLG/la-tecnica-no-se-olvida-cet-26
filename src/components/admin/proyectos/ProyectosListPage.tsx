@@ -26,13 +26,11 @@ import {
 import { DataTableConfig } from "@/hooks/useDataTableState";
 type Proyecto = Database["public"]["Tables"]["proyectos"]["Row"];
 
-interface ProyectosClientPageProps {
+interface ProyectosListPageProps {
   allProyectos: Proyecto[];
 }
 
-export function ProyectosClientPage({
-  allProyectos,
-}: ProyectosClientPageProps) {
+export function ProyectosListPage({ allProyectos }: ProyectosListPageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -43,10 +41,10 @@ export function ProyectosClientPage({
   // 1. Definimos la configuración en un solo lugar.
   const dataTableConfig: DataTableConfig<Proyecto> = {
     data: allProyectos, // <-- ¡ASÍ! Ahora usa los datos frescos del servidor
-    initialFilters: { es_eliminado: false },
+    initialFilters: { is_deleted: false },
     searchFields: ["titulo", "descripcion_general"],
     filterFields: [
-      { key: "es_eliminado", label: "Mostrar eliminados", type: "switch" },
+      { key: "is_deleted", label: "Mostrar eliminados", type: "switch" },
     ],
     sortableColumns: ["titulo", "ano_proyecto", "estado_actual"],
   };
@@ -84,7 +82,7 @@ export function ProyectosClientPage({
       render: (proyecto: Proyecto) => (
         <div className="flex items-center gap-2">
           {/* Mostramos este bloque si el tema NO está eliminado */}
-          {!proyecto.es_eliminado ? (
+          {!proyecto.is_deleted? (
             <>
               <Button
                 variant="ghost"

@@ -26,11 +26,11 @@ import {
 import { DataTableConfig } from "@/hooks/useDataTableState";
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 
-interface NoticiasClientPageProps {
+interface NoticiasListPageProps {
   allNoticias: Noticia[];
 }
 
-export function NoticiasClientPage({ allNoticias }: NoticiasClientPageProps) {
+export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -38,11 +38,11 @@ export function NoticiasClientPage({ allNoticias }: NoticiasClientPageProps) {
 
   // 1. Definimos la configuración en un solo lugar.
   const dataTableConfig: DataTableConfig<Noticia> = {
-    data: allNoticias, // <-- ¡ASÍ! Ahora usa los datos frescos del servidor
-    initialFilters: { esta_eliminada: false },
+    data: allNoticias, 
+    initialFilters: { is_deleted: false },
     searchFields: ["titulo", "tipo", "fecha_publicacion", "esta_publicada"],
     filterFields: [
-      { key: "esta_eliminada", label: "Mostrar eliminadas", type: "switch" },
+      { key: "is_deleted", label: "Mostrar eliminadas", type: "switch" },
     ],
     sortableColumns: ["titulo", "tipo", "fecha_publicacion"],
   };
@@ -74,6 +74,7 @@ export function NoticiasClientPage({ allNoticias }: NoticiasClientPageProps) {
     { key: "titulo", label: "Título", sortable: true },
     { key: "tipo", label: "Tipo", sortable: true },
     { key: "fecha_publicacion", label: "Fecha", sortable: true },
+    { key: "autor_noticia", label: "Autor", sortable: true },
     { key: "esta_publicada", label: "Publicada", sortable: true },
     {
       key: "action_buttons",
@@ -81,7 +82,7 @@ export function NoticiasClientPage({ allNoticias }: NoticiasClientPageProps) {
       render: (noticia: Noticia) => (
         <div className="flex items-center gap-2">
           {/* Mostramos este bloque si el tema NO está eliminado */}
-          {!noticia.esta_eliminada ? (
+          {!noticia.is_deleted? (
             <>
               <Button
                 variant="ghost"

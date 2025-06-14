@@ -116,7 +116,7 @@ class TemasService {
         .order("nombre", { ascending: true });
 
       if (!includeDeleted) {
-        query = query.eq("esta_eliminada", false);
+        query = query.eq("is_deleted", false);
       }
 
       const { data, error } = await query;
@@ -154,9 +154,9 @@ class TemasService {
       const { error } = await supabase
         .from("temas")
         .update({
-          esta_eliminada: true,
-          eliminado_en: new Date().toISOString(),
-          eliminado_por_uid: deletedByUid,
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_uid: deletedByUid,
         })
         .eq("id", id);
 
@@ -188,10 +188,10 @@ class TemasService {
       const { error } = await supabase
         .from("temas")
         .update({
-          esta_eliminada: false,
-          // Opcional: podrías querer limpiar también eliminado_en y eliminado_por_uid
-          // eliminado_en: null,
-          // eliminado_por_uid: null,
+          is_deleted: false,
+          // Opcional: podrías querer limpiar también deleted_at  y deleted_by_uid
+          // deleted_at : null,
+          // deleted_by_uid : null,
         })
         .eq("id", id);
 
@@ -231,7 +231,7 @@ class TemasService {
         `
         )
         .eq("persona_tema.persona_id", personaId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -274,7 +274,7 @@ class TemasService {
         `
         )
         .eq("proyecto_tema.proyecto_id", proyectoId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -317,7 +317,7 @@ class TemasService {
         `
         )
         .eq("historia_oral_tema.historia_oral_id", historiaOralId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
@@ -358,7 +358,7 @@ class TemasService {
         `
         )
         .eq("noticia_tema.noticia_id", noticiaId)
-        .eq("esta_eliminada", false)
+        .eq("is_deleted", false)
         .order("nombre", { ascending: true });
 
       if (error) throw error;

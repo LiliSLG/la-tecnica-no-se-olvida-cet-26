@@ -84,7 +84,7 @@ class NoticiasService {
       let query = supabase.from("noticias").select();
 
       if (!includeDeleted) {
-        query = query.eq("esta_eliminada", false);
+        query = query.eq("is_deleted", false);
       }
       const { data: noticias, error } = await query;
 
@@ -108,9 +108,9 @@ class NoticiasService {
       const { error } = await supabase
         .from("noticias")
         .update({
-          esta_eliminada: true,
-          eliminado_por_uid: deletedByUid,
-          eliminado_en: new Date().toISOString(),
+          is_deleted: true,
+          deleted_by_uid: deletedByUid,
+          deleted_at: new Date().toISOString(),
         })
         .eq("id", id);
 
@@ -142,10 +142,10 @@ class NoticiasService {
       const { error } = await supabase
         .from("noticias")
         .update({
-          esta_eliminada: false,
-          // Opcional: podrías querer limpiar también eliminado_en y eliminado_por_uid
-          // eliminado_en: null,
-          // eliminado_por_uid: null,
+          is_deleted: false,
+          // Opcional: podrías querer limpiar también deleted_at  y deleted_by_uid
+          // deleted_at : null,
+          // deleted_by_uid : null,
         })
         .eq("id", id);
 
@@ -173,7 +173,7 @@ class NoticiasService {
         .from('noticias')
         .select('*, noticia_tema!inner(tema_id)')
         .eq('noticia_tema.tema_id', temaId)
-        .eq('es_eliminado', false);
+        .eq('is_deleted', false);
 
       if (error) throw error;
       return createSuccessResult(data);

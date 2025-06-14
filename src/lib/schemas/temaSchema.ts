@@ -6,47 +6,52 @@ export const temaSchema = z.object({
   id: z.string().optional(),
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   descripcion: z.string().nullable(),
-  categoriaTema: z.enum([
-    "agropecuario",
-    "tecnologico",
-    "social",
-    "ambiental",
-    "educativo",
-    "produccion_animal",
-    "sanidad",
-    "energia",
-    "recursos_naturales",
-    "manejo_suelo",
-    "gastronomia",
-    "otro"
-  ] as const, {
-    required_error: "La categoría es requerida",
-  }),
+  categoriaTema: z.enum(
+    [
+      "agropecuario",
+      "tecnologico",
+      "social",
+      "ambiental",
+      "educativo",
+      "produccion_animal",
+      "sanidad",
+      "energia",
+      "recursos_naturales",
+      "manejo_suelo",
+      "gastronomia",
+      "otro",
+    ] as const,
+    {
+      required_error: "La categoría es requerida",
+    }
+  ),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
-  esta_eliminado: z.boolean().default(false),
-  eliminado_por_uid: z.string().nullable(),
-  eliminado_en: z.string().nullable(),
+  is_deleted: z.boolean().default(false),
+  deleted_by_uid: z.string().nullable(),
+  deleted_at: z.string().nullable(),
 });
 
 // Form-specific schema with camelCase fields
-export const temaFormSchema = temaSchema.extend({
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-  estaEliminado: z.boolean().default(false),
-  eliminadoPorUid: z.string().nullable(),
-  eliminadoEn: z.string().nullable(),
-}).transform(data => ({
-  // Transform to MappedTema format
-  id: data.id,
-  nombre: data.nombre,
-  descripcion: data.descripcion,
-  categoriaTema: data.categoriaTema,
-  createdAt: data.created_at || data.createdAt,
-  updatedAt: data.updated_at || data.updatedAt,
-  estaEliminado: data.esta_eliminado || data.estaEliminado,
-  eliminadoPorUid: data.eliminado_por_uid || data.eliminadoPorUid,
-  eliminadoEn: data.eliminado_en || data.eliminadoEn,
-}));
+export const temaFormSchema = temaSchema
+  .extend({
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+    is_deleted: z.boolean().default(false),
+    deleted_by_uid: z.string().nullable(),
+    deleted_at: z.string().nullable(),
+  })
+  .transform((data) => ({
+    // Transform to MappedTema format
+    id: data.id,
+    nombre: data.nombre,
+    descripcion: data.descripcion,
+    categoriaTema: data.categoriaTema,
+    createdAt: data.created_at || data.createdAt,
+    updatedAt: data.updated_at || data.updatedAt,
+    is_deleted: data.is_deleted || data.is_deleted,
+    deleted_by_uid: data.deleted_by_uid || data.deleted_by_uid,
+    deleted_at: data.deleted_at || data.deleted_at,
+  }));
 
-export type TemaFormData = z.infer<typeof temaFormSchema>; 
+export type TemaFormData = z.infer<typeof temaFormSchema>;

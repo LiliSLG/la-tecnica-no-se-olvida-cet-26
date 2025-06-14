@@ -10,31 +10,37 @@ import {
 
 // Schema for professional links
 const linkProfesionalSchema = z.object({
-  platform: z.enum(PLATAFORMAS_PROFESIONALES.map(p => p.value) as [string, ...string[]]),
+  platform: z.enum(
+    PLATAFORMAS_PROFESIONALES.map((p) => p.value) as [string, ...string[]]
+  ),
   url: z.string().url("URL inválida"),
 });
 
 // Schema for residential location
-const ubicacionResidencialSchema = z.object({
-  direccion: z.string().optional().nullable(),
-  provincia: z.enum(PROVINCIAS.map(p => p.value) as [string, ...string[]]).optional().nullable(),
-  localidad: z.string().optional().nullable(),
-  codigo_postal: z.string().optional().nullable(),
-  lat: z.number().optional().nullable(),
-  lng: z.number().optional().nullable(),
-})
-.transform((data) => {
-  const isEmpty =
-    !data?.direccion &&
-    !data?.provincia &&
-    !data?.localidad &&
-    !data?.codigo_postal &&
-    !data?.lat &&
-    !data?.lng;
-  return isEmpty ? undefined : data;
-})
-.optional()
-.nullable();
+const ubicacionResidencialSchema = z
+  .object({
+    direccion: z.string().optional().nullable(),
+    provincia: z
+      .enum(PROVINCIAS.map((p) => p.value) as [string, ...string[]])
+      .optional()
+      .nullable(),
+    localidad: z.string().optional().nullable(),
+    codigo_postal: z.string().optional().nullable(),
+    lat: z.number().optional().nullable(),
+    lng: z.number().optional().nullable(),
+  })
+  .transform((data) => {
+    const isEmpty =
+      !data?.direccion &&
+      !data?.provincia &&
+      !data?.localidad &&
+      !data?.codigo_postal &&
+      !data?.lat &&
+      !data?.lng;
+    return isEmpty ? undefined : data;
+  })
+  .optional()
+  .nullable();
 
 // Base schema sin transform
 const personaSchemaRaw = z.object({
@@ -44,16 +50,19 @@ const personaSchemaRaw = z.object({
   email: z.string().email("Email inválida").nullable(),
   fotoUrl: z.string().url("URL inválida").nullable(),
   categoriaPrincipal: z.enum(CATEGORIAS_PRINCIPALES),
-  capacidadesPlataforma: z.array(z.string()).default([]),
   activo: z.boolean().default(true),
-  esAdmin: z.boolean().default(false),
   tituloProfesional: z.string().nullable(),
   descripcionPersonalOProfesional: z.string().nullable(),
   areasDeInteresOExpertise: z.array(z.string()),
   disponibleParaProyectos: z.boolean().default(false),
   esExAlumnoCET: z.boolean().default(false),
   anoCursadaActualCET: z.number().int().min(1).max(6).nullable(),
-  anoEgresoCET: z.number().int().min(1900).max(new Date().getFullYear()).nullable(),
+  anoEgresoCET: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear())
+    .nullable(),
   titulacionObtenidaCET: z.string().nullable(),
   proyectoFinalCETId: z.string().nullable(),
   buscandoOportunidades: z.boolean().default(false),
@@ -65,10 +74,12 @@ const personaSchemaRaw = z.object({
   telefonoContacto: z.string().nullable(),
   linksProfesionales: z.array(linkProfesionalSchema),
   ubicacionResidencial: ubicacionResidencialSchema,
-  visibilidadPerfil: z.enum(VISIBILIDAD_PERFIL.map(v => v.value) as [string, ...string[]]),
-  estaEliminada: z.boolean().default(false),
-  eliminadoEn: z.string().nullable(),
-  eliminadoPorUid: z.string().nullable(),
+  visibilidadPerfil: z.enum(
+    VISIBILIDAD_PERFIL.map((v) => v.value) as [string, ...string[]]
+  ),
+  is_deleted: z.boolean().default(false),
+  deleted_at: z.string().nullable(),
+  deleted_by_uid: z.string().nullable(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -77,7 +88,6 @@ const personaSchemaRaw = z.object({
 export const personaSchema = personaSchemaRaw.transform(
   (data: z.infer<typeof personaSchemaRaw>) => ({
     ...data,
-    capacidadesPlataforma: data.capacidadesPlataforma || [],
     areasDeInteresOExpertise: data.areasDeInteresOExpertise || [],
     ofreceColaboracionComo: data.ofreceColaboracionComo || [],
     linksProfesionales: data.linksProfesionales || [],

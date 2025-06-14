@@ -5,6 +5,7 @@ import {
   createErrorResult as createError,
 } from "../types/serviceResult";
 import { supabase } from "../client";
+
 type AnalisisSatelital =
   Database["public"]["Tables"]["analisis_satelitales"]["Row"];
 type CreateAnalisisSatelital =

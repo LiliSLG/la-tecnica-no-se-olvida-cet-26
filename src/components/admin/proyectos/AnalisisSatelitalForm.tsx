@@ -14,9 +14,28 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const tipoAnalisisEnum = z.enum([
+  "NDVI",
+  "NDWI",
+  "NDMI",
+  "EVI",
+  "SAVI",
+  "MSAVI",
+  "NDSI",
+  "NDBI",
+]);
 
 const analisisSatelitalSchema = z.object({
   titulo: z.string().min(5, "El título debe tener al menos 5 caracteres"),
+  tipo_analisis: tipoAnalisisEnum,
   resumen: z.string().optional(),
   imagen_grafico_url: z.string().url("Debe ser una URL válida").optional(),
   datos_tabla: z.string().min(1, "Los datos de la tabla son requeridos"),
@@ -34,6 +53,7 @@ export function AnalisisSatelitalForm({ onSubmit, projectId }: Props) {
     resolver: zodResolver(analisisSatelitalSchema),
     defaultValues: {
       titulo: "",
+      tipo_analisis: undefined,
       resumen: "",
       imagen_grafico_url: "",
       datos_tabla: "",
@@ -50,13 +70,49 @@ export function AnalisisSatelitalForm({ onSubmit, projectId }: Props) {
             <FormItem>
               <FormLabel>Título</FormLabel>
               <FormControl>
-                <Input placeholder="Ingrese el título del análisis" {...field} />
+                <Input
+                  placeholder="Ingrese el título del análisis"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="tipo_analisis"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de análisis</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo de análisis" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {[
+                    "NDVI",
+                    "NDWI",
+                    "NDMI",
+                    "EVI",
+                    "SAVI",
+                    "MSAVI",
+                    "NDSI",
+                    "NDBI",
+                  ].map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>
+                      {tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="resumen"
@@ -73,7 +129,6 @@ export function AnalisisSatelitalForm({ onSubmit, projectId }: Props) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="imagen_grafico_url"
@@ -90,7 +145,6 @@ export function AnalisisSatelitalForm({ onSubmit, projectId }: Props) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="datos_tabla"
@@ -108,11 +162,10 @@ export function AnalisisSatelitalForm({ onSubmit, projectId }: Props) {
             </FormItem>
           )}
         />
-
         <Button type="submit" className="w-full">
           Crear Análisis
         </Button>
       </form>
     </Form>
   );
-} 
+}

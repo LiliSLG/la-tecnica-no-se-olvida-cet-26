@@ -1,20 +1,20 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '../types/database.types';
-import { PostgrestQueryBuilder } from '@supabase/postgrest-js';
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "../types/database.types";
+import { PostgrestQueryBuilder } from "@supabase/postgrest-js";
 
 // Mock data for testing
 export const mockData = [
   {
-    id: '1',
-    titulo: 'Proyecto Test',
-    descripcion: 'Desc',
-    archivo_principal_url: 'https://test.com/file.pdf',
-    status: 'published' as const,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
-    eliminado_en: null,
-    eliminado_por_uid: null,
-    esta_eliminado: false,
+    id: "1",
+    titulo: "Proyecto Test",
+    descripcion: "Desc",
+    archivo_principal_url: "https://test.com/file.pdf",
+    status: "published" as const,
+    created_at: "2024-01-01",
+    updated_at: "2024-01-01",
+    deleted_at: null,
+    deleted_by_uid: null,
+    is_deleted: false,
   },
 ];
 
@@ -46,12 +46,16 @@ const createMockQueryBuilder = () => {
   // Add async methods that return Promises
   Object.assign(mock, {
     single: jest.fn().mockResolvedValue({ data: mockData[0], error: null }),
-    insert: jest.fn().mockImplementation((data) => 
-      Promise.resolve({ data: { ...mockData[0], ...data }, error: null })
-    ),
-    update: jest.fn().mockImplementation((data) => 
-      Promise.resolve({ data: { ...mockData[0], ...data }, error: null })
-    ),
+    insert: jest
+      .fn()
+      .mockImplementation((data) =>
+        Promise.resolve({ data: { ...mockData[0], ...data }, error: null })
+      ),
+    update: jest
+      .fn()
+      .mockImplementation((data) =>
+        Promise.resolve({ data: { ...mockData[0], ...data }, error: null })
+      ),
     delete: jest.fn().mockResolvedValue({ data: null, error: null }),
   });
 
@@ -72,7 +76,7 @@ export const createMockSupabase = () => {
 export const mockSupabase = createMockSupabase();
 
 // Mock the Supabase client module
-jest.mock('@supabase/supabase-js', () => ({
+jest.mock("@supabase/supabase-js", () => ({
   createClient: jest.fn().mockReturnValue(mockSupabase),
   SupabaseClient: jest.fn().mockImplementation(() => mockSupabase),
-})); 
+}));

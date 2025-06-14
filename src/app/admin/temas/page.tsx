@@ -1,12 +1,12 @@
 import { temasService } from "@/lib/supabase/services/temasService";
-import { TemasClientPage } from "../../../components/admin/temas/TemasClientPage";
+import { TemasListPage } from "../../../components/admin/temas/TemasListPage";
 
 export default async function TemasPage() {
   const result = await temasService.getAll(true);
-  
+  console.log(result);
   if (!result.success || !result.data) {
-    throw new Error('Failed to fetch temas');
+    throw new Error("Failed to fetch temas");
   }
 
-  return <TemasClientPage allTemas={result.data} />;
-} 
+  return <TemasListPage allTemas={result.data} />;
+}

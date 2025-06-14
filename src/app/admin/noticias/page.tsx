@@ -1,7 +1,7 @@
 // /app/admin/noticias/page.tsx
 import { cookies } from "next/headers";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
-import { NoticiasClientPage } from "@/components/admin/noticias/NoticiasClientPage";
+import { NoticiasListPage } from "@/components/admin/noticias/NoticiasListPage";
 
 export default async function NoticiasAdminPage() {
   const { data: noticias, error } = await noticiasService.getAll(true);
@@ -11,5 +11,5 @@ export default async function NoticiasAdminPage() {
     return <div>Error al cargar las noticias.</div>;
   }
 
-  return <NoticiasClientPage allNoticias={noticias || []} />;
+  return <NoticiasListPage allNoticias={noticias || []} />;
 }
