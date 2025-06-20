@@ -1,8 +1,8 @@
-// src/app/layout.tsx
+// src/app/layout.tsx (ROOT LAYOUT)
 import { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import '@/app/globals.css';
+import "@/app/globals.css";
 import { AuthProvider } from "@/providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });

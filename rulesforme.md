@@ -8,3 +8,9 @@ npx shadcn@latest add radio-group
 
 
 ps tree /F
+
+
+
+
+# Llamada REST a /temas incluyendo RLS y pidiendo conteo exacto
+

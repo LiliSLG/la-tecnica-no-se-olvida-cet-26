@@ -5,7 +5,6 @@ import {
   createSuccessResult as createSuccess,
   createErrorResult as createError,
 } from "../types/serviceResult";
-import { personasService } from "./personasService";
 
 type Persona = Database["public"]["Tables"]["personas"]["Row"];
 type CreatePersona = Database["public"]["Tables"]["personas"]["Insert"];
@@ -41,31 +40,26 @@ class AuthService {
 
   async signIn(email: string, password: string): Promise<ServiceResult<void>> {
     try {
+      console.log("🔑 AuthService: Signing in user:", email);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
       if (error) throw error;
-      if (!data.user)
+      if (!data.user) {
         throw new Error("Authentication succeeded but no user was returned.");
-
-      // Check if profile exists, if not, create it
-      const { data: profile } = await supabase
-        .from("personas")
-        .select("id")
-        .eq("id", data.user.id)
-        .single();
-
-      if (!profile) {
-        await personasService.create({
-          id: data.user.id,
-          email: data.user.email!,
-          nombre: data.user.email!.split("@")[0],
-        });
       }
+
+      console.log("✅ AuthService: Sign in successful");
+
+      // NO crear perfil aquí - déjalo al AuthProvider
+      // El AuthProvider se encargará de crear/obtener el perfil
 
       return createSuccess(undefined);
     } catch (error) {
+      console.error("❌ AuthService: Sign in error:", error);
       return createError({
         name: "ServiceError",
         message: "Login error",
@@ -110,7 +104,12 @@ class AuthService {
           id: authData.user.id,
           email: email,
           nombre: userData.nombre || email.split("@")[0],
-          rol: "usuario",
+          activo: true,
+          es_ex_alumno_cet: false,
+          buscando_oportunidades: false,
+          disponible_para_proyectos: false,
+          visibilidad_perfil:
+            "privado" as Database["public"]["Enums"]["visibilidad_perfil_enum"],
         })
         .select()
         .single();
@@ -140,6 +139,7 @@ class AuthService {
 
   async signOut(): Promise<ServiceResult<void>> {
     try {
+      console.log("👋 AuthService: Signing out user");
       const { error } = await supabase.auth.signOut();
       if (error) {
         return createError({
@@ -149,6 +149,7 @@ class AuthService {
           details: error,
         });
       }
+      console.log("✅ AuthService: Sign out successful");
       return createSuccess(undefined);
     } catch (error) {
       return createError({
@@ -203,7 +204,6 @@ class AuthService {
       });
     }
   }
-  // En authService.ts, dentro de la clase AuthService
 
   async getSession() {
     return supabase.auth.getSession();
