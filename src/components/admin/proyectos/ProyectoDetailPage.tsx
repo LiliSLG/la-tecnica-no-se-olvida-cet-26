@@ -92,7 +92,7 @@ export function ProyectoDetailPage({ proyecto }: Props) {
       </section>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" >
           <DialogHeader>
             <DialogTitle>Nuevo Análisis Satelital</DialogTitle>
           </DialogHeader>

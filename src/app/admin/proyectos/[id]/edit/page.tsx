@@ -4,11 +4,12 @@ import { proyectosService } from '@/lib/supabase/services/proyectosService';
 import { notFound } from 'next/navigation';
 
 interface EditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EditarProyectoPage({ params }: EditPageProps) {
-  const { data: proyecto, error } = await proyectosService.getById(params.id);
+  const { id } = await params;
+  const { data: proyecto, error } = await proyectosService.getById(id);
 
   if (error || !proyecto) {
     notFound();

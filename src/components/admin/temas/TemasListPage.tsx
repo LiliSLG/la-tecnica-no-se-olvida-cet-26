@@ -2,8 +2,9 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 import {
   useDataTableState,
   type DataTableConfig,
@@ -47,12 +48,19 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // ✅ Estado local para manejar la lista
+  const [temas, setTemas] = useState<Tema[]>(allTemas);
   const [temaToDelete, setTemaToDelete] = useState<Tema | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTema, setEditingTema] = useState<Tema | null>(null);
 
+  // ✅ Actualizar el estado local cuando cambien las props
+  useEffect(() => {
+    setTemas(allTemas);
+  }, [allTemas]);
+
   const dataTableConfig: DataTableConfig<Tema> = {
-    data: allTemas, // Usamos directamente los datos de las props
+    data: temas, // ✅ Usar el estado local
     initialFilters: { is_deleted: false },
     searchFields: ["nombre", "descripcion"],
     filterFields: [
@@ -72,25 +80,70 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
       });
       return;
     }
+
     try {
       if (editingTema) {
-        await temasService.update(editingTema.id, {
+        const updateData = {
           ...data,
           updated_by_uid: user.id,
-        });
+          updated_at: new Date().toISOString(), // Agregar timestamp explícito
+        };
+
+        // Agregar await y capturar el resultado
+        const result = await temasService.update(editingTema.id, updateData);
+        console.log("📥 Service result:", result);
+
+        if (!result.success) {
+          console.error("❌ Service error:", result.error);
+          toast({
+            title: "Error",
+            description: result.error?.message || "Error al actualizar",
+            variant: "destructive",
+          });
+          return;
+        }
+        // ✅ Actualizar el estado local
+        setTemas((prevTemas) =>
+          prevTemas.map((tema) =>
+            tema.id === editingTema.id ? { ...tema, ...updateData } : tema
+          )
+        );
         toast({ title: "Éxito", description: "Tema actualizado." });
       } else {
-        await temasService.create({ ...data, created_by_uid: user.id });
+        const createData = {
+          ...data,
+          created_by_uid: user.id,
+          created_at: new Date().toISOString(),
+        };
+        console.log("📤 Sending create data:", createData);
+
+        const result = await temasService.create(createData);
+
+        // ✅ Agregar verificación antes de actualizar estado
+        if (result.success && result.data) {
+          setTemas((prevTemas) => [...prevTemas, result.data!]);
+        }
+        console.log("📥 Service result:", result);
+
+        if (!result.success) {
+          console.error("❌ Service error:", result.error);
+          toast({
+            title: "Error",
+            description: result.error?.message || "Error al crear",
+            variant: "destructive",
+          });
+          return;
+        }
         toast({ title: "Éxito", description: "Tema creado." });
       }
+
       setIsModalOpen(false);
       setEditingTema(null);
-      router.refresh(); // La única fuente de verdad para actualizar la lista
     } catch (error) {
-      console.error("Error saving tema:", error);
+      console.error("❌ Unexpected error saving tema:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el tema.",
+        description: "Error inesperado al guardar el tema.",
         variant: "destructive",
       });
     }
@@ -105,7 +158,7 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
       render: (row: Tema) => (
         <div className="flex items-center gap-2">
           {/* Mostramos este bloque si el tema NO está eliminado */}
-          {!row.is_deleted? (
+          {!row.is_deleted ? (
             <>
               <Button
                 variant="ghost"
@@ -149,11 +202,18 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
                     });
                   try {
                     await temasService.restore(row.id);
+                    // ✅ Actualizar el estado local
+                    setTemas((prevTemas) =>
+                      prevTemas.map((tema) =>
+                        tema.id === row.id
+                          ? { ...tema, is_deleted: false }
+                          : tema
+                      )
+                    );
                     toast({
                       title: "Éxito",
                       description: "El tema ha sido restaurado.",
                     });
-                    router.refresh();
                   } catch (error) {
                     toast({
                       title: "Error",
@@ -206,8 +266,21 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
                 if (!temaToDelete || !user) return;
                 try {
                   await temasService.delete(temaToDelete.id, user.id);
+                  // ✅ Actualizar el estado local
+                  setTemas((prevTemas) =>
+                    prevTemas.map((tema) =>
+                      tema.id === temaToDelete.id
+                        ? {
+                            ...tema,
+                            is_deleted: true,
+                            deleted_at: new Date().toISOString(),
+                            deleted_by_uid: user.id,
+                          }
+                        : tema
+                    )
+                  );
                   toast({ title: "Tema eliminado" });
-                  router.refresh();
+
                   setTemaToDelete(null);
                 } catch (error) {
                   console.error("Error deleting tema:", error);

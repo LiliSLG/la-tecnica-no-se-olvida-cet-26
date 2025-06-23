@@ -8,17 +8,16 @@ import Link from "next/link";
 import { BackButton } from "@/components/common/BackButton";
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default async function TemaPage({ params }: PageProps) {
   try {
+    const { id } = await params;
     const [temaResult, personasResult, proyectosResult] = await Promise.all([
-      temasService.getById(params.id),
-      personasService.getByTemaId(params.id),
-      proyectosService.getByTemaId(params.id),
+      temasService.getById(id),
+      personasService.getByTemaId(id),
+      proyectosService.getByTemaId(id),
     ]);
 
     // Unwrap the data from ServiceResult objects

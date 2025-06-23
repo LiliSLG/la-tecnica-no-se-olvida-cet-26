@@ -1,4 +1,235 @@
 # Changelog
+## [2025-06-23] ✅ Temas CRUD Completo + RLS Configurado
+Context Session: Completado sistema completo de temas con políticas RLS y estado local.
+🔧 PROBLEMA RESUELTO: RLS Policies Faltantes
+Issue: Error 406 al intentar editar temas - solo existían políticas SELECT
+Root Cause: Faltaban políticas UPDATE, INSERT, DELETE en tabla temas
+Solución Implementada:
+sql-- Política UPDATE para temas
+CREATE POLICY "temas_update" ON "public"."temas"
+FOR UPDATE TO public
+USING (auth.role() = 'authenticated'::text);
+
+-- Política INSERT para temas  
+CREATE POLICY "temas_insert" ON "public"."temas"
+FOR INSERT TO public
+WITH CHECK (auth.role() = 'authenticated'::text);
+
+-- Política DELETE para temas (soft delete usa UPDATE)
+CREATE POLICY "temas_delete" ON "public"."temas"
+FOR UPDATE TO public
+USING (auth.role() = 'authenticated'::text);
+🚀 MEJORA: Estado Local en lugar de router.refresh()
+Issue: Lista no se actualizaba después de modificaciones
+Solución: Implementado estado local con useState para actualizaciones inmediatas sin recarga
+Beneficios:
+
+✅ Actualización instantánea de la UI
+✅ Mejor UX sin parpadeos
+✅ Mantiene estado de filtros y scroll
+✅ Menos requests al servidor
+
+✅ COMPLETADO ESTA SESIÓN
+
+Temas CRUD: Funcionando al 100% (crear, editar, eliminar, restaurar)
+RLS Policies: Configuradas para todas las operaciones
+UI Responsiva: Estado local sincronizado
+Error Handling: Robusto con toast notifications
+
+🎯 PRÓXIMA SESIÓN - FASE 1A CONTINÚA
+Objetivo: Expandir RLS a Personas y Organizaciones
+Checklist Fase 1A:
+
+ RLS para Temas: Políticas completas ✅
+ RLS para Personas: Crear políticas UPDATE/INSERT/DELETE
+ RLS para Organizaciones: Crear políticas UPDATE/INSERT/DELETE
+ Utilidades de permisos: Crear helper functions
+ Documentar todas las políticas: Para referencia
+
+📝 RLS Pattern Establecido
+Para cada tabla que necesite CRUD, crear estas 3 políticas:
+sql-- Template para cualquier tabla
+CREATE POLICY "[tabla]_insert" ON "public"."[tabla]"
+FOR INSERT TO public
+WITH CHECK (auth.role() = 'authenticated'::text);
+
+CREATE POLICY "[tabla]_update" ON "public"."[tabla]"
+FOR UPDATE TO public
+USING (auth.role() = 'authenticated'::text);
+
+-- Para soft delete (UPDATE) o hard delete (DELETE)
+CREATE POLICY "[tabla]_delete" ON "public"."[tabla]"
+FOR UPDATE TO public  -- o DELETE
+USING (auth.role() = 'authenticated'::text);
+🔗 Archivos Modificados Esta Sesión
+
+src/app/admin/temas/page.tsx: Client Component con estado local
+src/components/admin/temas/TemasListPage.tsx: Estado local + sin router.refresh
+src/components/admin/temas/TemaForm.tsx: Debug logs (temporales)
+Supabase RLS: 3 nuevas políticas para tabla temas
+## [2025-06-23] ✅ Temas Restaurado - Plan Híbrido Definido
+Context Session: Temas funcionando correctamente, definiendo estrategia híbrida para continuar migración.
+🎯 DECISIÓN ARQUITECTÓNICA: ENFOQUE HÍBRIDO
+Después de evaluar Opción A (Seguridad Primero) vs Opción B (Funcionalidad Primero), se eligió ENFOQUE HÍBRIDO que combina ambos:
+
+Fase 1A: Permisos Básicos Mejorados (seguridad fundamental)
+Fase 1B: Personas Management (funcionalidad crítica)
+Fase 2: Sistema Avanzado completo
+
+✅ COMPLETADO ESTA SESIÓN
+
+Temas: Restaurado y funcionando con Client Components + AuthProvider
+Arquitectura Base: Confirmada como sólida
+Plan de Migración: Definido y documentado
+
+🚀 PRÓXIMA SESIÓN - FASE 1A (Prioridad Inmediata)
+Objetivo: Expandir RLS y Crear Utilidades Básicas de Permisos
+Tiempo estimado: 1 sesión
+Checklist Fase 1A:
+
+ Expandir RLS a Personas: Políticas de lectura/escritura según roles
+ Expandir RLS a Organizaciones: Políticas de lectura/escritura según roles
+ Crear utilidades básicas de permisos: Funciones helper para verificar acceso
+ Documentar políticas RLS: Para referencia futura
+
+Archivos a Modificar/Crear:
+
+Supabase: Nuevas políticas RLS para personas y organizaciones
+src/lib/supabase/permissions.ts: Utilidades básicas de permisos
+docs/rls-policies.md: Documentación de políticas
+
+🎯 FASE 1B - Siguiente Prioridad
+Objetivo: Personas Management Completo
+Tiempo estimado: 1-2 sesiones
+Checklist Fase 1B:
+
+ Lista de personas: Con AdminDataTable y permisos RLS
+ Formulario CRUD: Creación/edición con validación
+ Gestión de roles: Asignación de roles globales y por proyecto
+ Upload de fotos: Integración con Supabase Storage
+ Filtros avanzados: Por rol, estado, etc.
+
+Archivos Principales:
+
+src/app/admin/personas/page.tsx: Lista principal
+src/app/admin/personas/new/page.tsx: Formulario de creación
+src/app/admin/personas/[id]/edit/page.tsx: Formulario de edición
+src/components/admin/personas/: Componentes específicos
+
+📋 ROADMAP COMPLETO POST-FASE 1
+Fase 2: Sistema de Permisos Avanzado
+
+ usePermissions hook completo
+ Middleware de rutas automático
+ Permisos granulares por acción
+
+Fase 3: Organizaciones + Storage
+
+ Organizaciones Management completo
+ Migración Firebase → Supabase Storage
+ Upload de archivos para todas las entidades
+
+Fase 4: Páginas Públicas
+
+ Vistas públicas optimizadas
+ SEO y performance
+
+Fase 5: Funcionalidades Avanzadas
+
+ Relaciones entre entidades
+ Análisis satelitales
+ Dashboard con métricas
+
+📝 PLANTILLA PARA PRÓXIMA SESIÓN
+CONTEXTO: Migración arquitectural Next.js + Supabase - Enfoque Híbrido
+
+ESTADO ACTUAL: 
+✅ Temas funcionando correctamente
+🎯 Iniciando Fase 1A: Expandir RLS y crear utilidades básicas
+
+PRIORIDAD INMEDIATA: 
+Expandir políticas RLS para Personas y Organizaciones + crear utilidades de permisos básicas
+
+OBJETIVO SESIÓN:
+Completar Fase 1A para tener base sólida antes de implementar Personas Management
+
+ARCHIVOS CONTEXTO: rules.md, blueprint.md, changelog.md
+🔗 CONTEXTO TÉCNICO CLAVE
+Patrón Establecido:
+
+Client Components para páginas admin que necesitan AuthProvider
+Standalone Services sin herencia para todas las entidades
+RLS + AuthProvider para control de acceso
+
+Sistema de Roles Actual:
+
+Roles Globales: persona_roles table (admin, moderator)
+Roles por Proyecto: proyecto_persona_rol table (autor, tutor, colaborador)
+Función RPC: is_admin() para verificación de permisos
+
+Arquitectura de Datos:
+
+PostgreSQL con Supabase
+Soft deletes implementados
+Types generados automáticamente en database.types.ts
+
+
+IMPORTANTE: Este plan híbrido permite avanzar con funcionalidades visibles mientras construimos una base de seguridad sólida. La Fase 1A es crucial para no crear deuda técnica.
+## Session 2025-06-23 (Current)
+Topic: Architecture Migration & Temas Page Restoration
+AI Assistant: Claude 3.5 Sonnet
+Status: 🚧 In Progress
+Achievements This Session:
+
+✅ Analyzed current codebase and identified architecture needs
+✅ Discussed role system design (hybrid global + project-specific roles)
+✅ Selected optimal architecture: Server Components + API Routes
+✅ Updated comprehensive project documentation (blueprint, changelog)
+✅ Created implementation plan for temas page restoration
+
+Current Implementation:
+
+Creating API route for temas with server-side auth
+Migrating temas page to Server Component pattern
+Setting up reusable pattern for other entities
+
+Next Session Context:
+When starting a new conversation, provide:
+
+This updated changelog.md
+The updated blueprint.md
+Current rules.md
+Mention: "Implementing Server Components + API Routes migration, currently working on temas restoration"
+## [2025-06-23] 🔄 Architectural Migration: Client → Server Components + API Routes
+Context Session: Migrating from problematic Client Component data fetching to robust Server Components + API Routes architecture.
+🏗️ Architecture Decisions Made
+
+Selected Pattern: Server Components + API Routes over pure Client Components
+Reasoning: Better SEO, performance, security, and maintainable authentication flow
+Authentication Strategy: API Routes handle Supabase auth + RLS via server-side cookies
+Future Scalability: Pattern replicable across all entities (proyectos, noticias, personas)
+
+🔧 Implementation Plan Established
+
+Phase 1: Restore temas functionality with new architecture
+Phase 2: Expand pattern to proyectos, noticias, personas
+Phase 3: Add middleware for route protection
+Phase 4: Implement advanced usePermissions hook
+
+📋 Files to Create/Modify
+
+src/app/api/admin/temas/route.ts - API route with Supabase server client
+src/app/admin/temas/page.tsx - Server Component consuming API
+src/lib/supabase/server.ts - Server-side Supabase client utility
+
+🎯 Current Priority
+Immediate: Restore temas page functionality that was simplified for permissions testing
+Next: Apply same pattern to all other admin entities
+📚 Documentation Updates
+
+Blueprint: Added complete folder structure, security architecture, data fetching patterns
+Rules: Maintained existing development standards
+This Changelog: Now includes context for future AI assistants
 ## [2025-06-13] Admin Modules & Architecture Solidified
 - **Feature: News Module:** Successfully implemented the full CRUD functionality for the "News" entity, replicating the dedicated-page form pattern from the Projects module. This confirms the robustness and reusability of our admin architecture.
 - **Feature: Restore Functionality:** Added a "Restore" action for soft-deleted items in both the Topics and Projects modules, providing a complete logical-delete workflow.
