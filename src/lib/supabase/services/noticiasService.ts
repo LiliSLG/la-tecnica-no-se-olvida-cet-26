@@ -1,8 +1,8 @@
 import { Database } from "../types/database.types";
 import {
   ServiceResult,
-  createSuccessResult,
-  createErrorResult,
+  createSuccessResult as createSuccess,
+  createErrorResult as createError,
 } from "../types/serviceResult";
 import { supabase } from "../client";
 
@@ -22,9 +22,9 @@ class NoticiasService {
         .single();
 
       if (error) throw error;
-      return createSuccessResult(newNoticia);
+      return createSuccess(newNoticia);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error creating noticia",
         code: "DB_ERROR",
@@ -36,19 +36,31 @@ class NoticiasService {
   async update(
     id: string,
     data: UpdateNoticia
-  ): Promise<ServiceResult<Noticia | null>> {
+  ): Promise<ServiceResult<Noticia>> {
     try {
-      const { data: updatedNoticia, error } = await supabase
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+
+      const { data: result, error } = await supabase
         .from("noticias")
-        .update(data)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
-      return createSuccessResult(updatedNoticia);
+      return createSuccess(result);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error updating noticia",
         code: "DB_ERROR",
@@ -66,9 +78,9 @@ class NoticiasService {
         .single();
 
       if (error) throw error;
-      return createSuccessResult(noticia);
+      return createSuccess(noticia);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error fetching noticia",
         code: "DB_ERROR",
@@ -108,10 +120,10 @@ class NoticiasService {
       }
 
       console.log("✅ Returning success result");
-      return createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
       console.error("❌ Service error:", error);
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error fetching noticias",
         code: "DB_ERROR",
@@ -134,9 +146,9 @@ class NoticiasService {
         .eq("id", id);
 
       if (error) throw error;
-      return createSuccessResult(true);
+      return createSuccess(true);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error deleting noticia",
         code: "DB_ERROR",
@@ -150,7 +162,7 @@ class NoticiasService {
   async restore(id: string): Promise<ServiceResult<boolean>> {
     try {
       if (!id) {
-        return createErrorResult({
+        return createError({
           name: "ValidationError",
           message: "ID is required",
           code: "VALIDATION_ERROR",
@@ -169,9 +181,9 @@ class NoticiasService {
         .eq("id", id);
 
       if (error) throw error;
-      return createSuccessResult(true);
+      return createSuccess(true);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message:
           error instanceof Error
@@ -182,11 +194,138 @@ class NoticiasService {
       });
     }
   }
+
+  async getDestacadas(): Promise<ServiceResult<Noticia[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("noticias")
+        .select("*")
+        .eq("es_destacada", true)
+        .eq("is_deleted", false)
+        .order("fecha_publicacion", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching noticias destacadas",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getByTipo(tipo: any): Promise<ServiceResult<Noticia[]>> {
+    try {
+      if (!tipo || !["articulo", "link"].includes(tipo)) {
+        return createError({
+          name: "ValidationError",
+          message: "Valid tipo is required (articulo or link)",
+          code: "VALIDATION_ERROR",
+          details: { tipo },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .select("*")
+        .eq("tipo", tipo)
+        .eq("is_deleted", false)
+        .order("fecha_publicacion", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching noticias by tipo",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getRecientes(limit: number = 10): Promise<ServiceResult<Noticia[]>> {
+    try {
+      if (limit < 1 || limit > 100) {
+        return createError({
+          name: "ValidationError",
+          message: "Limit must be between 1 and 100",
+          code: "VALIDATION_ERROR",
+          details: { limit },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .select("*")
+        .eq("is_deleted", false)
+        .order("fecha_publicacion", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching noticias recientes",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async toggleDestacada(id: string): Promise<ServiceResult<Noticia>> {
+    try {
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+
+      // Primero obtenemos el estado actual
+      const getCurrentResult = await this.getById(id);
+      if (!getCurrentResult.success || !getCurrentResult.data) {
+        return createError({
+          name: "NotFoundError",
+          message: "Noticia not found",
+          code: "NOT_FOUND",
+          details: { id },
+        });
+      }
+
+      const currentState = getCurrentResult.data.es_destacada;
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .update({
+          es_destacada: !currentState,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createSuccess(data);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error toggling noticia destacada",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
   // --- Relationship Methods ---
   /*
   async getByTemaId(temaId: string): Promise<ServiceResult<Noticia[] | null>> {
     try {
-      if (!temaId) return createErrorResult({ name: 'ValidationError', message: 'Tema ID is required', code: 'VALIDATION_ERROR' });
+      if (!temaId) return createError({ name: 'ValidationError', message: 'Tema ID is required', code: 'VALIDATION_ERROR' });
 
       const { data, error } = await supabase
         .from('noticias')
@@ -195,9 +334,9 @@ class NoticiasService {
         .eq('is_deleted', false);
 
       if (error) throw error;
-      return createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return createErrorResult({ name: 'ServiceError', message: 'Error fetching noticias by tema', code: 'DB_ERROR', details: error });
+      return createError({ name: 'ServiceError', message: 'Error fetching noticias by tema', code: 'DB_ERROR', details: error });
     }
   }
   */

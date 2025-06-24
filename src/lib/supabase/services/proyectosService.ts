@@ -1,8 +1,8 @@
 import { Database } from "../types/database.types";
 import {
   ServiceResult,
-  createSuccessResult,
-  createErrorResult,
+  createSuccessResult as createSuccess,
+  createErrorResult as createError,
 } from "../types/serviceResult";
 import { supabase } from "../client";
 
@@ -22,9 +22,9 @@ class ProyectosService {
         .single();
 
       if (error) throw error;
-      return createSuccessResult(newProyecto);
+      return createSuccess(newProyecto);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error creating proyecto",
         code: "DB_ERROR",
@@ -36,19 +36,31 @@ class ProyectosService {
   async update(
     id: string,
     data: UpdateProyecto
-  ): Promise<ServiceResult<Proyecto | null>> {
+  ): Promise<ServiceResult<Proyecto>> {
     try {
-      const { data: updatedProyecto, error } = await supabase
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+
+      const { data: result, error } = await supabase
         .from("proyectos")
-        .update(data)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
-      return createSuccessResult(updatedProyecto);
+      return createSuccess(result);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error updating proyecto",
         code: "DB_ERROR",
@@ -66,9 +78,9 @@ class ProyectosService {
         .single();
 
       if (error) throw error;
-      return createSuccessResult(proyecto);
+      return createSuccess(proyecto);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error fetching proyecto",
         code: "DB_ERROR",
@@ -90,9 +102,9 @@ class ProyectosService {
       const { data: proyectos, error } = await query;
 
       if (error) throw error;
-      return createSuccessResult(proyectos);
+      return createSuccess(proyectos);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error fetching proyectos",
         code: "DB_ERROR",
@@ -116,9 +128,9 @@ class ProyectosService {
         .eq("id", id);
 
       if (error) throw error;
-      return createSuccessResult(true);
+      return createSuccess(true);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error deleting proyecto",
         code: "DB_ERROR",
@@ -127,12 +139,10 @@ class ProyectosService {
     }
   }
 
-  // En temasService.ts, dentro de la clase TemasService
-
   async restore(id: string): Promise<ServiceResult<boolean>> {
     try {
       if (!id) {
-        return createErrorResult({
+        return createError({
           name: "ValidationError",
           message: "ID is required",
           code: "VALIDATION_ERROR",
@@ -150,9 +160,9 @@ class ProyectosService {
         .eq("id", id);
 
       if (error) throw error;
-      return createSuccessResult(true);
+      return createSuccess(true);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message:
           error instanceof Error
@@ -163,12 +173,162 @@ class ProyectosService {
       });
     }
   }
+
+  async getByEstado(estado: any): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      if (!estado) {
+        return createError({
+          name: "ValidationError",
+          message: "Estado is required",
+          code: "VALIDATION_ERROR",
+          details: { estado },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("*")
+        .eq("estado_actual", estado)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching proyectos by estado",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getByAno(ano: number): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      if (!ano || ano < 1990 || ano > new Date().getFullYear() + 5) {
+        return createError({
+          name: "ValidationError",
+          message: "Valid ano is required",
+          code: "VALIDATION_ERROR",
+          details: { ano },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("*")
+        .eq("ano_proyecto", ano)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching proyectos by ano",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getPublicos(): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("*")
+        .eq("is_deleted", false)
+        .in("estado_actual", ["finalizado", "presentado"])
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching proyectos publicos",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getFinalizados(): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("*")
+        .eq("estado_actual", "finalizado")
+        .eq("is_deleted", false)
+        .order("fecha_finalizacion_real", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching proyectos finalizados",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getEnDesarrollo(): Promise<ServiceResult<Proyecto[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("*")
+        .eq("estado_actual", "en_desarrollo")
+        .eq("is_deleted", false)
+        .order("fecha_inicio", { ascending: false });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching proyectos en desarrollo",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getAnosDisponibles(): Promise<ServiceResult<number[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("proyectos")
+        .select("ano_proyecto")
+        .eq("is_deleted", false)
+        .not("ano_proyecto", "is", null);
+
+      if (error) throw error;
+
+      // Extraer años únicos y ordenar
+      const anos = [
+        ...new Set(data?.map((item) => item.ano_proyecto).filter(Boolean)),
+      ] as number[];
+      anos.sort((a, b) => b - a); // Más recientes primero
+
+      return createSuccess(anos);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching anos disponibles",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
   // --- Relationship Methods ---
 
   async getByTemaId(temaId: string): Promise<ServiceResult<Proyecto[] | null>> {
     try {
       if (!temaId)
-        return createErrorResult({
+        return createError({
           name: "ValidationError",
           message: "Tema ID is required",
           code: "VALIDATION_ERROR",
@@ -180,9 +340,9 @@ class ProyectosService {
         .eq("is_deleted", false);
 
       if (error) throw error;
-      return createSuccessResult(data);
+      return createSuccess(data);
     } catch (error) {
-      return createErrorResult({
+      return createError({
         name: "ServiceError",
         message: "Error fetching proyectos by tema",
         code: "DB_ERROR",

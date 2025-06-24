@@ -34,10 +34,7 @@ class TemasService {
     }
   }
 
-  async update(
-    id: string,
-    data: UpdateTema
-  ): Promise<ServiceResult<Tema | null>> {
+  async update(id: string, data: UpdateTema): Promise<ServiceResult<Tema>> {
     try {
       if (!id) {
         return createError({
@@ -47,9 +44,13 @@ class TemasService {
           details: { id },
         });
       }
+
       const { data: result, error } = await supabase
         .from("temas")
-        .update(data)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(), // 🆕 Siempre actualizar timestamp
+        })
         .eq("id", id)
         .select()
         .single();
@@ -59,10 +60,7 @@ class TemasService {
     } catch (error) {
       return createError({
         name: "ServiceError",
-        message:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
+        message: "Error updating tema",
         code: "DB_ERROR",
         details: error,
       });
@@ -374,6 +372,63 @@ class TemasService {
             : "An unexpected error occurred",
         code: "DB_ERROR",
         details: { operation: "getByNoticia", noticiaId, error },
+      });
+    }
+  }
+  async getByCategoria(
+    categoria: Database["public"]["Enums"]["tema_categoria_enum"]
+  ): Promise<ServiceResult<Tema[]>> {
+    try {
+      if (!categoria) {
+        return createError({
+          name: "ValidationError",
+          message: "Categoria is required",
+          code: "VALIDATION_ERROR",
+          details: { categoria },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("temas")
+        .select("*")
+        .eq("categoria_tema", categoria)
+        .eq("is_deleted", false)
+        .order("nombre", { ascending: true });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching temas by categoria",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getAllCategories(): Promise<ServiceResult<string[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("temas")
+        .select("categoria_tema")
+        .eq("is_deleted", false)
+        .not("categoria_tema", "is", null);
+
+      if (error) throw error;
+
+      // Extraer categorías únicas
+      const categories = [
+        ...new Set(data?.map((item) => item.categoria_tema).filter(Boolean)),
+      ] as string[];
+
+      return createSuccess(categories);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching tema categories",
+        code: "DB_ERROR",
+        details: error,
       });
     }
   }

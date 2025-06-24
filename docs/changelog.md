@@ -1,4 +1,32 @@
 # Changelog
+
+## [2025-06-24] - AdminDataTable Mejorado y Navegación
+### Added
+- DropdownMenu para acciones múltiples en tablas
+- Paginación de 10 elementos por página
+- Búsqueda en propiedades anidadas (ej: "autor.nombre")
+- Filtrado exclusivo: solo activos O solo eliminados
+- Stats dinámicos sin información redundante
+- NoticiasListPage con AdminDataTable integrado
+
+### Fixed
+- Navegación entre páginas admin sin necesidad de F5
+- Tipos TypeScript para is_deleted (boolean | null)
+- Estados de carga y autenticación en páginas admin
+- Consistencia en valores de enum tipo_noticia
+
+### Changed
+- TemasListPage migrado a nuevo patrón AdminDataTable
+- Páginas admin convertidas a Client Components
+- Stats simplificados (removida información duplicada)
+- Acciones de tabla separadas de columnas para mejor mantenimiento
+
+### Files Modified
+- components/admin/AdminDataTable.tsx
+- components/admin/temas/TemasListPage.tsx
+- components/admin/noticias/NoticiasListPage.tsx
+- app/admin/noticias/page.tsx
+- app/admin/temas/page.tsx
 ## [2025-06-23] ✅ Temas CRUD Completo + RLS Configurado
 Context Session: Completado sistema completo de temas con políticas RLS y estado local.
 🔧 PROBLEMA RESUELTO: RLS Policies Faltantes

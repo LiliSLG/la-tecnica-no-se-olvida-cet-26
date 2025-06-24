@@ -37,7 +37,7 @@ class PersonasService {
   async update(
     id: string,
     data: UpdatePersona
-  ): Promise<ServiceResult<Persona | null>> {
+  ): Promise<ServiceResult<Persona>> {
     try {
       if (!id) {
         return createError({
@@ -50,7 +50,10 @@ class PersonasService {
 
       const { data: result, error } = await supabase
         .from("personas")
-        .update(data)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id)
         .select()
         .single();
@@ -60,10 +63,7 @@ class PersonasService {
     } catch (error) {
       return createError({
         name: "ServiceError",
-        message:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
+        message: "Error updating persona",
         code: "DB_ERROR",
         details: error,
       });
@@ -331,6 +331,143 @@ class PersonasService {
       return createError({
         name: "ServiceError",
         message: "Error fetching personas by tema",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getByCategoria(categoria: any): Promise<ServiceResult<Persona[]>> {
+    try {
+      if (!categoria) {
+        return createError({
+          name: "ValidationError",
+          message: "Categoria is required",
+          code: "VALIDATION_ERROR",
+          details: { categoria },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("personas")
+        .select("*")
+        .eq("categoria_principal", categoria)
+        .eq("is_deleted", false)
+        .eq("activo", true)
+        .order("apellido", { ascending: true });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching personas by categoria",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getAdmins(): Promise<ServiceResult<Persona[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("personas")
+        .select("*")
+        .eq("es_admin", true)
+        .eq("is_deleted", false)
+        .eq("activo", true)
+        .order("apellido", { ascending: true });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching admin personas",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getEstudiantesYExAlumnos(): Promise<ServiceResult<Persona[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("personas")
+        .select("*")
+        .in("categoria_principal", ["estudiante_cet", "ex_alumno_cet"])
+        .eq("is_deleted", false)
+        .eq("activo", true)
+        .order("apellido", { ascending: true });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching estudiantes y ex-alumnos",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getTutoresDisponibles(): Promise<ServiceResult<Persona[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("personas")
+        .select("*")
+        .in("categoria_principal", [
+          "docente_cet",
+          "tutor_invitado",
+          "profesional_externo",
+        ])
+        .eq("is_deleted", false)
+        .eq("activo", true)
+        .order("apellido", { ascending: true });
+
+      if (error) throw error;
+      return createSuccess(data || []);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching tutores disponibles",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getByEmail(email: string): Promise<ServiceResult<Persona | null>> {
+    try {
+      if (!email) {
+        return createError({
+          name: "ValidationError",
+          message: "Email is required",
+          code: "VALIDATION_ERROR",
+          details: { email },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("personas")
+        .select("*")
+        .eq("email", email)
+        .eq("is_deleted", false)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      return createSuccess(data);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching persona by email",
         code: "DB_ERROR",
         details: error,
       });
