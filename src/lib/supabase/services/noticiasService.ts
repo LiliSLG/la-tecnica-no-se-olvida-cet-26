@@ -77,20 +77,40 @@ class NoticiasService {
     }
   }
 
+  // Cambio temporal en noticiasService.ts - método getAll
+
   async getAll(
     includeDeleted: boolean = false
   ): Promise<ServiceResult<Noticia[] | null>> {
     try {
+      console.log(
+        "🔍 NoticiasService.getAll called with includeDeleted:",
+        includeDeleted
+      );
+
       let query = supabase.from("noticias").select();
+      console.log("📝 Base query created");
 
       if (!includeDeleted) {
         query = query.eq("is_deleted", false);
+        console.log("📝 Added filter: is_deleted = false");
       }
-      const { data: noticias, error } = await query;
 
-      if (error) throw error;
-      return createSuccessResult(noticias);
+      console.log("⏳ Executing query...");
+      const { data, error } = await query;
+
+      console.log("📥 Query result:", { data, error });
+      console.log("📊 Data length:", data?.length);
+
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw error;
+      }
+
+      console.log("✅ Returning success result");
+      return createSuccessResult(data);
     } catch (error) {
+      console.error("❌ Service error:", error);
       return createErrorResult({
         name: "ServiceError",
         message: "Error fetching noticias",
@@ -99,7 +119,6 @@ class NoticiasService {
       });
     }
   }
-
   async delete(
     id: string,
     deletedByUid: string

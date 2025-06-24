@@ -35,10 +35,11 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [noticiaToDelete, setNoticiaToDelete] = useState<Noticia | null>(null);
-
+  const [noticias, setNoticias] = useState<Noticia[]>(allNoticias);
+  
   // 1. Definimos la configuración en un solo lugar.
   const dataTableConfig: DataTableConfig<Noticia> = {
-    data: allNoticias, 
+    data: noticias,
     initialFilters: { is_deleted: false },
     searchFields: ["titulo", "tipo", "fecha_publicacion", "esta_publicada"],
     filterFields: [
