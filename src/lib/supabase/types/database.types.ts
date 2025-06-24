@@ -1023,7 +1023,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: { role_name: string }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       categoria_principal_persona_enum:
@@ -1084,7 +1091,7 @@ export type Database = {
         | "otro"
       tipo_contenido_entrevista_enum: "video_propio" | "enlace_video_externo"
       tipo_contenido_noticia_enum: "articulo_propio" | "enlace_externo"
-      tipo_noticia: "articulo" | "link"
+      tipo_noticia: "articulo_propio" | "enlace_externo"
       tipo_organizacion_enum:
         | "empresa"
         | "institucion_educativa"
@@ -1284,7 +1291,7 @@ export const Constants = {
       ],
       tipo_contenido_entrevista_enum: ["video_propio", "enlace_video_externo"],
       tipo_contenido_noticia_enum: ["articulo_propio", "enlace_externo"],
-      tipo_noticia: ["articulo", "link"],
+      tipo_noticia: ["articulo_propio", "enlace_externo"],
       tipo_organizacion_enum: [
         "empresa",
         "institucion_educativa",

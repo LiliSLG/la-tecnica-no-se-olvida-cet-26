@@ -1,29 +1,33 @@
+// =============================================================================
+// NoticiasListPage - Usando AdminDataTable mejorado
+// Ubicación: /src/components/admin/noticias/NoticiasListPage.tsx
+// =============================================================================
+
 "use client";
 
-import { Database } from "@/lib/supabase/types/database.types";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   AdminDataTable,
-  ColumnConfig,
+  DataTableColumn,
+  DataTableAction,
 } from "@/components/admin/AdminDataTable";
-import { useDataTableState } from "@/hooks/useDataTableState";
-import { Eye, Pencil, Trash2, Undo2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useAuth } from "@/providers/AuthProvider";
+import { Database } from "@/lib/supabase/types/database.types";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
-import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DataTableConfig } from "@/hooks/useDataTableState";
+  Eye,
+  Pencil,
+  Trash2,
+  RotateCcw,
+  ExternalLink,
+  Star,
+} from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/providers/AuthProvider";
+import { useErrorHandler } from "@/hooks/useErrorHandler"; // Tu hook personalizado
+
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 
 interface NoticiasListPageProps {
@@ -32,152 +36,229 @@ interface NoticiasListPageProps {
 
 export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const { user } = useAuth();
-  const [noticiaToDelete, setNoticiaToDelete] = useState<Noticia | null>(null);
+  const { toast } = useToast();
+  const { handleError } = useErrorHandler();
+
+  // Estados
   const [noticias, setNoticias] = useState<Noticia[]>(allNoticias);
-  
-  // 1. Definimos la configuración en un solo lugar.
-  const dataTableConfig: DataTableConfig<Noticia> = {
-    data: noticias,
-    initialFilters: { is_deleted: false },
-    searchFields: ["titulo", "tipo", "fecha_publicacion", "esta_publicada"],
-    filterFields: [
-      { key: "is_deleted", label: "Mostrar eliminadas", type: "switch" },
-    ],
-    sortableColumns: ["titulo", "tipo", "fecha_publicacion"],
-  };
+  const [searchValue, setSearchValue] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
-  // 2. Le pasamos la configuración al "cerebro" (el hook).
-  const state = useDataTableState<Noticia>(dataTableConfig);
+  useEffect(() => {
+    setNoticias(allNoticias);
+    setCurrentPage(1);
+  }, [allNoticias]);
 
-  const handleDelete = async () => {
-    if (!noticiaToDelete || !user) return;
-    try {
-      await noticiasService.delete(noticiaToDelete.id, user.id);
-      toast({
-        title: "Noticia eliminada",
-        description: "El noticia se ha marcado como eliminada.",
-      });
-      router.refresh();
-      setNoticiaToDelete(null);
-    } catch (error) {
-      console.error("Error deleting new:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la noticia.",
-        variant: "destructive",
-      });
+  // Lógica de paginación
+  const filteredNoticias = React.useMemo(() => {
+    let filtered = noticias;
+
+    // Filtrar por deleted/no deleted
+    if (showDeleted) {
+      filtered = filtered.filter((noticia) => !!noticia.is_deleted);
+    } else {
+      filtered = filtered.filter((noticia) => !noticia.is_deleted);
     }
-  };
 
-  const columns: ColumnConfig<Noticia>[] = [
-    { key: "titulo", label: "Título", sortable: true },
-    { key: "tipo", label: "Tipo", sortable: true },
-    { key: "fecha_publicacion", label: "Fecha", sortable: true },
-    { key: "autor_noticia", label: "Autor", sortable: true },
-    { key: "esta_publicada", label: "Publicada", sortable: true },
+    // Aplicar búsqueda
+    if (searchValue.trim()) {
+      const searchTerm = searchValue.toLowerCase();
+      filtered = filtered.filter(
+        (noticia) =>
+          noticia.titulo?.toLowerCase().includes(searchTerm) ||
+          noticia.subtitulo?.toLowerCase().includes(searchTerm) ||
+          noticia.contenido?.toLowerCase().includes(searchTerm) ||
+          noticia.autor_noticia?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return filtered;
+  }, [noticias, showDeleted, searchValue]);
+
+  const totalPages = Math.ceil(filteredNoticias.length / pageSize);
+  const paginatedNoticias = filteredNoticias.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset página cuando cambien filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchValue, showDeleted]);
+
+  // Definir columnas
+  const columns: DataTableColumn<Noticia>[] = [
     {
-      key: "action_buttons",
-      label: "Acciones",
-      render: (noticia: Noticia) => (
+      key: "titulo",
+      header: "Título",
+      sortable: true,
+      searchable: true,
+      render: (value, item) => (
         <div className="flex items-center gap-2">
-          {/* Mostramos este bloque si el tema NO está eliminado */}
-          {!noticia.is_deleted? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push(`/admin/noticias/${noticia.id}`)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  router.push(`/admin/noticias/${noticia.id}/edit`)
-                }
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setNoticiaToDelete(noticia)}
-              >
-                <Trash2 className="h-4 w-4 text-red-600" />
-              </Button>
-            </>
-          ) : (
-            // Y mostramos este otro bloque si la noticia SÍ está eliminado
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={async () => {
-                  if (!user)
-                    return toast({
-                      title: "Error",
-                      description: "Debes iniciar sesión.",
-                    });
-                  try {
-                    await noticiasService.restore(noticia.id);
-                    toast({
-                      title: "Éxito",
-                      description: "La noticia ha sido restaurada.",
-                    });
-                    router.refresh();
-                  } catch (error) {
-                    toast({
-                      title: "Error",
-                      description: "No se pudo restaurar la noticia.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                title="Restaurar"
-              >
-                <Undo2 className="h-4 w-4 text-green-600" />
-              </Button>
-            </>
+          <span className="font-medium">{value}</span>
+          {item.es_destacada && (
+            <Star className="h-4 w-4 text-yellow-500 fill-current" />
           )}
         </div>
       ),
     },
+    {
+      key: "tipo",
+      header: "Tipo",
+      sortable: true,
+      render: (value) => (
+        <Badge variant={value === "articulo_propio" ? "default" : "secondary"}>
+          {value === "articulo_propio" ? "Artículo Propio" : "Enlace Externo"}
+        </Badge>
+      ),
+    },
+    {
+      key: "autor_noticia",
+      header: "Autor",
+      searchable: true,
+      render: (value) =>
+        value || <span className="text-gray-400">Sin autor</span>,
+    },
+    {
+      key: "fecha_publicacion",
+      header: "Fecha Publicación",
+      sortable: true,
+      render: (value) =>
+        value ? (
+          new Date(value).toLocaleDateString("es-ES")
+        ) : (
+          <span className="text-gray-400">Sin fecha</span>
+        ),
+    },
   ];
 
-  return (
-    <div className="p-6">
-      <AdminDataTable
-        title="Gestión de Noticias"
-        columns={columns}
-        config={dataTableConfig} // <-- 3. Le pasamos la MISMA configuración al "cuerpo" (la tabla)
-        state={state}
-        addLabel="Nueva Noticia"
-        onAdd={() => router.push("/admin/noticias/new")}
-      />
+  // Definir acciones
+  const actions: DataTableAction<Noticia>[] = [
+    {
+      label: "Ver",
+      icon: Eye,
+      onClick: (noticia) => {
+        if (noticia.tipo === "enlace_externo" && noticia.url_externa) {
+          window.open(noticia.url_externa, "_blank");
+        } else {
+          router.push(`/admin/noticias/${noticia.id}`);
+        }
+      },
+      show: (item) => !item.is_deleted,
+    },
+    {
+      label: "Abrir Enlace",
+      icon: ExternalLink,
+      onClick: (noticia) => {
+        if (noticia.url_externa) {
+          window.open(noticia.url_externa, "_blank");
+        }
+      },
+      show: (item) =>
+        !item.is_deleted &&
+        item.tipo === "enlace_externo" &&
+        !!item.url_externa,
+    },
+    {
+      label: "Editar",
+      icon: Pencil,
+      onClick: (noticia) => router.push(`/admin/noticias/${noticia.id}/edit`),
+      show: (item) => !item.is_deleted,
+    },
+    {
+      label: "Eliminar",
+      icon: Trash2,
+      variant: "destructive",
+      onClick: handleDelete,
+      show: (item) => !item.is_deleted,
+      requireConfirmation: {
+        title: "¿Estás seguro?",
+        description:
+          "Esta acción marcará la noticia como eliminada. Podrás restaurarla después.",
+      },
+    },
+    {
+      label: "Restaurar",
+      icon: RotateCcw,
+      onClick: handleRestore,
+      show: (item) => !!item.is_deleted,
+    },
+  ];
 
-      <AlertDialog
-        open={!!noticiaToDelete}
-        onOpenChange={() => setNoticiaToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción marcará la noticia como eliminada. Podrá restaurarla
-              más tarde.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+  // Funciones de manejo
+  async function handleDelete(noticia: Noticia) {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await noticiasService.delete(noticia.id, user.id);
+
+      setNoticias((prev) =>
+        prev.map((n) => (n.id === noticia.id ? { ...n, is_deleted: true } : n))
+      );
+
+      toast({
+        title: "Éxito",
+        description: "Noticia eliminada correctamente.",
+      });
+    } catch (error) {
+      handleError(error, "No se pudo eliminar la noticia");
+    }
+  }
+
+  async function handleRestore(noticia: Noticia) {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await noticiasService.restore(noticia.id);
+
+      setNoticias((prev) =>
+        prev.map((n) => (n.id === noticia.id ? { ...n, is_deleted: false } : n))
+      );
+
+      toast({
+        title: "Éxito",
+        description: "Noticia restaurada correctamente.",
+      });
+    } catch (error) {
+      handleError(error, "No se pudo restaurar la noticia");
+    }
+  }
+
+  return (
+    <AdminDataTable
+      title="Gestión de Noticias"
+      data={paginatedNoticias}
+      columns={columns}
+      actions={actions}
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      showDeleted={showDeleted}
+      onToggleShowDeleted={() => setShowDeleted(!showDeleted)}
+      onAdd={() => router.push("/admin/noticias/new")}
+      addButtonLabel="Nueva Noticia"
+      emptyMessage="No hay noticias disponibles"
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+      totalCount={filteredNoticias.length}
+      pageSize={pageSize}
+    />
   );
 }
