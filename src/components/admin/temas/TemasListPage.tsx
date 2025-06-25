@@ -160,6 +160,12 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
       icon: RotateCcw,
       onClick: handleRestore,
       show: (item) => !!item.is_deleted,
+      requireConfirmation: {
+        // ✅ AGREGAR ESTO
+        title: "¿Restaurar tema?",
+        description:
+          "Esta acción restaurará el tema y volverá a aparecer en la lista principal.",
+      },
     },
   ];
 

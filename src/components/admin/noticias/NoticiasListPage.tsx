@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService";
 
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 
@@ -62,12 +63,50 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     useState<Noticia | null>(null);
   const [isTogglingDestacada, setIsTogglingDestacada] = useState(false);
 
+  // 🆕 NUEVO: Estado para manejar temas de cada noticia
+  const [noticiasTemas, setNoticiasTemas] = useState<Record<string, any[]>>({});
+  const [loadingTemas, setLoadingTemas] = useState(true);
+
   useEffect(() => {
     setNoticias(allNoticias);
     setCurrentPage(1);
   }, [allNoticias]);
 
-  // 🆕 Lógica de paginación (sin cambios)
+  useEffect(() => {
+    async function loadTemasForNoticias() {
+      if (noticias.length === 0) {
+        setLoadingTemas(false);
+        return;
+      }
+
+      try {
+        const temasMap: Record<string, any[]> = {};
+
+        // Cargar temas para cada noticia
+        const temasPromises = noticias.map(async (noticia) => {
+          const result = await noticiaTemasService.getTemasWithInfoForNoticia(
+            noticia.id
+          );
+          if (result.success && result.data) {
+            temasMap[noticia.id] = result.data;
+          } else {
+            temasMap[noticia.id] = [];
+          }
+        });
+
+        await Promise.all(temasPromises);
+        setNoticiasTemas(temasMap);
+      } catch (error) {
+        console.error("Error loading temas for noticias:", error);
+      } finally {
+        setLoadingTemas(false);
+      }
+    }
+
+    loadTemasForNoticias();
+  }, [noticias]);
+
+  // 🆕 Lógica de paginación
   const filteredNoticias = React.useMemo(() => {
     let filtered = noticias;
 
@@ -101,7 +140,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     setCurrentPage(1);
   }, [searchValue, showDeleted]);
 
-  // ✅ Helper functions (sin cambios)
+  // ✅ Helper functions
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("es-AR", {
@@ -181,6 +220,51 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
               </span>
             </div>
           )}
+
+          {/* 🆕 NUEVO: Mostrar solo CATEGORÍAS de temas (compacto) */}
+          {!loadingTemas &&
+            noticiasTemas[noticia.id] &&
+            noticiasTemas[noticia.id].length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {/* Obtener categorías únicas */}
+                {Array.from(
+                  new Set(
+                    noticiasTemas[noticia.id]
+                      .map((tema) => tema.categoria_tema)
+                      .filter(Boolean) // Filtrar nulls
+                  )
+                )
+                  .slice(0, 3)
+                  .map((categoria, index) => (
+                    <Badge
+                      key={`categoria-${index}`}
+                      variant="outline"
+                      className="text-xs px-1 py-0 h-4 capitalize"
+                    >
+                      {categoria}
+                    </Badge>
+                  ))}
+
+                {/* Mostrar temas sin categoría */}
+                {noticiasTemas[noticia.id].some(
+                  (tema) => !tema.categoria_tema
+                ) && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-1 py-0 h-4 text-muted-foreground"
+                  >
+                    sin categoría
+                  </Badge>
+                )}
+              </div>
+            )}
+
+          {/* Indicador de carga */}
+          {loadingTemas && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Cargando...
+            </div>
+          )}
         </div>
       ),
     },
@@ -217,6 +301,42 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         <span className="text-sm text-muted-foreground">
           {formatDate(value)}
         </span>
+      ),
+    },
+    {
+      key: "temas_relacionados",
+      header: "Temas",
+      sortable: false,
+      render: (value, noticia) => (
+        <div className="max-w-[200px]">
+          {loadingTemas ? (
+            <div className="text-xs text-muted-foreground">Cargando...</div>
+          ) : noticiasTemas[noticia.id] &&
+            noticiasTemas[noticia.id].length > 0 ? (
+            <div className="space-y-1">
+              {/* 🆕 NUEVO: Mostrar NOMBRES completos de temas */}
+              {noticiasTemas[noticia.id].slice(0, 3).map((tema) => (
+                <Badge
+                  key={tema.id}
+                  variant="outline"
+                  className="text-xs mr-1 mb-1 block max-w-full"
+                  title={tema.descripcion || tema.nombre} // Tooltip con descripción
+                >
+                  <span className="truncate block max-w-[150px]">
+                    {tema.nombre}
+                  </span>
+                </Badge>
+              ))}
+              {noticiasTemas[noticia.id].length > 3 && (
+                <div className="text-xs text-muted-foreground">
+                  +{noticiasTemas[noticia.id].length - 3} más
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">Sin temas</div>
+          )}
+        </div>
       ),
     },
     {
@@ -273,7 +393,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       label: "Eliminar",
       icon: Trash2,
       variant: "destructive",
-      onClick: handleDelete,
+      onClick: (noticia) => handleDelete(noticia), // ✅ Pasar como callback
       show: (item) => !item.is_deleted,
       requireConfirmation: {
         title: "¿Estás seguro?",
@@ -284,8 +404,13 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     {
       label: "Restaurar",
       icon: RotateCcw,
-      onClick: handleRestore,
+      onClick: (noticia) => handleRestore(noticia), // ✅ Pasar como callback
       show: (item) => !!item.is_deleted,
+      requireConfirmation: {
+        title: "¿Restaurar noticia?",
+        description:
+          "Esta acción restaurará la noticia y volverá a aparecer en la lista principal.",
+      },
     },
   ];
 
@@ -469,7 +594,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       {/* ✅ AdminDataTable (sin cambios) */}
       <AdminDataTable
         title="Gestión de Noticias"
-        data={paginatedNoticias}
+        data={filteredNoticias} // ← Datos filtrados, no paginados
         columns={columns}
         actions={actions}
         searchValue={searchValue}
@@ -479,11 +604,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         onAdd={() => router.push("/admin/noticias/new")}
         addButtonLabel="Nueva Noticia"
         emptyMessage="No hay noticias disponibles"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        totalCount={filteredNoticias.length}
-        pageSize={pageSize}
+        // ❌ REMOVER: currentPage, totalPages, onPageChange, totalCount, pageSize
       />
 
       {/* ✅ AlertDialog para confirmar cambio de publicación */}

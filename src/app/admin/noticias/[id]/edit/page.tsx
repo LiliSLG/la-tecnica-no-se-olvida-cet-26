@@ -1,8 +1,17 @@
 // src/app/admin/noticias/[id]/edit/page.tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { NoticiaForm } from "@/components/admin/noticias/NoticiaForm";
 import { BackButton } from "@/components/common/BackButton";
 import { notFound } from "next/navigation";
+import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService";
 
 interface EditNoticiaPageProps {
   params: Promise<{
@@ -13,21 +22,50 @@ interface EditNoticiaPageProps {
 export default async function EditNoticiaPage({
   params,
 }: EditNoticiaPageProps) {
-  // ✅ ARREGLO Next.js 15: await params antes de usar sus propiedades
   const { id } = await params;
 
   try {
-    const result = await noticiasService.getById(id);
+    console.log("🔍 Loading noticia for edit:", id);
 
-    if (!result.success || !result.data) {
+    // 🔄 AGREGAR carga de temas junto con la noticia
+    const [noticiaResult, temasResult] = await Promise.all([
+      noticiasService.getByIdWithAuthor(id), // o getById según tengas
+      noticiaTemasService.getTemasForNoticia(id),
+    ]);
+
+    if (!noticiaResult.success || !noticiaResult.data) {
       notFound();
     }
 
+    const noticia = noticiaResult.data;
+    const temasIds = temasResult.success ? temasResult.data || [] : [];
+
+    console.log("📊 Loaded noticia with temas:", {
+      titulo: noticia.titulo,
+      temasCount: temasIds.length,
+    });
+
     return (
       <div className="container mx-auto py-8 px-4">
-        <BackButton />
-        <h1 className="text-3xl font-bold mb-8">Editar Noticia</h1>
-        <NoticiaForm initialData={result.data} />
+        <div className="max-w-4xl mx-auto">
+          <BackButton />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Editar Noticia</CardTitle>
+              <CardDescription>
+                Modifica los datos de la noticia "{noticia.titulo}"
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* 🔄 CAMBIO: Pasar los temas iniciales al formulario */}
+              <NoticiaForm
+                initialData={noticia}
+                initialTemas={temasIds} // 🆕 NUEVO
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   } catch (error) {

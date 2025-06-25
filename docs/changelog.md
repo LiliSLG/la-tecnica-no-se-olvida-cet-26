@@ -1,5 +1,24 @@
 # Changelog
 
+## 25/12/24
+
+### ✨ Features
+- **Noticias**: Mostrar nombres reales de autores en lugar de UIDs
+- **Noticias**: Toggle rápido de publicada/destacada con confirmación
+- **Base de datos**: Agregadas foreign keys para integridad referencial
+- **Arquitectura**: Migrado a Server Components para mejor performance
+
+### 🔧 Technical improvements  
+- Implementado patrón JOIN con personas para obtener datos de autor
+- Creado tipo NoticiaWithAuthor para datos extendidos
+- Agregados métodos getAllWithAuthor() y getByIdWithAuthor()
+- Mejorado formateo de autor: nombre + apellido, fuente externa, fallbacks
+
+### 📋 Database changes
+- ALTER TABLE noticias ADD CONSTRAINT noticias_created_by_uid_fkey
+- ALTER TABLE noticias ADD CONSTRAINT noticias_updated_by_uid_fkey  
+- ALTER TABLE noticias ADD CONSTRAINT noticias_deleted_by_uid_fkey
+- CREATE INDEX idx_noticias_created_by_uid para performance
 ## [2025-06-24] - Servicios Mejorados con Métodos Especializados
 ### Added
 - TemasService: getByCategoria(), getAllCategories() para filtros

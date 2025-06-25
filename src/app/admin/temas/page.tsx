@@ -16,15 +16,24 @@ export default function TemasPage() {
   useEffect(() => {
     async function fetchTemas() {
       if (isLoading) return;
-      if (isAdmin === undefined) return;
 
       try {
-        const result = await temasService.getAll();
+        console.log("🔍 Client: Fetching temas, isAdmin:", isAdmin);
+
+        const result = await temasService.getAll(isAdmin);
+
         if (result.success && result.data) {
+          console.log("📊 Client: Loaded temas:", result.data.length);
+          console.log(
+            "📊 Client: Include deleted:",
+            result.data.filter((t) => t.is_deleted).length
+          );
           setTemas(result.data);
+        } else {
+          console.error("Error fetching temas:", result.error);
         }
       } catch (error) {
-        console.error("Error fetching temas:", error);
+        console.error("Error in fetchTemas:", error);
       } finally {
         setLoading(false);
       }
@@ -37,9 +46,7 @@ export default function TemasPage() {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
-            Cargando temáticas...
-          </div>
+          <div className="text-sm text-muted-foreground">Cargando temas...</div>
         </div>
       </div>
     );

@@ -39,6 +39,10 @@ import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 type Tema = Database["public"]["Tables"]["temas"]["Row"];
 
+interface NoticiaFormProps {
+  initialData?: Noticia;
+  initialTemas?: string[]; // IDs de temas iniciales
+}
 // ✅ CORREGIDO: Esquema con valores correctos del enum de BD
 const formSchema = z.object({
   tipo: z.enum(["articulo_propio", "enlace_externo"], {
@@ -78,11 +82,6 @@ const formSchema = z.object({
   esta_publicada: z.boolean().default(false),
 });
 
-interface NoticiaFormProps {
-  initialData?: Noticia;
-  initialTemas?: string[]; // IDs de temas iniciales
-}
-
 export function NoticiaForm({ initialData, initialTemas }: NoticiaFormProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [fetchingOgData, setFetchingOgData] = useState(false);
@@ -101,7 +100,6 @@ export function NoticiaForm({ initialData, initialTemas }: NoticiaFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // ✅ NUEVO: Cargar temas disponibles
   useEffect(() => {
     async function loadTemas() {
       try {
@@ -732,7 +730,86 @@ export function NoticiaForm({ initialData, initialTemas }: NoticiaFormProps) {
             </FormItem>
           )}
         />
+        {/* 🆕 NUEVA SECCIÓN: Gestión de Temas */}
+        <div className="space-y-4">
+          <FormLabel className="text-base font-semibold">
+            Temáticas Relacionadas
+          </FormLabel>
 
+          {loadingTemas ? (
+            <div className="text-sm text-muted-foreground">
+              Cargando temas...
+            </div>
+          ) : (
+            <>
+              {/* Selector de temas */}
+              <Select onValueChange={addTema}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Agregar temática..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTemas
+                    .filter((tema) => !selectedTemas.includes(tema.id))
+                    .map((tema) => (
+                      <SelectItem key={tema.id} value={tema.id}>
+                        {tema.nombre}
+                        {tema.categoria_tema && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({tema.categoria_tema})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              {/* Temas seleccionados */}
+              {selectedTemas.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">
+                    Temáticas seleccionadas:
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTemas.map((temaId) => {
+                      const tema = getTemaById(temaId);
+                      return tema ? (
+                        <Badge
+                          key={temaId}
+                          variant="secondary"
+                          className="flex items-center gap-1"
+                        >
+                          {tema.nombre}
+                          {tema.categoria_tema && (
+                            <span className="text-xs text-muted-foreground">
+                              ({tema.categoria_tema})
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeTema(temaId)}
+                            className="ml-1 hover:text-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground">
+                💡 Selecciona las temáticas que mejor describan esta noticia.
+                Esto ayudará a los usuarios a encontrar contenido relacionado.
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Estados de la Noticia (sección existente) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ... código existente de checkboxes ... */}
+        </div>
         {/* Estados de la Noticia */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField

@@ -1038,7 +1038,29 @@ export type Database = {
           updated_at?: string | null
           updated_by_uid?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "temas_created_by_uid_fkey"
+            columns: ["created_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temas_deleted_by_uid_fkey"
+            columns: ["deleted_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temas_updated_by_uid_fkey"
+            columns: ["updated_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
