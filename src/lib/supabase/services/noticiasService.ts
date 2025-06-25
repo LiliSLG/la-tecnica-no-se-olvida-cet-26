@@ -10,6 +10,14 @@ type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 type CreateNoticia = Database["public"]["Tables"]["noticias"]["Insert"];
 type UpdateNoticia = Database["public"]["Tables"]["noticias"]["Update"];
 
+// 🔄 Tipo con campos reales: nombre + apellido
+export type NoticiaWithAuthor = Noticia & {
+  created_by_persona?: {
+    nombre: string;
+    apellido: string | null;
+    email: string | null;
+  } | null;
+};
 class NoticiasService {
   // --- Standard CRUD Methods ---
 
@@ -71,25 +79,40 @@ class NoticiasService {
 
   async getById(id: string): Promise<ServiceResult<Noticia | null>> {
     try {
-      const { data: noticia, error } = await supabase
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+      const { data, error } = await supabase
         .from("noticias")
-        .select()
+        .select("*")
         .eq("id", id)
         .single();
 
-      if (error) throw error;
-      return createSuccess(noticia);
+      if (error) {
+        if (error.code === "PGRST116") {
+          return createSuccess(null); // Not found is not an error
+        }
+        throw error;
+      }
+
+      return createSuccess(data);
     } catch (error) {
       return createError({
         name: "ServiceError",
-        message: "Error fetching noticia",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         code: "DB_ERROR",
-        details: error,
+        details: { operation: "getById", id, error },
       });
     }
   }
-
-  // Cambio temporal en noticiasService.ts - método getAll
 
   async getAll(
     includeDeleted: boolean = false
@@ -156,8 +179,6 @@ class NoticiasService {
       });
     }
   }
-
-  // En temasService.ts, dentro de la clase TemasService
 
   async restore(id: string): Promise<ServiceResult<boolean>> {
     try {
@@ -321,6 +342,117 @@ class NoticiasService {
       });
     }
   }
+
+  async getAllWithAuthor(
+    includeDeleted: boolean = false
+  ): Promise<ServiceResult<NoticiaWithAuthor[] | null>> {
+    try {
+      console.log(
+        "🔍 NoticiasService.getAllWithAuthor called with includeDeleted:",
+        includeDeleted
+      );
+
+      // 🎯 SINTAXIS EXPLÍCITA: Especificar tabla!columna directamente
+      let query = supabase.from("noticias").select(`
+          *,
+          created_by_persona:personas!created_by_uid (
+            nombre,
+            apellido,
+            email
+          )
+        `);
+
+      if (!includeDeleted) {
+        query = query.eq("is_deleted", false);
+      }
+
+      query = query.order("created_at", { ascending: false });
+
+      console.log("⏳ Executing query with explicit syntax...");
+      const { data, error } = await query;
+
+      console.log("📥 Query result:", { data: data?.length, error });
+
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw error;
+      }
+
+      // 🔄 Cast temporal para evitar errores TypeScript
+      const result = data as any[];
+      const transformedData: NoticiaWithAuthor[] = result.map((item) => ({
+        ...item,
+        created_by_persona: item.created_by_persona || null,
+      }));
+
+      console.log("✅ Returning success result with author data");
+      return createSuccess(transformedData);
+    } catch (error) {
+      console.error("❌ Service error:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching noticias with author",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  // 🔄 CORREGIDO: getById con sintaxis explícita
+  async getByIdWithAuthor(
+    id: string
+  ): Promise<ServiceResult<NoticiaWithAuthor | null>> {
+    try {
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+
+      // 🎯 SINTAXIS EXPLÍCITA
+      const { data, error } = await supabase
+        .from("noticias")
+        .select(
+          `
+          *,
+          created_by_persona:personas!created_by_uid (
+            nombre,
+            apellido,
+            email
+          )
+        `
+        )
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      // 🔄 Transformación explícita
+      const result = data as any;
+      const transformedData: NoticiaWithAuthor = {
+        ...result,
+        created_by_persona: result.created_by_persona || null,
+      };
+
+      return createSuccess(transformedData);
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching noticia with author",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
   // --- Relationship Methods ---
   /*
   async getByTemaId(temaId: string): Promise<ServiceResult<Noticia[] | null>> {

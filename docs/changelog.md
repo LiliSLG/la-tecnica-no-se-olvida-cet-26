@@ -1,5 +1,33 @@
 # Changelog
 
+## [2025-06-24] - Servicios Mejorados con Métodos Especializados
+### Added
+- TemasService: getByCategoria(), getAllCategories() para filtros
+- PersonasService: getByCategoria(), getAdmins(), getEstudiantesYExAlumnos(), getTutoresDisponibles(), getByEmail()
+- ProyectosService: getByEstado(), getByAno(), getPublicos(), getFinalizados(), getEnDesarrollo(), getAnosDisponibles()
+- NoticiasService: getDestacadas(), getByTipo(), getRecientes(), toggleDestacada()
+- OrganizacionesService: servicio completo con CRUD y métodos especializados
+- Timestamps automáticos en todos los métodos update()
+- Validación de inputs en todos los nuevos métodos
+
+### Improved
+- Queries optimizadas para casos de uso específicos
+- Métodos especializados para filtros de UI y dropdowns
+- Consistency en manejo de errores across servicios
+- Performance mejorada con queries dirigidas
+
+### Technical
+- Mantiene patrón createSuccess/createError existente
+- Sigue estructura de tipos Database["public"]["Tables"]
+- Implementa ServiceResult<T> consistente
+- Compatible con RLS policies existentes
+
+### Files Modified
+- src/lib/supabase/services/temasService.ts
+- src/lib/supabase/services/personasService.ts  
+- src/lib/supabase/services/proyectosService.ts
+- src/lib/supabase/services/noticiasService.ts
+- src/lib/supabase/services/organizacionesService.ts (nuevo)
 ## [2025-06-24] - AdminDataTable Mejorado y Navegación
 ### Added
 - DropdownMenu para acciones múltiples en tablas

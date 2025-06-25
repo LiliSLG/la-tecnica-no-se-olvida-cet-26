@@ -351,7 +351,29 @@ export type Database = {
           updated_by_uid?: string | null
           url_externa?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "noticias_created_by_uid_fkey"
+            columns: ["created_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "noticias_deleted_by_uid_fkey"
+            columns: ["deleted_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "noticias_updated_by_uid_fkey"
+            columns: ["updated_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ofertas_laborales: {
         Row: {
@@ -1090,7 +1112,6 @@ export type Database = {
         | "gastronomia"
         | "otro"
       tipo_contenido_entrevista_enum: "video_propio" | "enlace_video_externo"
-      tipo_contenido_noticia_enum: "articulo_propio" | "enlace_externo"
       tipo_noticia: "articulo_propio" | "enlace_externo"
       tipo_organizacion_enum:
         | "empresa"
@@ -1290,7 +1311,6 @@ export const Constants = {
         "otro",
       ],
       tipo_contenido_entrevista_enum: ["video_propio", "enlace_video_externo"],
-      tipo_contenido_noticia_enum: ["articulo_propio", "enlace_externo"],
       tipo_noticia: ["articulo_propio", "enlace_externo"],
       tipo_organizacion_enum: [
         "empresa",
