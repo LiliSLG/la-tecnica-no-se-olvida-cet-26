@@ -2,6 +2,29 @@
 
 ## [26/06/25]
 
+### ✨ Nueva Funcionalidad
+- **AdminDataTable Responsivo**: Implementada vista de cards para dispositivos móviles
+  - Las tablas ahora se muestran como cards elegantes en pantallas pequeñas (<768px)
+  - Soporte para propiedad `mobileHidden` en columnas para ocultar información no esencial
+  - Filtros móviles optimizados con Sheet component de shadcn/ui
+  - Transiciones suaves y diseño consistente con el sistema de diseño
+
+### 🔧 Mejoras Técnicas
+- **Limpieza de Código**: Eliminados todos los logs de debug de producción
+- **UX Móvil Mejorada**: Experiencia optimizada para gestión de contenido en dispositivos móviles
+- **Patrones Consolidados**: AdminDataTable ahora es completamente responsive por defecto
+
+### 📱 Responsividad
+- **Temas y Noticias**: Ambas secciones admin ahora funcionan perfectamente en móvil
+- **Acciones Contextuales**: Botones de acción agrupados inteligentemente en cards móviles
+- **Filtros Móviles**: Panel deslizante para filtros y opciones avanzadas
+
+### 🎯 Impacto
+- Los administradores pueden gestionar contenido eficientemente desde cualquier dispositivo
+- Reducción significativa en scroll horizontal y problemas de usabilidad móvil
+- Base sólida para implementar responsividad en futuras entidades (Personas, Proyectos)
+## [26/06/25]
+
 ### ✨ Nuevas Funcionalidades - Visual Polish Completo
 - **AdminDataTable Responsive**: Vista de tarjetas automática en móvil con navegación optimizada
 - **Filtros Móviles**: Sheet component para filtros en pantallas pequeñas con indicadores visuales

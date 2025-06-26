@@ -1,25 +1,37 @@
 // =============================================================================
-// TemasListPage MIGRADO - Usando AdminDataTable mejorado
+// TemasListPage ACTUALIZADO - Usando nueva interfaz AdminDataTable modernizado
 // Ubicación: /src/components/admin/temas/TemasListPage.tsx
 // =============================================================================
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// 🔄 CAMBIOS EN IMPORTS
+import {
+  useDataTableState,
+  type DataTableConfig,
+} from "@/hooks/useDataTableState";
 import {
   AdminDataTable,
-  DataTableColumn,
-  DataTableAction,
+  type ColumnConfig,
 } from "@/components/admin/AdminDataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, Trash2, RotateCcw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Eye, Pencil, Trash2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -40,203 +52,175 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // ✅ Estados simplificados
+  // ✅ Estado local para manejar la lista
   const [temas, setTemas] = useState<Tema[]>(allTemas);
+  const [temaToDelete, setTemaToDelete] = useState<Tema | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTema, setEditingTema] = useState<Tema | null>(null);
 
-  // 🆕 Estados para el AdminDataTable mejorado
-  const [searchValue, setSearchValue] = useState("");
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10); // Fijo en 10
-
+  // ✅ Actualizar el estado local cuando cambien las props
   useEffect(() => {
     setTemas(allTemas);
-    setCurrentPage(1); // Reset página al cambiar datos
   }, [allTemas]);
 
-  // 🆕 Lógica de paginación
-  const filteredTemas = React.useMemo(() => {
-    let filtered = temas;
+  // ✅ Configuración de la tabla con nueva interfaz
+  const dataTableConfig: DataTableConfig<Tema> = {
+    data: temas,
+    initialFilters: { is_deleted: false },
+    searchFields: ["nombre", "descripcion"],
+    filterFields: [
+      { key: "is_deleted", label: "Mostrar eliminados", type: "switch" },
+    ],
+    sortableColumns: ["nombre", "categoria_tema"],
+  };
 
-    // Filtrar por deleted/no deleted
-    if (showDeleted) {
-      filtered = filtered.filter((tema) => !!tema.is_deleted);
-    } else {
-      filtered = filtered.filter((tema) => !tema.is_deleted);
-    }
+  const tableState = useDataTableState<Tema>(dataTableConfig);
 
-    // Aplicar búsqueda
-    if (searchValue.trim()) {
-      const searchTerm = searchValue.toLowerCase();
-      filtered = filtered.filter(
-        (tema) =>
-          tema.nombre?.toLowerCase().includes(searchTerm) ||
-          tema.descripcion?.toLowerCase().includes(searchTerm) ||
-          tema.categoria_tema?.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    return filtered;
-  }, [temas, showDeleted, searchValue]);
-
-  const totalPages = Math.ceil(filteredTemas.length / pageSize);
-  const paginatedTemas = filteredTemas.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  // Reset página cuando cambien filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchValue, showDeleted]);
-
-  // 🔄 CAMBIO: Definir columnas con nueva interface
-  const columns: DataTableColumn<Tema>[] = [
+  // ✅ Definir columnas con estilo MODERNO - Consistente con Noticias
+  const columns: ColumnConfig<Tema>[] = [
     {
       key: "nombre",
-      header: "Nombre",
+      label: "Nombre",
       sortable: true,
-      searchable: true,
+      render: (value, tema) => (
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-foreground">
+            {value || "Sin nombre"}
+          </div>
+          {tema.descripcion && (
+            <div className="text-sm text-muted-foreground line-clamp-2 mt-1 max-w-md">
+              {tema.descripcion}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: "categoria_tema",
-      header: "Categoría",
+      label: "Categoría",
       sortable: true,
-      render: (value) =>
-        value ? (
-          <Badge variant="outline">{value}</Badge>
-        ) : (
-          <span className="text-gray-400">Sin categoría</span>
-        ),
-    },
-    {
-      key: "descripcion",
-      header: "Descripción",
-      searchable: true,
-      render: (value) =>
-        value ? (
-          <span className="text-sm text-gray-600 max-w-xs truncate block">
+      render: (value) => {
+        if (!value) {
+          return (
+            <Badge
+              variant="secondary"
+              className="bg-gray-50 text-gray-600 border-gray-200"
+            >
+              Sin categoría
+            </Badge>
+          );
+        }
+
+        // Colores por categoría para mejor organización visual
+        const getCategoryStyle = (categoria: string) => {
+          const styles = {
+            tecnologico: "bg-blue-100 text-blue-800 border-blue-200",
+            social: "bg-green-100 text-green-800 border-green-200",
+            educativo: "bg-purple-100 text-purple-800 border-purple-200",
+            ambiental: "bg-emerald-100 text-emerald-800 border-emerald-200",
+            agropecuario: "bg-orange-100 text-orange-800 border-orange-200",
+            energia: "bg-yellow-100 text-yellow-800 border-yellow-200",
+          };
+          return (
+            styles[categoria as keyof typeof styles] ||
+            "bg-gray-100 text-gray-800 border-gray-200"
+          );
+        };
+
+        return (
+          <Badge
+            variant="outline"
+            className={`font-medium capitalize ${getCategoryStyle(value)}`}
+          >
             {value}
-          </span>
-        ) : (
-          <span className="text-gray-400">Sin descripción</span>
-        ),
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "action_buttons",
+      label: "Acciones",
+      render: (tema: Tema) => (
+        <div className="flex items-center gap-1">
+          {!tema.is_deleted ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/admin/temas/${tema.id}`)}
+                title="Ver detalles"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditingTema(tema);
+                  setIsModalOpen(true);
+                }}
+                title="Editar temática"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTemaToDelete(tema)}
+                title="Eliminar temática"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  if (!user)
+                    return toast({
+                      title: "Error",
+                      description: "Debes iniciar sesión.",
+                    });
+                  try {
+                    await temasService.restore(tema.id);
+
+                    // Actualizar estado local
+                    setTemas((prevTemas) =>
+                      prevTemas.map((t) =>
+                        t.id === tema.id ? { ...t, is_deleted: false } : t
+                      )
+                    );
+
+                    toast({
+                      title: "Éxito",
+                      description: "El tema ha sido restaurado.",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "No se pudo restaurar el tema.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                title="Restaurar temática"
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      ),
     },
   ];
 
-  // 🆕 NUEVO: Definir acciones por separado (más limpio)
-  const actions: DataTableAction<Tema>[] = [
-    {
-      label: "Ver",
-      icon: Eye,
-      onClick: (tema) => router.push(`/admin/temas/${tema.id}`),
-      show: (item) => !item.is_deleted,
-    },
-    
-    {
-      label: "Editar",
-      icon: Pencil,
-      onClick: (tema) => {
-        setEditingTema(tema);
-        setIsModalOpen(true);
-      },
-      show: (item) => !item.is_deleted,
-    },
-    {
-      label: "Eliminar",
-      icon: Trash2,
-      variant: "destructive",
-      onClick: handleDelete,
-      show: (item) => !item.is_deleted,
-      requireConfirmation: {
-        title: "¿Estás seguro?",
-        description:
-          "Esta acción marcará el tema como eliminado. Podrás restaurarlo después.",
-      },
-    },
-    {
-      label: "Restaurar",
-      icon: RotateCcw,
-      onClick: handleRestore,
-      show: (item) => !!item.is_deleted,
-      requireConfirmation: {
-        // ✅ AGREGAR ESTO
-        title: "¿Restaurar tema?",
-        description:
-          "Esta acción restaurará el tema y volverá a aparecer en la lista principal.",
-      },
-    },
-  ];
-
-  // 🔄 CAMBIO: Funciones de manejo simplificadas
-  async function handleDelete(tema: Tema) {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Debes iniciar sesión.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await temasService.delete(tema.id, user.id);
-
-      // Actualizar estado local
-      setTemas((prevTemas) =>
-        prevTemas.map((t) =>
-          t.id === tema.id ? { ...t, is_deleted: true } : t
-        )
-      );
-
-      toast({
-        title: "Éxito",
-        description: "Tema eliminado correctamente.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el tema.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function handleRestore(tema: Tema) {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Debes iniciar sesión.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await temasService.restore(tema.id);
-
-      // Actualizar estado local
-      setTemas((prevTemas) =>
-        prevTemas.map((t) =>
-          t.id === tema.id ? { ...t, is_deleted: false } : t
-        )
-      );
-
-      toast({
-        title: "Éxito",
-        description: "Tema restaurado correctamente.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo restaurar el tema.",
-        variant: "destructive",
-      });
-    }
-  }
-
+  // ✅ Manejar envío del formulario
   const handleSubmit = async (data: any) => {
     if (!user) {
       toast({
@@ -323,32 +307,80 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
     }
   };
 
+  // ✅ Manejar eliminación confirmada
+  const handleConfirmDelete = async () => {
+    if (!temaToDelete || !user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await temasService.delete(temaToDelete.id, user.id);
+
+      if (!result.success) {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el tema.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Actualizar estado local
+      setTemas((prevTemas) =>
+        prevTemas.map((t) =>
+          t.id === temaToDelete.id ? { ...t, is_deleted: true } : t
+        )
+      );
+
+      toast({
+        title: "Éxito",
+        description: "Tema eliminado correctamente.",
+      });
+
+      setTemaToDelete(null);
+    } catch (error) {
+      console.error("Error deleting tema:", error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al eliminar el tema.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
-      {/* 🔄 CAMBIO PRINCIPAL: Usar AdminDataTable mejorado */}
+      {/* ✅ AdminDataTable modernizado */}
       <AdminDataTable
         title="Gestión de Temáticas"
-        data={paginatedTemas}
         columns={columns}
-        actions={actions}
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        showDeleted={showDeleted}
-        onToggleShowDeleted={() => setShowDeleted(!showDeleted)}
+        config={dataTableConfig}
+        state={tableState}
+        addLabel="Nueva Temática"
         onAdd={() => {
           setEditingTema(null);
           setIsModalOpen(true);
         }}
-        addButtonLabel="Nueva Temática"
-        emptyMessage="No hay temáticas disponibles"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        totalCount={filteredTemas.length}
-        pageSize={pageSize}
+        emptyState={{
+          title: "No hay temáticas disponibles",
+          description:
+            "Comienza creando tu primera temática para organizar el contenido.",
+          action: {
+            label: "Crear Primera Temática",
+            onClick: () => {
+              setEditingTema(null);
+              setIsModalOpen(true);
+            },
+          },
+        }}
       />
 
-      {/* ✅ Modal mantenido igual */}
+      {/* ✅ Modal de formulario sin cambios */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -362,6 +394,31 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
           />
         </DialogContent>
       </Dialog>
+
+      {/* ✅ AlertDialog de confirmación de eliminación */}
+      <AlertDialog
+        open={!!temaToDelete}
+        onOpenChange={() => setTemaToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción marcará la temática como eliminada. Podrás restaurarla
+              después si es necesario.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

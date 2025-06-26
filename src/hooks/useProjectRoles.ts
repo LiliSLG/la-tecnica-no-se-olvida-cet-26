@@ -23,8 +23,6 @@ export function useProjectRoles() {
       return;
     }
 
-    // 🚧 MOCK TEMPORAL - Corregir nombre del campo
-    // CORREGIDO: usar categoria_principal (no categoria_principal_persona)
     try {
       const mockHasRoles =
         user.categoria_principal === "estudiante_cet" ||

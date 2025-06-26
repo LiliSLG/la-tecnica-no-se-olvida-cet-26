@@ -1,10 +1,32 @@
 // =============================================================================
-// AdminDataTable RESPONSIVE - Basado en tu versión con mejoras móviles
+// AdminDataTable FINAL - SIN LOGS DE DEBUG
 // Ubicación: /src/components/admin/AdminDataTable.tsx
 // =============================================================================
 
 import React, { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Plus,
+  Filter,
+  Eye,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,13 +35,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -28,210 +43,230 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  RotateCcw,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  Eye,
-  Filter,
-  SlidersHorizontal,
-} from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { DataTableState, DataTableConfig } from "@/hooks/useDataTableState";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
-// TIPOS Y INTERFACES (manteniendo tu estructura + nuevas props responsive)
+// TIPOS Y INTERFACES
 // =============================================================================
 
-export interface DataTableColumn<T> {
-  key: keyof T | string;
-  header: string;
-  render?: (value: any, item: T) => React.ReactNode;
+// For columns that map directly to data properties
+export type DataColumnConfig<T> = {
+  key: keyof T;
+  label: string;
   sortable?: boolean;
-  width?: string;
-  searchable?: boolean;
-  mobileHidden?: boolean; // ✅ NUEVO: Ocultar en móvil
-  mobileLabel?: string; // ✅ NUEVO: Label personalizado para móvil
+  className?: string;
+  mobileHidden?: boolean;
+  render?: (value: any, item: T) => React.ReactNode;
+};
+
+// For virtual columns like "Actions"
+export type ActionColumnConfig<T> = {
+  key: `action_${string}`; // Must start with action_
+  label: string;
+  render: (item: T) => React.ReactNode;
+  className?: string;
+  mobileHidden?: boolean;
+};
+
+// The columns prop will now accept an array of either type
+export type ColumnConfig<T> = DataColumnConfig<T> | ActionColumnConfig<T>;
+
+interface FilterField {
+  key: string;
+  label: string;
+  type: "select" | "switch";
+  options?: { value: string; label: string }[];
 }
 
-export interface DataTableAction<T> {
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  onClick: (item: T) => void;
-  variant?: "default" | "destructive" | "outline" | "secondary";
-  show?: (item: T) => boolean;
-  requireConfirmation?: {
+interface AdminDataTableProps<T extends object> {
+  title?: string;
+  columns: ColumnConfig<T>[];
+  config: {
+    searchFields: (keyof T)[];
+    filterFields: FilterField[];
+    sortableColumns: (keyof T)[];
+  };
+  state: DataTableState<T>;
+  onAdd?: () => void;
+  addLabel?: string;
+  emptyState?: {
     title: string;
     description: string;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
   };
-}
-
-interface AdminDataTableProps<T> {
-  data: T[];
-  columns: DataTableColumn<T>[];
-  actions?: DataTableAction<T>[];
-  loading?: boolean;
-  searchValue: string;
-  onSearchChange: (value: string) => void;
-  showDeleted: boolean;
-  onToggleShowDeleted: () => void;
-  onAdd?: () => void;
-  addButtonLabel?: string;
-  emptyMessage?: string;
-  totalCount?: number;
-  currentPage?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
-  pageSize?: number;
-  onPageSizeChange?: (size: number) => void;
-  title?: string;
-  mobileCardView?: boolean; // ✅ NUEVO: Habilitar vista de tarjetas en móvil
+  pageSizes?: number[];
+  mobileCardView?: boolean;
 }
 
 // =============================================================================
-// HELPER FUNCTIONS (manteniendo las tuyas)
+// HELPER FUNCTIONS
 // =============================================================================
 
-const getNestedValue = (obj: any, path: string) => {
-  return path.split(".").reduce((current, key) => current?.[key], obj);
-};
+function isDataColumn<T>(
+  column: ColumnConfig<T>
+): column is DataColumnConfig<T> {
+  return !String(column.key).startsWith("action_");
+}
 
-const isColumnSearchable = (column: DataTableColumn<any>): boolean => {
-  return column.searchable !== false;
-};
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  React.useEffect(() => {
+    const checkDevice = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
+  return isMobile;
+}
 
 // =============================================================================
-// COMPONENTE PRINCIPAL RESPONSIVE
+// COMPONENTE PRINCIPAL
 // =============================================================================
 
-export function AdminDataTable<
-  T extends { id: string; is_deleted?: boolean | null }
->({
-  data,
-  columns,
-  actions = [],
-  loading = false,
-  searchValue,
-  onSearchChange,
-  showDeleted,
-  onToggleShowDeleted,
-  onAdd,
-  addButtonLabel = "Agregar",
-  emptyMessage = "No hay datos disponibles",
-  totalCount,
-  currentPage = 1,
-  totalPages = 1,
-  onPageChange,
-  pageSize = 10,
-  onPageSizeChange,
+export function AdminDataTable<T extends object>({
   title,
-  mobileCardView = true, // ✅ NUEVO: Por defecto true
+  columns,
+  config,
+  state,
+  onAdd,
+  addLabel = "Agregar",
+  emptyState,
+  pageSizes = [5, 10, 20, 50],
+  mobileCardView = true,
 }: AdminDataTableProps<T>) {
-  // ✅ Estados existentes + nuevos para móvil
-  const [pendingAction, setPendingAction] = useState<{
-    action: DataTableAction<T>;
-    item: T;
-  } | null>(null);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const {
+    search,
+    filters,
+    sort,
+    currentPage,
+    pageSize,
+    paginatedData,
+    totalPages,
+    totalItems,
+    setSearch,
+    setFilters,
+    setSort,
+    setCurrentPage,
+    setPageSize,
+  } = state;
 
-  // ✅ Hook para detectar móvil
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const isMobile = useIsMobile();
 
-  // ✅ Filtrar columnas visibles en móvil
-  const visibleColumns = React.useMemo(() => {
-    if (!isMobile) return columns;
-    return columns.filter((col) => !col.mobileHidden);
-  }, [columns, isMobile]);
+  // Handlers
+  const handleSort = (column: keyof T) => {
+    if (config.sortableColumns.includes(column)) {
+      setSort(column);
+    }
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   const clearSearch = () => {
-    onSearchChange("");
+    setSearch("");
   };
 
-  // ✅ Funciones existentes (sin cambios)
-  const handleActionClick = async (action: DataTableAction<T>, item: T) => {
-    if (action.requireConfirmation) {
-      setPendingAction({ action, item });
-      return;
-    }
+  // Filtrar columnas visibles en móvil
+  const visibleColumns = React.useMemo(() => {
+    if (!isMobile || !mobileCardView) return columns;
+    return columns.filter((col) => !col.mobileHidden);
+  }, [columns, isMobile, mobileCardView]);
 
-    try {
-      await action.onClick(item);
-    } catch (error) {
-      console.error("Error executing action:", error);
-    }
-  };
+  // Componente de tarjeta móvil
+  const MobileCard = ({ item }: { item: T }) => (
+    <Card className="group transition-all duration-200 hover:shadow-md border-border bg-card">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Mostrar columnas visibles */}
+          {visibleColumns.map((column, index) => {
+            if (String(column.key).startsWith("action_")) {
+              return null; // Las acciones las renderizamos por separado
+            }
 
-  const handleConfirmAction = async () => {
-    if (!pendingAction) return;
+            const dataColumn = column as DataColumnConfig<T>;
+            const value = (item as any)[dataColumn.key];
+            const displayValue = dataColumn.render
+              ? dataColumn.render(value, item)
+              : String(value || "-");
 
-    try {
-      await pendingAction.action.onClick(pendingAction.item);
-    } catch (error) {
-      console.error("Error executing confirmed action:", error);
-    } finally {
-      setPendingAction(null);
-    }
-  };
+            return (
+              <div
+                key={String(column.key)}
+                className="flex justify-between items-start gap-3"
+              >
+                <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
+                  {column.label}:
+                </span>
+                <div className="text-sm text-right ml-2 min-w-0 flex-1">
+                  {displayValue}
+                </div>
+              </div>
+            );
+          })}
 
-  // ✅ Lógica de filtrado existente (sin cambios)
-  const filteredData = React.useMemo(() => {
-    let filtered = data;
+          {/* Acciones */}
+          {(() => {
+            const actionColumns = columns.filter((col) =>
+              String(col.key).startsWith("action_")
+            ) as ActionColumnConfig<T>[];
 
-    if (showDeleted) {
-      filtered = filtered.filter((item) => !!item.is_deleted);
-    } else {
-      filtered = filtered.filter((item) => !item.is_deleted);
-    }
+            if (actionColumns.length === 0) return null;
 
-    if (!searchValue.trim()) return filtered;
+            return (
+              <>
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex justify-end gap-2">
+                    {actionColumns.map((actionColumn) => (
+                      <div key={String(actionColumn.key)}>
+                        {actionColumn.render(item)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-    const searchableColumns = columns.filter(isColumnSearchable);
-
-    return filtered.filter((item) =>
-      searchableColumns.some((column) => {
-        const value = getNestedValue(item, column.key as string);
-        return value
-          ?.toString()
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
-      })
-    );
-  }, [data, searchValue, columns, showDeleted]);
-
-  // ✅ NUEVO: Componente de filtros móvil
+  // Componente de filtros móviles
   const MobileFilters = () => (
     <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="md:hidden">
           <Filter className="h-4 w-4 mr-2" />
           Filtros
-          {showDeleted && (
+          {Object.values(filters).some(
+            (val) => val !== false && val !== "all" && val !== ""
+          ) && (
             <Badge
               variant="secondary"
-              className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
+              className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
             >
               !
             </Badge>
@@ -240,374 +275,339 @@ export function AdminDataTable<
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[40vh]">
         <SheetHeader>
-          <SheetTitle>Filtros</SheetTitle>
+          <SheetTitle>Filtros y opciones</SheetTitle>
           <SheetDescription>
             Ajusta los filtros para refinar los resultados
           </SheetDescription>
         </SheetHeader>
         <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <Label
-              htmlFor="show-deleted-mobile"
-              className="text-sm font-medium"
-            >
-              {showDeleted ? "Mostrando eliminados" : "Mostrar eliminados"}
-            </Label>
-            <Switch
-              id="show-deleted-mobile"
-              checked={showDeleted}
-              onCheckedChange={onToggleShowDeleted}
-            />
-          </div>
+          {config.filterFields.map((field) =>
+            field.type === "select" ? (
+              <div key={String(field.key)} className="space-y-2">
+                <Label className="text-sm font-medium">{field.label}</Label>
+                <Select
+                  value={filters[field.key as string] || "all"}
+                  onValueChange={(value) =>
+                    setFilters({ [field.key as string]: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={field.label} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {field.options?.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div
+                key={String(field.key)}
+                className="flex items-center justify-between"
+              >
+                <Label
+                  htmlFor={String(field.key)}
+                  className="text-sm font-medium"
+                >
+                  {field.label}
+                </Label>
+                <Switch
+                  id={String(field.key)}
+                  checked={filters[field.key as string] || false}
+                  onCheckedChange={(checked) =>
+                    setFilters({ [field.key as string]: checked })
+                  }
+                />
+              </div>
+            )
+          )}
         </div>
       </SheetContent>
     </Sheet>
   );
 
-  // ✅ NUEVO: Componente de tarjeta móvil
-  const MobileCard = ({ item }: { item: T }) => (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Mostrar columnas visibles */}
-          {visibleColumns.map((column, index) => {
-            const value = getNestedValue(item, column.key as string);
-            const displayValue = column.render
-              ? column.render(value, item)
-              : String(value || "-");
-            const mobileLabel = column.mobileLabel || column.header;
-
-            return (
-              <div
-                key={column.key as string}
-                className="flex justify-between items-start"
-              >
-                <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
-                  {mobileLabel}:
-                </span>
-                <span className="text-sm text-right ml-2 min-w-0 flex-1">
-                  <div className="flex items-center justify-end gap-2">
-                    {displayValue}
-                    {item.is_deleted && index === 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        Eliminado
-                      </Badge>
-                    )}
-                  </div>
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Acciones */}
-          {actions.length > 0 && (
-            <>
-              <Separator />
-              <div className="flex justify-end">{renderActions(item)}</div>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  // ✅ Funciones de renderizado existentes (sin cambios)
-  const renderActions = (item: T) => {
-    if (!actions.length) return null;
-
-    const visibleActions = actions.filter((action) =>
-      action.show ? action.show(item) : true
-    );
-
-    if (!visibleActions.length) return null;
-
-    if (visibleActions.length === 1) {
-      const action = visibleActions[0];
-      return renderSingleAction(action, item);
-    }
-
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Abrir menú</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {visibleActions.map((action, index) => {
-            const isDestructive = action.variant === "destructive";
-
-            return (
-              <DropdownMenuItem
-                key={index}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  handleActionClick(action, item);
-                }}
-                className={
-                  isDestructive ? "text-red-600 focus:text-red-600" : ""
-                }
-              >
-                {action.icon && <action.icon className="mr-2 h-4 w-4" />}
-                {action.label}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  };
-
-  const renderSingleAction = (action: DataTableAction<T>, item: T) => {
-    return (
-      <Button
-        variant={action.variant || "outline"}
-        size="sm"
-        onClick={() => handleActionClick(action, item)}
-        className="h-8 w-8 p-0"
-        title={action.label}
-      >
-        {action.icon && <action.icon className="h-4 w-4" />}
-      </Button>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <>
-      <div className="space-y-4">
-        {/* Header mejorado responsive */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          {title && <h2 className="text-2xl font-bold">{title}</h2>}
-          {onAdd && (
-            <Button
-              onClick={onAdd}
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <Plus className="h-4 w-4" />
-              {addButtonLabel}
-            </Button>
-          )}
-        </div>
-
-        {/* Controles de búsqueda y filtros responsive */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Búsqueda */}
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar..."
-              value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchValue && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearSearch}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {title && (
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              {title}
+            </h1>
+            <p className="text-muted-foreground">
+              Gestiona y organiza el contenido de la plataforma
+            </p>
           </div>
-
-          {/* Filtros desktop */}
-          <div className="hidden md:flex items-center space-x-2">
-            <Switch
-              id="show-deleted"
-              checked={showDeleted}
-              onCheckedChange={onToggleShowDeleted}
-            />
-            <Label htmlFor="show-deleted" className="text-sm whitespace-nowrap">
-              {showDeleted ? "Mostrando eliminados" : "Mostrar eliminados"}
-            </Label>
-          </div>
-
-          {/* Filtros móvil */}
-          <MobileFilters />
-        </div>
-
-        {/* Contenido principal */}
-        {filteredData.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500">
-              <p className="text-lg font-medium mb-2">No hay resultados</p>
-              <p className="text-sm">{emptyMessage}</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Vista móvil: Tarjetas */}
-            {isMobile && mobileCardView ? (
-              <div className="md:hidden">
-                {filteredData.map((item) => (
-                  <MobileCard key={item.id} item={item} />
-                ))}
-              </div>
-            ) : (
-              /* Vista desktop: Tabla */
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {visibleColumns.map((column) => (
-                          <TableHead
-                            key={column.key as string}
-                            style={{ width: column.width }}
-                            className="whitespace-nowrap"
-                          >
-                            {column.header}
-                          </TableHead>
-                        ))}
-                        {actions.length > 0 && (
-                          <TableHead className="w-20">Acciones</TableHead>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredData.map((item) => (
-                        <TableRow
-                          key={item.id}
-                          className={cn(
-                            "hover:bg-muted/50 transition-colors",
-                            item.is_deleted && "opacity-60 bg-gray-50"
-                          )}
-                        >
-                          {visibleColumns.map((column) => (
-                            <TableCell key={column.key as string}>
-                              <div className="flex items-center gap-2">
-                                {column.render
-                                  ? column.render(
-                                      getNestedValue(
-                                        item,
-                                        column.key as string
-                                      ),
-                                      item
-                                    )
-                                  : String(
-                                      getNestedValue(
-                                        item,
-                                        column.key as string
-                                      ) || "-"
-                                    )}
-                                {item.is_deleted &&
-                                  column.key === visibleColumns[0].key && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      Eliminado
-                                    </Badge>
-                                  )}
-                              </div>
-                            </TableCell>
-                          ))}
-                          {actions.length > 0 && (
-                            <TableCell>{renderActions(item)}</TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-          </>
         )}
+        {onAdd && (
+          <Button
+            onClick={onAdd}
+            className="flex items-center gap-2 w-full sm:w-auto shadow-sm"
+            size="default"
+          >
+            <Plus className="h-4 w-4" />
+            {addLabel}
+          </Button>
+        )}
+      </div>
 
-        {/* Paginación responsive */}
-        {totalPages > 1 && onPageChange && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-500 text-center sm:text-left">
-              {totalCount && (
-                <span>
-                  Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
-                  {Math.min(currentPage * pageSize, totalCount)} de {totalCount}{" "}
-                  <span className="hidden sm:inline">resultados</span>
-                </span>
+      {/* Controles de búsqueda y filtros */}
+      <Card className="border-border bg-card/50 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Búsqueda */}
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar en el contenido..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 pr-10 bg-background/50 border-border"
+              />
+              {search && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Anterior</span>
-              </Button>
-
-              <span className="text-sm px-2">
-                {currentPage} de {totalPages}
-              </span>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <span className="hidden sm:inline">Siguiente</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+            {/* Filtros desktop */}
+            <div className="hidden md:flex items-center gap-4">
+              {config.filterFields.map((field) =>
+                field.type === "select" ? (
+                  <Select
+                    key={String(field.key)}
+                    value={filters[field.key as string] || "all"}
+                    onValueChange={(value) =>
+                      setFilters({ [field.key as string]: value })
+                    }
+                  >
+                    <SelectTrigger className="w-[180px] bg-background/50">
+                      <SelectValue placeholder={field.label} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {field.options?.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div
+                    key={String(field.key)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Switch
+                      id={String(field.key)}
+                      checked={filters[field.key as string] || false}
+                      onCheckedChange={(checked) =>
+                        setFilters({ [field.key as string]: checked })
+                      }
+                    />
+                    <Label
+                      htmlFor={String(field.key)}
+                      className="text-sm whitespace-nowrap"
+                    >
+                      {field.label}
+                    </Label>
+                  </div>
+                )
+              )}
             </div>
+
+            {/* Filtros móvil */}
+            <MobileFilters />
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {/* Stats de la tabla */}
-        {!showDeleted &&
-          data.filter((item) => !!item.is_deleted).length > 0 && (
-            <div className="text-sm text-gray-500 flex justify-end">
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {data.filter((item) => !!item.is_deleted).length} eliminados
-                disponibles
-              </span>
+      {/* Contenido principal */}
+      {paginatedData.length === 0 ? (
+        <Card className="border-dashed border-2 border-muted">
+          <CardContent className="py-12">
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                <Eye className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">
+                  {emptyState?.title || "No hay resultados"}
+                </h3>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  {emptyState?.description ||
+                    "Intenta ajustar los filtros de búsqueda o crea nuevo contenido."}
+                </p>
+              </div>
+              {emptyState?.action && (
+                <Button
+                  variant="outline"
+                  onClick={emptyState.action.onClick}
+                  className="mt-4"
+                >
+                  {emptyState.action.label}
+                </Button>
+              )}
             </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Vista móvil: Cards */}
+          {isMobile && mobileCardView ? (
+            <div className="space-y-3">
+              {paginatedData.map((item, index) => (
+                <MobileCard key={index} item={item} />
+              ))}
+            </div>
+          ) : (
+            /* Vista desktop: Tabla */
+            <Card className="border-border shadow-sm overflow-hidden bg-card">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border">
+                      {columns.map((column) => (
+                        <TableHead
+                          key={String(column.key)}
+                          className={cn(
+                            "py-4 px-6 font-semibold",
+                            isDataColumn(column) && column.sortable
+                              ? "cursor-pointer hover:bg-muted/50 transition-colors"
+                              : "",
+                            column.className
+                          )}
+                          onClick={() => {
+                            if (isDataColumn(column) && column.sortable) {
+                              handleSort(column.key);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            {column.label}
+                            {isDataColumn(column) &&
+                              column.sortable &&
+                              sort.column === column.key && (
+                                <ArrowUpDown className="h-4 w-4 text-primary" />
+                              )}
+                          </div>
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData.map((item, index) => (
+                      <TableRow
+                        key={index}
+                        className="hover:bg-muted/30 transition-colors duration-150 border-border"
+                      >
+                        {columns.map((column) => (
+                          <TableCell
+                            key={String(column.key)}
+                            className={cn("py-4 px-6", column.className)}
+                          >
+                            {isDataColumn(column)
+                              ? column.render
+                                ? column.render((item as any)[column.key], item)
+                                : String((item as any)[column.key] || "-")
+                              : (column as ActionColumnConfig<T>).render(item)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           )}
-      </div>
+        </>
+      )}
 
-      {/* Dialog de confirmación (sin cambios) */}
-      <AlertDialog
-        open={!!pendingAction}
-        onOpenChange={() => setPendingAction(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction?.action.requireConfirmation?.title}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingAction?.action.requireConfirmation?.description}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmAction}
-              className={
-                pendingAction?.action.variant === "destructive"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : ""
-              }
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <Card className="border-border bg-card/30">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {(currentPage - 1) * pageSize + 1} -{" "}
+                  {Math.min(currentPage * pageSize, totalItems)} de {totalItems}{" "}
+                  resultados
+                </p>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => handlePageSizeChange(Number(value))}
+                >
+                  <SelectTrigger className="w-[130px] h-8">
+                    <SelectValue placeholder="Por página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizes.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size} por página
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="h-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Anterior</span>
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  <span className="text-sm px-3 py-1 bg-primary/10 text-primary rounded">
+                    {currentPage}
+                  </span>
+                  <span className="text-sm text-muted-foreground">de</span>
+                  <span className="text-sm text-muted-foreground">
+                    {totalPages}
+                  </span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="h-8"
+                >
+                  <span className="hidden sm:inline mr-2">Siguiente</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats informativos */}
+      {totalItems > 0 && (
+        <div className="text-center">
+          <Badge variant="outline" className="bg-muted/50">
+            {totalItems} elemento{totalItems !== 1 ? "s" : ""} en total
+          </Badge>
+        </div>
+      )}
+    </div>
   );
 }
