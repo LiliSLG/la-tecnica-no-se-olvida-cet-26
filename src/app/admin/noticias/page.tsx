@@ -1,28 +1,57 @@
-// REEMPLAZAR COMPLETO: /src/app/admin/noticias/page.tsx
-// ===================================================
+// src/app/admin/noticias/page.tsx
+"use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { NoticiasListPage } from "@/components/admin/noticias/NoticiasListPage";
+import { AdminDataTableSkeleton } from "@/components/admin/AdminDataTableSkeleton";
+import { Database } from "@/lib/supabase/types/database.types";
 
-export default async function NoticiasPage() {
-  console.log("🔍 Server: Loading noticias with author data");
+type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 
-  // 🔄 CAMBIO: Usar el nuevo método con JOIN
-  const result = await noticiasService.getAllWithAuthor(true);
+export default function NoticiasPage() {
+  const { isAdmin, isLoading } = useAuth();
+  const [noticias, setNoticias] = useState<Noticia[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!result.success) {
-    console.error("❌ Server: Error loading noticias:", result.error);
+  useEffect(() => {
+    async function fetchNoticias() {
+      if (isLoading) return;
+      if (isAdmin === undefined) return;
+
+      try {
+        console.log("🔍 Fetching noticias, isAdmin:", isAdmin);
+
+        const result = await noticiasService.getAll(isAdmin);
+
+        if (result.success && result.data) {
+          console.log("📊 Server noticias:", result.data.length);
+          setNoticias(result.data);
+        } else {
+          console.error("Error fetching noticias:", result.error);
+        }
+      } catch (error) {
+        console.error("Error in fetchNoticias:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchNoticias();
+  }, [isAdmin, isLoading]);
+
+  // Show skeleton while loading
+  if (isLoading || loading) {
     return (
-      <div className="p-6">
-        <div className="text-red-600">
-          Error cargando noticias: {result.error?.message}
-        </div>
-      </div>
+      <AdminDataTableSkeleton
+        title="Gestión de Noticias"
+        addLabel="Nueva Noticia"
+        rows={8}
+        columns={4}
+      />
     );
   }
-
-  const noticias = result.data || [];
-  console.log("📊 Server: Loaded noticias with authors:", noticias.length);
 
   return <NoticiasListPage allNoticias={noticias} />;
 }

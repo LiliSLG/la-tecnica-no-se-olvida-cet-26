@@ -1,14 +1,23 @@
-// src/app/(public)/layout.tsx
+// /src/app/(public)/layout.tsx
 import { ReactNode } from "react";
 import { MainHeader } from "@/components/common/MainHeader";
-import { Toaster } from "@/components/ui/toaster";
+import { PublicFooter } from "@/components/common/PublicFooter";
 
-export default function PublicLayout({ children }: { children: ReactNode }) {
+interface PublicLayoutProps {
+  children: ReactNode;
+}
+
+export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header común para páginas públicas */}
       <MainHeader />
-      <main className="container mx-auto px-4 py-6">{children}</main>
-      <Toaster />
+
+      {/* Contenido principal */}
+      <main className="flex-1">{children}</main>
+
+      {/* Footer */}
+      <PublicFooter />
     </div>
   );
 }

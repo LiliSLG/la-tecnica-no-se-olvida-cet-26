@@ -1,9 +1,11 @@
+// src/app/admin/temas/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { TemasListPage } from "@/components/admin/temas/TemasListPage";
+import { AdminDataTableSkeleton } from "@/components/admin/AdminDataTableSkeleton";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Tema = Database["public"]["Tables"]["temas"]["Row"];
@@ -18,16 +20,12 @@ export default function TemasPage() {
       if (isLoading) return;
 
       try {
-        console.log("🔍 Client: Fetching temas, isAdmin:", isAdmin);
+        console.log("🔍 Fetching temas, isAdmin:", isAdmin);
 
         const result = await temasService.getAll(isAdmin);
 
         if (result.success && result.data) {
-          console.log("📊 Client: Loaded temas:", result.data.length);
-          console.log(
-            "📊 Client: Include deleted:",
-            result.data.filter((t) => t.is_deleted).length
-          );
+          console.log("📊 Server temas:", result.data.length);
           setTemas(result.data);
         } else {
           console.error("Error fetching temas:", result.error);
@@ -42,13 +40,15 @@ export default function TemasPage() {
     fetchTemas();
   }, [isAdmin, isLoading]);
 
+  // Show skeleton while loading
   if (isLoading || loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">Cargando temas...</div>
-        </div>
-      </div>
+      <AdminDataTableSkeleton
+        title="Gestión de Temáticas"
+        addLabel="Nueva Temática"
+        rows={6}
+        columns={2}
+      />
     );
   }
 

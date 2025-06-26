@@ -131,9 +131,10 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
     {
       label: "Ver",
       icon: Eye,
-      onClick: (tema) => router.push(`/temas/${tema.id}`),
+      onClick: (tema) => router.push(`/admin/temas/${tema.id}`),
       show: (item) => !item.is_deleted,
     },
+    
     {
       label: "Editar",
       icon: Pencil,

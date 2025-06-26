@@ -1,6 +1,7 @@
-// src/app/(public)/page.tsx
+// src/app/page.tsx
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PublicLayout } from "@/components/layouts/PublicLayout";
 import {
   Card,
   CardContent,
@@ -41,7 +42,7 @@ export default function HomePage() {
   ];
 
   return (
-    <>
+    <PublicLayout>
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-20">
         <div className="container mx-auto px-4 text-center">
@@ -151,6 +152,6 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
-    </>
+    </PublicLayout>
   );
 }

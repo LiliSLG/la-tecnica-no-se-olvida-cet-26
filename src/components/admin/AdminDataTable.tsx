@@ -1,9 +1,10 @@
 // =============================================================================
-// AdminDataTable ARREGLADO - requireConfirmation funciona correctamente
+// AdminDataTable RESPONSIVE - Basado en tu versión con mejoras móviles
 // Ubicación: /src/components/admin/AdminDataTable.tsx
 // =============================================================================
 
-import React, { useState } from "react"; 
+import React, { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -17,6 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +46,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   Eye,
+  Filter,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -47,9 +60,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
-// TIPOS Y INTERFACES (manteniendo tu estructura)
+// TIPOS Y INTERFACES (manteniendo tu estructura + nuevas props responsive)
 // =============================================================================
 
 export interface DataTableColumn<T> {
@@ -59,6 +73,8 @@ export interface DataTableColumn<T> {
   sortable?: boolean;
   width?: string;
   searchable?: boolean;
+  mobileHidden?: boolean; // ✅ NUEVO: Ocultar en móvil
+  mobileLabel?: string; // ✅ NUEVO: Label personalizado para móvil
 }
 
 export interface DataTableAction<T> {
@@ -92,6 +108,7 @@ interface AdminDataTableProps<T> {
   pageSize?: number;
   onPageSizeChange?: (size: number) => void;
   title?: string;
+  mobileCardView?: boolean; // ✅ NUEVO: Habilitar vista de tarjetas en móvil
 }
 
 // =============================================================================
@@ -107,7 +124,7 @@ const isColumnSearchable = (column: DataTableColumn<any>): boolean => {
 };
 
 // =============================================================================
-// COMPONENTE PRINCIPAL ARREGLADO
+// COMPONENTE PRINCIPAL RESPONSIVE
 // =============================================================================
 
 export function AdminDataTable<
@@ -131,26 +148,35 @@ export function AdminDataTable<
   pageSize = 10,
   onPageSizeChange,
   title,
+  mobileCardView = true, // ✅ NUEVO: Por defecto true
 }: AdminDataTableProps<T>) {
-  // ✅ NUEVO: Estado para manejar confirmaciones
+  // ✅ Estados existentes + nuevos para móvil
   const [pendingAction, setPendingAction] = useState<{
     action: DataTableAction<T>;
     item: T;
   } | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // ✅ Hook para detectar móvil
+  const isMobile = useIsMobile();
+
+  // ✅ Filtrar columnas visibles en móvil
+  const visibleColumns = React.useMemo(() => {
+    if (!isMobile) return columns;
+    return columns.filter((col) => !col.mobileHidden);
+  }, [columns, isMobile]);
 
   const clearSearch = () => {
     onSearchChange("");
   };
 
-  // ✅ NUEVO: Función para manejar clicks en acciones
+  // ✅ Funciones existentes (sin cambios)
   const handleActionClick = async (action: DataTableAction<T>, item: T) => {
-    // Si la acción requiere confirmación, mostrar dialog
     if (action.requireConfirmation) {
       setPendingAction({ action, item });
-      return; // ✅ NO ejecutar onClick hasta confirmar
+      return;
     }
 
-    // Si no requiere confirmación, ejecutar directamente
     try {
       await action.onClick(item);
     } catch (error) {
@@ -158,7 +184,6 @@ export function AdminDataTable<
     }
   };
 
-  // ✅ NUEVO: Función para confirmar y ejecutar acción pendiente
   const handleConfirmAction = async () => {
     if (!pendingAction) return;
 
@@ -167,11 +192,11 @@ export function AdminDataTable<
     } catch (error) {
       console.error("Error executing confirmed action:", error);
     } finally {
-      setPendingAction(null); // Cerrar dialog
+      setPendingAction(null);
     }
   };
 
-  // Filtrar datos basado en showDeleted
+  // ✅ Lógica de filtrado existente (sin cambios)
   const filteredData = React.useMemo(() => {
     let filtered = data;
 
@@ -196,7 +221,97 @@ export function AdminDataTable<
     );
   }, [data, searchValue, columns, showDeleted]);
 
-  // ✅ ARREGLADO: Renderizar acciones con confirmación correcta
+  // ✅ NUEVO: Componente de filtros móvil
+  const MobileFilters = () => (
+    <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="sm" className="md:hidden">
+          <Filter className="h-4 w-4 mr-2" />
+          Filtros
+          {showDeleted && (
+            <Badge
+              variant="secondary"
+              className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
+            >
+              !
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="h-[40vh]">
+        <SheetHeader>
+          <SheetTitle>Filtros</SheetTitle>
+          <SheetDescription>
+            Ajusta los filtros para refinar los resultados
+          </SheetDescription>
+        </SheetHeader>
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="show-deleted-mobile"
+              className="text-sm font-medium"
+            >
+              {showDeleted ? "Mostrando eliminados" : "Mostrar eliminados"}
+            </Label>
+            <Switch
+              id="show-deleted-mobile"
+              checked={showDeleted}
+              onCheckedChange={onToggleShowDeleted}
+            />
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
+  // ✅ NUEVO: Componente de tarjeta móvil
+  const MobileCard = ({ item }: { item: T }) => (
+    <Card className="mb-3">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Mostrar columnas visibles */}
+          {visibleColumns.map((column, index) => {
+            const value = getNestedValue(item, column.key as string);
+            const displayValue = column.render
+              ? column.render(value, item)
+              : String(value || "-");
+            const mobileLabel = column.mobileLabel || column.header;
+
+            return (
+              <div
+                key={column.key as string}
+                className="flex justify-between items-start"
+              >
+                <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
+                  {mobileLabel}:
+                </span>
+                <span className="text-sm text-right ml-2 min-w-0 flex-1">
+                  <div className="flex items-center justify-end gap-2">
+                    {displayValue}
+                    {item.is_deleted && index === 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        Eliminado
+                      </Badge>
+                    )}
+                  </div>
+                </span>
+              </div>
+            );
+          })}
+
+          {/* Acciones */}
+          {actions.length > 0 && (
+            <>
+              <Separator />
+              <div className="flex justify-end">{renderActions(item)}</div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // ✅ Funciones de renderizado existentes (sin cambios)
   const renderActions = (item: T) => {
     if (!actions.length) return null;
 
@@ -228,7 +343,7 @@ export function AdminDataTable<
                 key={index}
                 onSelect={(e) => {
                   e.preventDefault();
-                  handleActionClick(action, item); // ✅ USAR handleActionClick
+                  handleActionClick(action, item);
                 }}
                 className={
                   isDestructive ? "text-red-600 focus:text-red-600" : ""
@@ -249,7 +364,7 @@ export function AdminDataTable<
       <Button
         variant={action.variant || "outline"}
         size="sm"
-        onClick={() => handleActionClick(action, item)} // ✅ USAR handleActionClick
+        onClick={() => handleActionClick(action, item)}
         className="h-8 w-8 p-0"
         title={action.label}
       >
@@ -269,20 +384,24 @@ export function AdminDataTable<
   return (
     <>
       <div className="space-y-4">
-        {/* Header mejorado */}
-        <div className="flex justify-between items-center">
+        {/* Header mejorado responsive */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           {title && <h2 className="text-2xl font-bold">{title}</h2>}
           {onAdd && (
-            <Button onClick={onAdd} className="flex items-center gap-2">
+            <Button
+              onClick={onAdd}
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4" />
               {addButtonLabel}
             </Button>
           )}
         </div>
 
-        {/* Controles de búsqueda y filtros */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
+        {/* Controles de búsqueda y filtros responsive */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Búsqueda */}
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Buscar..."
@@ -302,91 +421,120 @@ export function AdminDataTable<
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* Filtros desktop */}
+          <div className="hidden md:flex items-center space-x-2">
             <Switch
               id="show-deleted"
               checked={showDeleted}
               onCheckedChange={onToggleShowDeleted}
             />
-            <Label htmlFor="show-deleted" className="text-sm">
+            <Label htmlFor="show-deleted" className="text-sm whitespace-nowrap">
               {showDeleted ? "Mostrando eliminados" : "Mostrar eliminados"}
             </Label>
           </div>
+
+          {/* Filtros móvil */}
+          <MobileFilters />
         </div>
 
-        {/* Tabla */}
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.key as string}
-                    style={{ width: column.width }}
-                  >
-                    {column.header}
-                  </TableHead>
+        {/* Contenido principal */}
+        {filteredData.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No hay resultados</p>
+              <p className="text-sm">{emptyMessage}</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Vista móvil: Tarjetas */}
+            {isMobile && mobileCardView ? (
+              <div className="md:hidden">
+                {filteredData.map((item) => (
+                  <MobileCard key={item.id} item={item} />
                 ))}
-                {actions.length > 0 && (
-                  <TableHead className="w-20">Acciones</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    {emptyMessage}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredData.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className={item.is_deleted ? "opacity-60 bg-gray-50" : ""}
-                  >
-                    {columns.map((column) => (
-                      <TableCell key={column.key as string}>
-                        <div className="flex items-center gap-2">
-                          {column.render
-                            ? column.render(
-                                getNestedValue(item, column.key as string),
-                                item
-                              )
-                            : String(
-                                getNestedValue(item, column.key as string) ||
-                                  "-"
-                              )}
-                          {item.is_deleted && column.key === columns[0].key && (
-                            <Badge variant="secondary" className="text-xs">
-                              Eliminado
-                            </Badge>
+              </div>
+            ) : (
+              /* Vista desktop: Tabla */
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {visibleColumns.map((column) => (
+                          <TableHead
+                            key={column.key as string}
+                            style={{ width: column.width }}
+                            className="whitespace-nowrap"
+                          >
+                            {column.header}
+                          </TableHead>
+                        ))}
+                        {actions.length > 0 && (
+                          <TableHead className="w-20">Acciones</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item) => (
+                        <TableRow
+                          key={item.id}
+                          className={cn(
+                            "hover:bg-muted/50 transition-colors",
+                            item.is_deleted && "opacity-60 bg-gray-50"
                           )}
-                        </div>
-                      </TableCell>
-                    ))}
-                    {actions.length > 0 && (
-                      <TableCell>{renderActions(item)}</TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                        >
+                          {visibleColumns.map((column) => (
+                            <TableCell key={column.key as string}>
+                              <div className="flex items-center gap-2">
+                                {column.render
+                                  ? column.render(
+                                      getNestedValue(
+                                        item,
+                                        column.key as string
+                                      ),
+                                      item
+                                    )
+                                  : String(
+                                      getNestedValue(
+                                        item,
+                                        column.key as string
+                                      ) || "-"
+                                    )}
+                                {item.is_deleted &&
+                                  column.key === visibleColumns[0].key && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      Eliminado
+                                    </Badge>
+                                  )}
+                              </div>
+                            </TableCell>
+                          ))}
+                          {actions.length > 0 && (
+                            <TableCell>{renderActions(item)}</TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
-        {/* Paginación */}
+        {/* Paginación responsive */}
         {totalPages > 1 && onPageChange && (
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-500 text-center sm:text-left">
               {totalCount && (
                 <span>
                   Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
                   {Math.min(currentPage * pageSize, totalCount)} de {totalCount}{" "}
-                  resultados
+                  <span className="hidden sm:inline">resultados</span>
                 </span>
               )}
             </div>
@@ -399,11 +547,11 @@ export function AdminDataTable<
                 disabled={currentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Anterior
+                <span className="hidden sm:inline">Anterior</span>
               </Button>
 
-              <span className="text-sm">
-                Página {currentPage} de {totalPages}
+              <span className="text-sm px-2">
+                {currentPage} de {totalPages}
               </span>
 
               <Button
@@ -412,7 +560,7 @@ export function AdminDataTable<
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
               >
-                Siguiente
+                <span className="hidden sm:inline">Siguiente</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -431,7 +579,7 @@ export function AdminDataTable<
           )}
       </div>
 
-      {/* ✅ NUEVO: Dialog de confirmación global */}
+      {/* Dialog de confirmación (sin cambios) */}
       <AlertDialog
         open={!!pendingAction}
         onOpenChange={() => setPendingAction(null)}

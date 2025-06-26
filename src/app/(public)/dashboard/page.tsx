@@ -10,6 +10,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardFooter,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,12 @@ import {
   Settings,
   BarChart,
   Clock,
+  TrendingUp,
+  CheckCircle,
+  Star,
+  Activity,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -32,7 +39,6 @@ export default function DashboardPage() {
   const { hasActiveRoles, isLoading: rolesLoading } = useProjectRoles();
 
   // NO redirigir admins automáticamente - déjalos ver su dashboard personal también
-  // Solo redirigir si no tienen acceso al dashboard
   useEffect(() => {
     if (!isLoading && !rolesLoading && user && !isAdmin) {
       if (!hasActiveRoles) {
@@ -53,7 +59,7 @@ export default function DashboardPage() {
     );
   }
 
-  // Access guard for non-admin users - admins también pueden ver su dashboard personal
+  // Access guard for non-admin users
   if (!user || (!isAdmin && !hasActiveRoles)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -71,275 +77,362 @@ export default function DashboardPage() {
     (user.categoria_principal === "estudiante_cet" ||
       user.categoria_principal === "ex_alumno_cet");
 
-  // Secciones del dashboard de usuario
-  const userSections = [
-    // Mis Proyectos - donde participa
+  // Estadísticas rápidas (placeholder data)
+  const quickStats = [
     {
       title: "Mis Proyectos",
-      description: "Proyectos donde soy autor, tutor o colaborador",
+      value: "3",
+      change: "+1 nuevo",
+      icon: FolderOpen,
+      trend: "up",
+      description: "Participando activamente",
+    },
+    {
+      title: "Mis Noticias",
+      value: "7",
+      change: "+2 esta semana",
+      icon: Newspaper,
+      trend: "up",
+      description: "Publicadas",
+    },
+    {
+      title: "Colaboraciones",
+      value: "12",
+      change: "4 activas",
+      icon: Users,
+      trend: "neutral",
+      description: "En total",
+    },
+  ];
+
+  // Secciones principales mejoradas
+  const userSections = [
+    {
+      title: "Mis Proyectos",
+      description:
+        "Gestiona los proyectos donde participas como autor, tutor o colaborador",
       icon: FolderOpen,
       href: "/dashboard/proyectos",
-      color: "bg-gradient-to-br from-blue-50 to-blue-100/50",
-      iconColor: "text-blue-600",
-      count: "-- proyectos", // Placeholder para futuro
-      badge: "Gestión",
+      stats: { active: "2", total: "3" },
+      isActive: true,
+      badge: "Activo",
     },
-
-    // Crear Proyecto - Solo para autores potenciales
     ...(canCreateProjects
       ? [
           {
             title: "Crear Proyecto",
-            description: "Iniciar un nuevo proyecto de fin de curso",
+            description:
+              "Inicia un nuevo proyecto de fin de curso o investigación",
             icon: PlusCircle,
             href: "/proyectos/new",
-            color: "bg-gradient-to-br from-green-50 to-green-100/50",
-            iconColor: "text-green-600",
-            count: null,
+            stats: null,
+            isActive: true,
             badge: "Nuevo",
           },
         ]
       : []),
-
-    // Mis Noticias
     {
       title: "Mis Noticias",
-      description: "Noticias que he creado o en las que colaboro",
+      description:
+        "Administra las noticias que has creado o en las que colaboras",
       icon: Newspaper,
       href: "/dashboard/noticias",
-      color: "bg-gradient-to-br from-purple-50 to-purple-100/50",
-      iconColor: "text-purple-600",
-      count: "-- noticias",
+      stats: { published: "5", drafts: "2" },
+      isActive: true,
       badge: "Contenido",
     },
-
-    // Mi Perfil
     {
       title: "Mi Perfil",
-      description: "Actualizar información personal y preferencias",
+      description:
+        "Actualiza tu información personal, categoría y preferencias",
       icon: Users,
       href: "/perfil",
-      color: "bg-gradient-to-br from-orange-50 to-orange-100/50",
-      iconColor: "text-orange-600",
-      count: null,
+      stats: null,
+      isActive: true,
       badge: "Perfil",
     },
   ];
 
-  // Secciones de exploración
+  // Secciones de exploración mejoradas
   const exploreSections = [
     {
-      title: "Explorar Noticias",
-      description: "Ver todas las noticias publicadas de la comunidad",
+      title: "Noticias Comunidad",
+      description: "Explora todas las noticias publicadas por la comunidad",
       icon: Eye,
       href: "/noticias",
-      color: "bg-gradient-to-br from-indigo-50 to-indigo-100/50",
-      iconColor: "text-indigo-600",
+      isActive: true,
     },
     {
       title: "Historias Orales",
-      description: "Descubrir testimonios de la comunidad rural",
+      description: "Descubre testimonios y sabiduría de nuestra región",
       icon: BookOpen,
       href: "/historias",
-      color: "bg-gradient-to-br from-teal-50 to-teal-100/50",
-      iconColor: "text-teal-600",
+      isActive: false,
     },
     {
-      title: "Actividad",
-      description: "Ver mi actividad reciente en la plataforma",
-      icon: Clock,
+      title: "Mi Actividad",
+      description: "Revisa tu actividad reciente en la plataforma",
+      icon: Activity,
       href: "/dashboard/actividad",
-      color: "bg-gradient-to-br from-gray-50 to-gray-100/50",
-      iconColor: "text-gray-600",
+      isActive: false,
+    },
+    {
+      title: "Configuración",
+      description: "Ajusta tus preferencias y notificaciones",
+      icon: Settings,
+      href: "/dashboard/configuracion",
+      isActive: false,
     },
   ];
 
+  // Formatear categoría
+  const formatCategoria = (categoria: string) => {
+    const categorias: Record<string, string> = {
+      estudiante_cet: "Estudiante CET",
+      ex_alumno_cet: "Ex Alumno CET",
+      docente_cet: "Docente CET",
+      tutor_externo: "Tutor Externo",
+      colaborador_externo: "Colaborador",
+    };
+    return categorias[categoria] || categoria;
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            Mi Dashboard
-          </h1>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-primary/60 mx-auto rounded-full"></div>
+    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6">
+      {/* Header personalizado */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">Mi Dashboard</h1>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span>Bienvenido/a, {user.nombre || user.email}</span>
+              <MapPin className="h-4 w-4" />
+              <span className="text-sm">CET N°26</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="bg-primary/10 text-primary border-primary/30"
+            >
+              {formatCategoria(user.categoria_principal || "")}
+            </Badge>
+            {isAdmin && (
+              <Badge
+                variant="secondary"
+                className="bg-orange-100 text-orange-700 border-orange-200"
+              >
+                Administrador
+              </Badge>
+            )}
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Bienvenido/a,{" "}
-          <span className="font-medium text-foreground">
-            {user.nombre || user.email}
-          </span>
-        </p>
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">Categoría:</span>
-          <Badge
-            variant="secondary"
-            className="bg-primary/10 text-primary border-primary/20"
-          >
-            {user.categoria_principal?.replace("_", " ") || "Usuario"}
+      </div>
+
+      {/* Estadísticas rápidas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {quickStats.map((stat) => (
+          <Card key={stat.title} className="relative overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <Badge
+                      variant={stat.trend === "up" ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {stat.change}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </div>
+                <div className="opacity-20">
+                  <stat.icon className="h-8 w-8" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Secciones principales */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-bold">Gestión Personal</h2>
+          <Badge variant="outline" className="hidden sm:inline-flex">
+            {userSections.filter((s) => s.isActive).length} secciones
+            disponibles
           </Badge>
         </div>
-      </div>
 
-      {/* Stats rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          {
-            label: "Proyectos",
-            value: "--",
-            icon: FolderOpen,
-            color: "text-blue-600",
-          },
-          {
-            label: "Noticias",
-            value: "--",
-            icon: Newspaper,
-            color: "text-purple-600",
-          },
-          {
-            label: "Colaboraciones",
-            value: "--",
-            icon: Users,
-            color: "text-green-600",
-          },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={stat.label}
-              className="text-center bg-gradient-to-br from-background to-primary/5"
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center space-x-2">
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
-                  <span className="text-2xl font-bold">{stat.value}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {stat.label}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Secciones Principales */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-          Gestión Personal
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {userSections.map((section) => {
-            const Icon = section.icon;
+            const IconComponent = section.icon;
             return (
               <Card
                 key={section.title}
-                className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 ${section.color} border-primary/10`}
+                className="group flex flex-col cursor-pointer transition-all duration-200 hover:shadow-md border-border"
                 onClick={() => router.push(section.href)}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-lg">
-                      <Icon className={`h-6 w-6 ${section.iconColor}`} />
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <CardTitle className="text-base sm:text-lg leading-tight">
+                          {section.title}
+                        </CardTitle>
+                        {section.stats && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {section.stats.active && (
+                              <span>{section.stats.active} activos</span>
+                            )}
+                            {section.stats.total && (
+                              <span>• {section.stats.total} total</span>
+                            )}
+                            {section.stats.published && (
+                              <span>{section.stats.published} publicadas</span>
+                            )}
+                            {section.stats.drafts && (
+                              <span>• {section.stats.drafts} borradores</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {section.badge && (
-                      <Badge variant="outline" className="bg-white/60 text-xs">
+                      <Badge variant="secondary" className="text-xs">
                         {section.badge}
                       </Badge>
                     )}
                   </div>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    {section.title}
-                    {section.count && (
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {section.count}
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-sm leading-relaxed">
+                  <CardDescription className="text-sm leading-relaxed mt-2">
                     {section.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-white/60 hover:bg-white/80"
-                  >
-                    {section.title.startsWith("Crear") ? "Crear" : "Acceder"}
+
+                <CardFooter className="pt-0 mt-auto">
+                  <Button variant="default" className="w-full text-sm">
+                    {section.title.includes("Crear")
+                      ? "Crear Nuevo"
+                      : "Acceder"}
                   </Button>
-                </CardContent>
+                </CardFooter>
               </Card>
             );
           })}
         </div>
       </section>
 
-      {/* Secciones de Exploración */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-          Explorar Comunidad
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Explorar comunidad */}
+      <section className="space-y-4">
+        <h2 className="text-xl sm:text-2xl font-bold">Explorar Comunidad</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {exploreSections.map((section) => {
-            const Icon = section.icon;
+            const IconComponent = section.icon;
             return (
               <Card
                 key={section.title}
-                className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 ${section.color} border-0`}
-                onClick={() => router.push(section.href)}
+                className={`group flex flex-col cursor-pointer transition-opacity ${
+                  section.isActive
+                    ? "hover:shadow-md border-border"
+                    : "opacity-60 hover:opacity-80"
+                }`}
+                onClick={() => section.isActive && router.push(section.href)}
               >
-                <CardHeader className="text-center">
-                  <div className="mx-auto p-3 bg-white/80 backdrop-blur-sm rounded-lg w-fit">
-                    <Icon className={`h-6 w-6 ${section.iconColor}`} />
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        section.isActive
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-base leading-tight">
+                        {section.title}
+                      </CardTitle>
+                      {!section.isActive && (
+                        <Badge variant="secondary" className="text-xs">
+                          Próximamente
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
                   <CardDescription className="text-sm leading-relaxed">
                     {section.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button variant="ghost" size="sm" className="w-full">
-                    Explorar
+
+                <CardFooter className="pt-0 mt-auto">
+                  <Button
+                    variant={section.isActive ? "default" : "secondary"}
+                    className="w-full text-sm"
+                    disabled={!section.isActive}
+                  >
+                    {section.isActive ? "Explorar" : "Próximamente"}
                   </Button>
-                </CardContent>
+                </CardFooter>
               </Card>
             );
           })}
         </div>
       </section>
 
-      {/* Info del usuario */}
-      <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6 border border-primary/20">
-        <div className="text-center space-y-3">
-          <h3 className="font-semibold text-primary mb-2">
-            📚 Tu espacio personal en La Técnica no se Olvida
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-            Este dashboard te permite gestionar tu contenido, participar en
-            proyectos y colaborar con la comunidad. También puedes explorar
-            noticias e historias orales publicadas por otros miembros.
-          </p>
-          <div className="flex items-center justify-center gap-4 pt-3">
+      {/* Quick actions */}
+      <section className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg p-6 border border-primary/20">
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-primary">
+              Tu espacio en La Técnica no se Olvida
+            </h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Gestiona tus proyectos, colabora con la comunidad y mantén vivo el
+              conocimiento técnico del CET N°26. Tu participación hace la
+              diferencia.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => router.push("/noticias")}
               className="bg-white/60 hover:bg-white/80"
             >
+              <Newspaper className="h-4 w-4 mr-2" />
               Ver Noticias
             </Button>
             <Button
               variant="outline"
-              size="sm"
               onClick={() => router.push("/perfil")}
               className="bg-white/60 hover:bg-white/80"
             >
+              <Users className="h-4 w-4 mr-2" />
               Editar Perfil
             </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => router.push("/admin")}
+                className="bg-primary/90 hover:bg-primary"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Panel Admin
+              </Button>
+            )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

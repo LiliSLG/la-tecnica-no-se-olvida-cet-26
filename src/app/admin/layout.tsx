@@ -8,6 +8,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { MainHeader } from "@/components/common/MainHeader";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 
 type Persona = Database["public"]["Tables"]["personas"]["Row"];
@@ -15,6 +17,7 @@ type Persona = Database["public"]["Tables"]["personas"]["Row"];
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { session, user, isAdmin, isLoading, signOut } = useAuth();
 
   // Redirigir solo cuando terminó de cargar Y no hay sesión
@@ -34,6 +37,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
   }, [isLoading, session, user, isAdmin, pathname, router]);
+
+  // Cerrar mobile menu al cambiar de ruta
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   // Mostrar loader mientras carga
   if (isLoading) {
@@ -69,7 +77,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Renderizar layout admin con MainHeader + sidebar + header + contenido
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  // Renderizar layout admin con MainHeader + sidebar + breadcrumbs + contenido
   return (
     <div className="min-h-screen bg-background">
       {/* MainHeader para navegación global */}
@@ -77,10 +93,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Layout Admin Principal */}
       <div className="grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <AdminSidebar user={user! as Persona} onSignOut={signOut} />
+        {/* AdminSidebar con soporte mobile */}
+        <AdminSidebar
+          user={user! as Persona}
+          onSignOut={signOut}
+          isMobileOpen={isMobileMenuOpen}
+          onMobileClose={closeMobileMenu}
+        />
+
         <div className="flex flex-col">
-          {/* Eliminamos AdminHeader - ya tenemos MainHeader */}
-          <main className="flex-1 p-4 sm:p-6 bg-muted/40">{children}</main>
+          {/* Mini header para mobile hamburger (solo visible en móvil) */}
+          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={toggleMobileMenu}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+            <div className="flex-1">
+              <h2 className="font-semibold">Panel Admin</h2>
+            </div>
+          </header>
+
+          {/* Contenido principal con breadcrumbs */}
+          <main className="flex-1 p-4 sm:p-6 bg-muted/40">
+            {/* Breadcrumbs - se muestran automáticamente según la ruta */}
+            <AdminBreadcrumbs />
+            {children}
+          </main>
         </div>
       </div>
 

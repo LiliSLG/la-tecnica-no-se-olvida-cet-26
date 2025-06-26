@@ -4,15 +4,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { type Database } from "@/lib/supabase/types/database.types";
+import { MobileSidebar } from "./MobileSidebar";
 import {
   LayoutDashboard,
   Users,
@@ -95,6 +89,9 @@ const sidebarLinks = [
 interface AdminSidebarProps {
   user: Persona | null;
   onSignOut: () => Promise<void>;
+  // Nuevas props para mobile
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 function SidebarContent({
@@ -110,19 +107,19 @@ function SidebarContent({
 
   const handleLinkClick = (href: string) => {
     if (href === "#") return;
-    onLinkClick?.();
+    onLinkClick?.(); // Cerrar mobile sidebar al navegar
   };
 
   return (
     <div className="flex h-full max-h-screen flex-col gap-2">
+      {/* Header del desktop - se mantiene simple */}
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
         <Link
           href="/admin"
           className="flex items-center gap-2 font-semibold"
           onClick={() => handleLinkClick("/admin")}
         >
-          <LayoutDashboard className="h-5 w-5" />
-          <span>Dashboard</span>
+          <span>Panel Admin</span>
         </Link>
       </div>
 
@@ -172,10 +169,28 @@ function SidebarContent({
   );
 }
 
-export function AdminSidebar({ user, onSignOut }: AdminSidebarProps) {
+export function AdminSidebar({
+  user,
+  onSignOut,
+  isMobileOpen = false,
+  onMobileClose,
+}: AdminSidebarProps) {
   return (
-    <aside className="hidden border-r bg-background md:block">
-      <SidebarContent user={user} onSignOut={onSignOut} />
-    </aside>
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden border-r bg-background md:block">
+        <SidebarContent user={user} onSignOut={onSignOut} />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      {onMobileClose && (
+        <MobileSidebar
+          isOpen={isMobileOpen}
+          onClose={onMobileClose}
+          user={user}
+          onSignOut={onSignOut}
+        />
+      )}
+    </>
   );
 }

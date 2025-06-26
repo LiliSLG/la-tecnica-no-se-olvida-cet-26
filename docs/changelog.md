@@ -1,5 +1,25 @@
 # Changelog
 
+## [26/06/25]
+
+### ✨ Nuevas Funcionalidades - Visual Polish Completo
+- **AdminDataTable Responsive**: Vista de tarjetas automática en móvil con navegación optimizada
+- **Filtros Móviles**: Sheet component para filtros en pantallas pequeñas con indicadores visuales
+- **Login Mejorado**: Diseño moderno con gradientes, branding CET N°26 y mejor UX
+- **Contraseña Visible**: Toggle para mostrar/ocultar contraseña con validación mejorada
+- **Credenciales Demo**: Credenciales de prueba visibles para desarrollo y testing
+
+### 🎨 Mejoras de Diseño
+- Soporte para columnas `mobileHidden` en tablas admin
+- Estados de loading elegantes con spinners y mensajes contextuales
+- Mensajes de error más amigables y específicos
+- Navegación responsive optimizada para todas las pantallas
+- Consistencia visual total entre componentes admin y públicos
+
+### 📱 Responsive Design
+- Breakpoints inteligentes que se adaptan automáticamente
+- Filtros que se transforman en Sheet modal en móvil
+- Paginación compacta para pantallas pequeñas
 ## [25/06/25]
 
 ### ✨ Nuevas Funcionalidades

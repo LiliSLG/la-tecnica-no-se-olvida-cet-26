@@ -4,7 +4,6 @@
 import "@/app/globals.css";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardHeader,
@@ -13,21 +12,25 @@ import {
   CardFooter,
   CardContent,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   Users,
   FolderOpen,
   Newspaper,
   BookOpen,
   Building,
-  Tag,
+  Tags,
   GraduationCap,
   Briefcase,
-  Shield,
-  BarChart,
   Settings,
+  BarChart3,
+  Shield,
   FileText,
+  TrendingUp,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
-import { useAuth } from "@/providers/AuthProvider";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -40,8 +43,7 @@ export default function AdminDashboard() {
       href: "/admin/personas",
       isActive: true,
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 hover:bg-blue-100",
+      stats: { total: "24", new: "3" },
     },
     {
       title: "Proyectos",
@@ -50,8 +52,7 @@ export default function AdminDashboard() {
       href: "/admin/proyectos",
       isActive: true,
       icon: FolderOpen,
-      color: "text-green-600",
-      bgColor: "bg-green-50 hover:bg-green-100",
+      stats: { total: "12", new: "2" },
     },
     {
       title: "Noticias",
@@ -60,8 +61,7 @@ export default function AdminDashboard() {
       href: "/admin/noticias",
       isActive: true,
       icon: Newspaper,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 hover:bg-purple-100",
+      stats: { total: "18", new: "1" },
     },
     {
       title: "Historias Orales",
@@ -70,8 +70,7 @@ export default function AdminDashboard() {
       href: "/admin/historias-orales",
       isActive: false,
       icon: BookOpen,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50 hover:bg-orange-100",
+      stats: { total: "0", new: "0" },
     },
     {
       title: "Organizaciones Vinculadas",
@@ -80,8 +79,7 @@ export default function AdminDashboard() {
       href: "/admin/organizaciones",
       isActive: false,
       icon: Building,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50 hover:bg-indigo-100",
+      stats: { total: "0", new: "0" },
     },
     {
       title: "Temáticas / Ejes",
@@ -89,9 +87,8 @@ export default function AdminDashboard() {
         "Definir y gestionar las temáticas o ejes que estructuran los contenidos y proyectos de la comunidad.",
       href: "/admin/temas",
       isActive: true,
-      icon: Tag,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50 hover:bg-pink-100",
+      icon: Tags,
+      stats: { total: "8", new: "0" },
     },
     {
       title: "Cursos",
@@ -100,8 +97,7 @@ export default function AdminDashboard() {
       href: "/admin/cursos",
       isActive: false,
       icon: GraduationCap,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50 hover:bg-cyan-100",
+      stats: { total: "0", new: "0" },
     },
     {
       title: "Bolsa de Trabajo",
@@ -109,8 +105,7 @@ export default function AdminDashboard() {
       href: "/admin/ofertasTrabajo",
       isActive: false,
       icon: Briefcase,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50 hover:bg-yellow-100",
+      stats: { total: "0", new: "0" },
     },
   ];
 
@@ -121,26 +116,20 @@ export default function AdminDashboard() {
       href: "#",
       isActive: false,
       icon: Shield,
-      color: "text-red-600",
-      bgColor: "bg-red-50 hover:bg-red-100",
     },
     {
       title: "Estadísticas",
-      description: "Ver métricas y analytics de la plataforma",
+      description: "Visualizar métricas y estadísticas del sitio",
       href: "#",
       isActive: false,
-      icon: BarChart,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50 hover:bg-emerald-100",
+      icon: BarChart3,
     },
     {
       title: "Configuración del Sitio",
-      description: "Configurar parámetros generales de la aplicación",
+      description: "Ajustes generales y configuración de la plataforma",
       href: "#",
       isActive: false,
       icon: Settings,
-      color: "text-gray-600",
-      bgColor: "bg-gray-50 hover:bg-gray-100",
     },
     {
       title: "Registros y Auditoría",
@@ -148,127 +137,146 @@ export default function AdminDashboard() {
       href: "#",
       isActive: false,
       icon: FileText,
-      color: "text-slate-600",
-      bgColor: "bg-slate-50 hover:bg-slate-100",
+    },
+  ];
+
+  // Estadísticas rápidas (placeholder data)
+  const quickStats = [
+    {
+      title: "Total Contenidos",
+      value: "62",
+      change: "+12%",
+      icon: TrendingUp,
+      trend: "up",
+    },
+    {
+      title: "Publicaciones Activas",
+      value: "45",
+      change: "+8%",
+      icon: CheckCircle,
+      trend: "up",
+    },
+    {
+      title: "Pendientes Revisión",
+      value: "5",
+      change: "-2",
+      icon: Clock,
+      trend: "down",
     },
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Header del Dashboard - más compacto */}
-      <div className="text-center space-y-3">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            Panel de Administración
-          </h1>
-          <div className="w-12 h-0.5 bg-gradient-to-r from-primary to-primary/60 mx-auto rounded-full"></div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Bienvenido/a,{" "}
-          <span className="font-medium text-foreground">
-            {user?.nombre || user?.email}
-          </span>
+    <div className="space-y-6 sm:space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          Panel de Administración
+        </h1>
+        <p className="text-muted-foreground">
+          Bienvenido/a, {user?.nombre || user?.email || "Administrador"}.
+          Gestiona el contenido y configuración de la plataforma.
         </p>
-        <Badge
-          variant="secondary"
-          className="bg-primary/10 text-primary border-primary/20 text-xs"
-        >
-          <Shield className="w-3 h-3 mr-1" />
-          Administrador
-        </Badge>
       </div>
 
-      {/* Stats rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          {
-            label: "Proyectos Activos",
-            value: "--",
-            icon: FolderOpen,
-            color: "text-green-600",
-          },
-          {
-            label: "Noticias Publicadas",
-            value: "--",
-            icon: Newspaper,
-            color: "text-purple-600",
-          },
-          {
-            label: "Usuarios Activos",
-            value: "--",
-            icon: Users,
-            color: "text-blue-600",
-          },
-          {
-            label: "Temas Definidos",
-            value: "--",
-            icon: Tag,
-            color: "text-pink-600",
-          },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={stat.label}
-              className="bg-gradient-to-br from-background to-primary/5 border-primary/10"
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {quickStats.map((stat) => (
+          <Card key={stat.title} className="relative overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </p>
+                  <div className="flex items-center gap-2">
                     <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-white rounded-lg shadow-sm">
-                    <Icon className={`h-6 w-6 ${stat.color}`} />
+                    <Badge
+                      variant={stat.trend === "up" ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {stat.change}
+                    </Badge>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <div className="opacity-20">
+                  <stat.icon className="h-8 w-8" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Gestión de contenidos */}
-      <section>
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-lg">
-            <FolderOpen className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+      {/* Content Management */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-bold">
             Gestión de Contenidos
           </h2>
+          <Badge variant="outline" className="hidden sm:inline-flex">
+            {contentManagementSections.filter((s) => s.isActive).length} de{" "}
+            {contentManagementSections.length} activos
+          </Badge>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {contentManagementSections.map((section) => {
-            const Icon = section.icon;
+            const IconComponent = section.icon;
             return (
               <Card
                 key={section.title}
-                className={`flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${section.bgColor} border-0`}
+                className={`group flex flex-col transition-all duration-200 ${
+                  section.isActive
+                    ? "hover:shadow-md border-border"
+                    : "opacity-60 hover:opacity-80"
+                }`}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-lg">
-                      <Icon className={`h-6 w-6 ${section.color}`} />
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${
+                          section.isActive
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <CardTitle className="text-base sm:text-lg leading-tight">
+                          {section.title}
+                        </CardTitle>
+                        {section.isActive && section.stats && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{section.stats.total} total</span>
+                            {parseInt(section.stats.new) > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-1.5 py-0"
+                              >
+                                +{section.stats.new}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <Badge
-                      variant={section.isActive ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {section.isActive ? "Activo" : "Próximamente"}
-                    </Badge>
+                    {!section.isActive && (
+                      <Badge variant="secondary" className="text-xs">
+                        Próximamente
+                      </Badge>
+                    )}
                   </div>
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
-                  <CardDescription className="text-sm leading-relaxed">
+                  <CardDescription className="text-sm leading-relaxed mt-2">
                     {section.description}
                   </CardDescription>
                 </CardHeader>
-                <CardFooter className="mt-auto">
+
+                <CardFooter className="pt-0 mt-auto">
                   <Button
                     variant={section.isActive ? "default" : "secondary"}
-                    className="w-full"
+                    className="w-full text-sm"
                     asChild={section.isActive}
                     disabled={!section.isActive}
                   >
@@ -285,38 +293,38 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {/* Administración General */}
-      <section>
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-lg">
-            <Settings className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            Administración General
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* General Administration */}
+      <section className="space-y-4">
+        <h2 className="text-xl sm:text-2xl font-bold">
+          Administración General
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {generalAdminSections.map((section) => {
-            const Icon = section.icon;
+            const IconComponent = section.icon;
             return (
               <Card
                 key={section.title}
-                className={`flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${section.bgColor} border-0`}
+                className="group flex flex-col opacity-60 hover:opacity-80 transition-opacity"
               >
-                <CardHeader className="text-center">
-                  <div className="mx-auto p-3 bg-white/80 backdrop-blur-sm rounded-lg w-fit">
-                    <Icon className={`h-6 w-6 ${section.color}`} />
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-base leading-tight">
+                      {section.title}
+                    </CardTitle>
                   </div>
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
                   <CardDescription className="text-sm leading-relaxed">
                     {section.description}
                   </CardDescription>
                 </CardHeader>
-                <CardFooter>
+
+                <CardFooter className="pt-0 mt-auto">
                   <Button
                     variant="secondary"
-                    className="w-full"
-                    disabled={!section.isActive}
+                    className="w-full text-sm"
+                    disabled
                   >
                     Próximamente
                   </Button>
