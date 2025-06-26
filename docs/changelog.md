@@ -1,5 +1,18 @@
 # Changelog
 
+## [25/06/25]
+
+### ✨ Nuevas Funcionalidades
+- **Navegación Unificada**: MainHeader común para toda la aplicación con navegación dinámica basada en roles
+- **Layout Público**: Estructura consistente con header/footer para páginas públicas
+- **Dashboard Responsive**: Panel principal adaptativo para usuarios y administradores
+- **Página Noticias Pública**: Vista pública con filtros y paginación
+- **Sidebar Admin**: Navegación lateral para panel administrativo
+
+### 🔧 Mejoras
+- Patrones de navegación consistentes en toda la app
+- Mejor experiencia de usuario con layouts estructurados
+- Separación clara entre vistas públicas y administrativas
 ## 25/12/24
 
 ### ✨ Features
