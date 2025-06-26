@@ -11,184 +11,189 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 - **Form Handling:** React Hook Form + Zod validation
 - **UI Components:** shadcn/ui + Lucide React icons
 
-## 🗂️ Estructura de Carpetas Completa
+## 🗂️ Estructura de Carpetas y Estado Actual
 
 ```
 /src
 ├── /app/                           # Next.js App Router pages
 │   ├── /admin/                     # Panel admin (rutas protegidas)
-│   │   ├── layout.tsx              # Layout admin con sidebar
-│   │   ├── page.tsx                # Dashboard admin
-│   │   ├── /temas/                 # Gestión de temas
-│   │   │   ├── page.tsx            # Página lista (Server Component)
-│   │   │   └── /[id]/page.tsx      # Página detalle
-│   │   ├── /proyectos/             # Gestión de proyectos
-│   │   │   ├── page.tsx            # Página lista
+│   │   ├── layout.tsx              # Layout admin con sidebar ✅
+│   │   ├── page.tsx                # Dashboard admin ✅
+│   │   ├── /temas/                 # ✅ Completo (Client Components)
+│   │   │   ├── page.tsx            # Lista temas (Client Component)
+│   │   │   └── /[id]/page.tsx      # Detalle tema
+│   │   ├── /proyectos/             # 🔄 Básico implementado (Client Components)
+│   │   │   ├── page.tsx            # Lista proyectos
 │   │   │   ├── /new/page.tsx       # Formulario crear (página dedicada)
 │   │   │   └── /[id]/
 │   │   │       ├── page.tsx        # Página detalle
-│   │   │       └── /edit/page.tsx  # Formulario editar (página dedicada)
-│   │   ├── /personas/              # Gestión de personas
+│   │   │       └── /edit/page.tsx  # Formulario editar
+│   │   ├── /noticias/              # ✅ Completo (Client Components)
+│   │   │   ├── page.tsx            # Lista noticias
+│   │   │   ├── /new/page.tsx       # Crear noticia
+│   │   │   └── /[id]/edit/page.tsx # Editar noticia
+│   │   ├── /personas/              # ❌ Pendiente
 │   │   │   ├── page.tsx            # Lista personas con AdminDataTable
 │   │   │   ├── /new/page.tsx       # Crear nueva persona
 │   │   │   └── /[id]/edit/page.tsx # Editar persona
-│   │   ├── /organizaciones/        # Gestión de organizaciones
-│   │   │   ├── page.tsx            # Lista organizaciones
-│   │   │   ├── /new/page.tsx       # Crear organización
-│   │   │   └── /[id]/edit/page.tsx # Editar organización
-│   │   └── /noticias/              # Gestión de noticias
-│   │       ├── page.tsx            # Lista noticias
-│   │       ├── /new/page.tsx       # Crear noticia
-│   │       └── /[id]/edit/page.tsx # Editar noticia
-│   ├── /api/                       # API Routes
-│   │   └── /admin/                 # Endpoints admin
-│   │       ├── /temas/route.ts     # API Temas con auth
-│   │       ├── /proyectos/route.ts # API Proyectos con auth
-│   │       ├── /personas/route.ts  # API Personas con auth
-│   │       ├── /organizaciones/route.ts # API Organizaciones con auth
-│   │       └── /noticias/route.ts  # API Noticias con auth
-│   ├── /(public)/                  # Páginas públicas
-│   │   ├── /temas/
-│   │   │   ├── page.tsx            # Lista temas públicos
-│   │   │   └── /[id]/page.tsx      # Detalle tema público
-│   │   ├── /proyectos/
-│   │   │   ├── page.tsx            # Lista proyectos públicos
-│   │   │   └── /[id]/page.tsx      # Detalle proyecto público
-│   │   ├── /noticias/
-│   │   │   ├── page.tsx            # Lista noticias públicas
-│   │   │   └── /[id]/page.tsx      # Detalle noticia pública
-│   │   └── /comunidad/
-│   │       └── /personas/
-│   │           └── /[id]/page.tsx  # Perfil persona público
-│   ├── /login/page.tsx             # Página autenticación
-│   ├── layout.tsx                  # Layout root con AuthProvider
-│   ├── page.tsx                    # Homepage
-│   └── globals.css                 # Estilos globales
+│   │   └── /organizaciones/        # ❌ Pendiente
+│   │       ├── page.tsx            # Lista organizaciones
+│   │       ├── /new/page.tsx       # Crear organización
+│   │       └── /[id]/edit/page.tsx # Editar organización
+│   ├── /api/admin/                 # API Routes con auth
+│   │   ├── /temas/route.ts         # API Temas ✅
+│   │   ├── /proyectos/route.ts     # API Proyectos 🔄
+│   │   ├── /noticias/route.ts      # API Noticias ✅
+│   │   ├── /personas/route.ts      # API Personas ❌
+│   │   └── /organizaciones/route.ts # API Organizaciones ❌
+│   ├── /(public)/                  # Páginas públicas (futuro)
+│   ├── /login/page.tsx             # Página autenticación ✅
+│   ├── layout.tsx                  # Layout root con AuthProvider ✅
+│   ├── page.tsx                    # Homepage ✅
+│   └── globals.css                 # Estilos globales ✅
 ├── /components/                    # Componentes UI reutilizables
-│   ├── /admin/                     # Componentes específicos admin
-│   │   ├── AdminDataTable.tsx      # Tabla de datos reutilizable
-│   │   ├── AdminSidebar.tsx        # Navegación admin
-│   │   └── /[entity]/              # Componentes específicos entidad
-│   │       ├── TemasForm.tsx       # Formulario temas (modal)
-│   │       ├── ProyectosForm.tsx   # Formulario proyectos (página)
-│   │       ├── PersonasForm.tsx    # Formulario personas (página)
-│   │       ├── OrganizacionesForm.tsx # Formulario organizaciones (página)
-│   │       └── NoticiasForm.tsx    # Formulario noticias (página)
+│   ├── /admin/                     # Componentes admin
+│   │   ├── AdminDataTable.tsx      # ✅ Tabla reutilizable
+│   │   ├── AdminSidebar.tsx        # ✅ Navegación admin
+│   │   ├── /temas/
+│   │   │   ├── TemasListPage.tsx   # ✅ Client Component
+│   │   │   └── TemasForm.tsx       # ✅ Modal
+│   │   ├── /proyectos/
+│   │   │   ├── ProyectosListPage.tsx # 🔄 Client Component básico
+│   │   │   └── ProyectoForm.tsx    # ✅ Página dedicada
+│   │   ├── /noticias/
+│   │   │   ├── NoticiasListPage.tsx # ✅ Client Component
+│   │   │   └── NoticiaForm.tsx     # ✅ Página dedicada
+│   │   ├── /personas/              # ❌ Pendiente
+│   │   └── /organizaciones/        # ❌ Pendiente
 │   ├── /common/                    # Componentes compartidos
-│   │   ├── BackButton.tsx          # Helper navegación
+│   │   ├── BackButton.tsx          # ✅ Helper navegación
 │   │   └── LoadingSpinner.tsx      # Estados carga
-│   └── /ui/                        # Componentes shadcn/ui
-│       ├── button.tsx
-│       ├── input.tsx
-│       ├── dialog.tsx
-│       ├── form.tsx
-│       └── ...                     # Otros primitivos UI
+│   └── /ui/                        # Componentes shadcn/ui ✅
 ├── /hooks/                         # Custom React hooks
-│   ├── useDataTableState.ts        # Gestión estado tabla
-│   ├── usePermissions.ts           # Verificación permisos (futuro)
-│   └── use-mobile.tsx              # Detección móvil
+│   ├── useDataTableState.ts        # ✅ Gestión estado tabla
+│   ├── usePermissions.ts           # ❌ Verificación permisos (futuro)
+│   └── use-mobile.tsx              # ✅ Detección móvil
 ├── /lib/                           # Utilidades e integraciones
 │   ├── /supabase/                  # Integración Supabase
-│   │   ├── client.ts               # Cliente browser
-│   │   ├── server.ts               # Cliente servidor (SSR)
+│   │   ├── client.ts               # ✅ Cliente browser
+│   │   ├── server.ts               # ✅ Cliente servidor (SSR)
 │   │   ├── /services/              # Servicios base de datos
-│   │   │   ├── temasService.ts     # Servicio temas ✅
-│   │   │   ├── proyectosService.ts # Servicio proyectos (básico)
-│   │   │   ├── personasService.ts  # Servicio personas (pendiente)
-│   │   │   ├── organizacionesService.ts # Servicio organizaciones (pendiente)
-│   │   │   ├── noticiasService.ts  # Servicio noticias (pendiente)
-│   │   │   └── authService.ts      # Servicio autenticación ✅
+│   │   │   ├── temasService.ts     # ✅ Servicio completo
+│   │   │   ├── proyectosService.ts # 🔄 Básico
+│   │   │   ├── noticiasService.ts  # ✅ Servicio completo
+│   │   │   ├── personasService.ts  # ❌ Pendiente
+│   │   │   ├── organizacionesService.ts # ❌ Pendiente
+│   │   │   └── authService.ts      # ✅ Autenticación
 │   │   ├── /types/                 # Definiciones tipos
-│   │   │   ├── database.types.ts   # Tipos DB generados
-│   │   │   └── serviceResult.ts    # Tipos respuesta servicio
+│   │   │   ├── database.types.ts   # ⚠️ Necesita regeneración
+│   │   │   └── serviceResult.ts    # ✅ Tipos respuesta servicio
 │   │   └── /errors/                # Manejo errores
-│   │       ├── types.ts            # Definiciones tipos error
-│   │       └── utils.ts            # Utilidades error
+│   │       ├── types.ts            # ✅ Definiciones tipos error
+│   │       └── utils.ts            # ✅ Utilidades error
 │   ├── /schemas/                   # Esquemas validación Zod
-│   │   ├── temaSchema.ts           # Validación tema ✅
-│   │   ├── proyectoSchema.ts       # Validación proyecto
-│   │   ├── personaSchema.ts        # Validación persona (pendiente)
-│   │   ├── organizacionSchema.ts   # Validación organización (pendiente)
-│   │   └── noticiaSchema.ts        # Validación noticia (pendiente)
-│   └── utils.ts                    # Utilidades generales (cn, etc.)
-├── /providers/                     # Providers React Context
-│   └── AuthProvider.tsx            # Contexto autenticación ✅
-└── /styles/
-    └── globals.css                 # CSS global con tokens diseño
+│   │   ├── temaSchema.ts           # ✅ Validación completa
+│   │   ├── proyectoSchema.ts       # ✅ Validación completa
+│   │   ├── noticiaSchema.ts        # ✅ Validación completa
+│   │   ├── personaSchema.ts        # ❌ Pendiente
+│   │   └── organizacionSchema.ts   # ❌ Pendiente
+│   └── utils.ts                    # ✅ Utilidades generales
+└── /providers/                     # Providers React Context
+    └── AuthProvider.tsx            # ✅ Contexto autenticación
 ```
 
 ## 🏛️ Patrones Arquitectónicos
 
 ### Patrón "Standalone" Service
-Todos los servicios de entidad deben seguir estas reglas:
+Todos los servicios de entidad siguen estas reglas:
 - **Sin Herencia:** Clases `standalone` que no extienden clase base
-- **Métodos Explícitos:** Implementan sus propios `create`, `update`, `getById`, `getAll`, `delete`
+- **Métodos Explícitos:** Implementan `create`, `update`, `getById`, `getAll`, `delete`, `restore`
 - **Tipos Locales:** Definen tipos (`Row`, `Insert`, `Update`) al inicio del archivo
 - **Export Singleton:** Exportan una sola instancia del servicio
 - **Ubicación:** `/src/lib/supabase/services/`
 
-### Patrón Data Fetching
-Patrón Server Components vs Client Components
-✅ USAR Server Components (Recomendado)
+### Patrón Client Components (Implementado y Funcional)
 
-Para: Páginas admin de listado y detalle de entidades
-Ventajas:
+**✅ PATRÓN ACTUAL:** Client Components con useEffect para páginas admin
 
-RLS funciona correctamente (datos se cargan en el servidor)
-Mejor performance (menos JavaScript en el cliente)
-SEO mejorado
-Menos problemas de permisos
-
-
-Patrón:
-typescript// ✅ CORRECTO: Server Component
-export default async function EntidadPage() {
-  const result = await entidadService.getAll(true);
-  if (!result.success) return <ErrorView />;
-  return <EntidadListPage allEntidades={result.data} />;
-}
-
-
-❌ EVITAR Client Components para Data Fetching
-
-Problemas:
-
-RLS más restrictivo en el cliente
-useEffect + useState genera complejidad innecesaria
-Problemas de hidratación
-Peor UX (loading states adicionales)
-
-
-Anti-patrón:
-typescript// ❌ INCORRECTO: Client Component innecesario
+#### Template Client Component Estándar
+```typescript
+// src/app/admin/[entidad]/page.tsx
 "use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
+import { entidadService } from "@/lib/supabase/services/entidadService";
+import { EntidadListPage } from "@/components/admin/entidad/EntidadListPage";
+import { Database } from "@/lib/supabase/types/database.types";
+
+type Entidad = Database["public"]["Tables"]["entidades"]["Row"];
+
 export default function EntidadPage() {
-  const [data, setData] = useState([]);
-  useEffect(() => { /* fetch data */ }, []);
-  // ...más código complejo
+  const { isAdmin, isLoading } = useAuth();
+  const [entidades, setEntidades] = useState<Entidad[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEntidades() {
+      if (isLoading) return; // Esperar a que auth se resuelva
+      if (isAdmin === undefined) return; // Esperar si isAdmin aún es undefined
+
+      try {
+        console.log("🔍 Fetching entidades, isAdmin:", isAdmin);
+        const result = await entidadService.getAll(isAdmin);
+
+        if (result.success && result.data) {
+          console.log("📊 Server entidades:", result.data.length);
+          setEntidades(result.data);
+        } else {
+          console.error("Error fetching entidades:", result.error);
+        }
+      } catch (error) {
+        console.error("Error in fetchEntidades:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchEntidades();
+  }, [isAdmin, isLoading]); // Incluir ambas dependencias
+
+  if (isLoading || loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center">
+          <div className="text-sm text-muted-foreground">
+            Cargando entidades...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <EntidadListPage allEntidades={entidades} />;
 }
+```
 
+#### Ventajas del Patrón Client Components Actual
+- ✅ **RLS Funciona Correctamente**: Se resolvieron problemas de auth y permisos
+- ✅ **Manejo de Estados**: Control fino sobre loading y error states
+- ✅ **Compatibilidad Auth**: Funciona bien con `useAuth` hook
+- ✅ **Debugging Fácil**: Logs claros del lado cliente
 
-🎯 Cuándo SÍ usar Client Components
+#### Tipos de Formularios
 
-Interactividad: Formularios, modales, componentes con estado local
-Hooks específicos: useRouter, useAuth para acciones
-Event handlers: onClick, onChange, etc.
+**Formularios Modal (Entidades Simples)**
+- **Uso**: Entidades simples como Temas
+- **Patrón**: Dialog modal con formulario dentro de la página de lista Client Component
+- **Componentes**: `TemaForm.tsx` + `Dialog` de shadcn/ui
+- **Estado local**: Gestionado en el componente padre
 
-📋 Checklist Migración a Server Components
-
-✅ Remover "use client" de páginas de listado/detalle
-✅ Cambiar función a async
-✅ Usar await servicioEntidad.getAll() directamente
-✅ Manejar errores con return <ErrorComponent />
-✅ Pasar datos como props a componentes Client
-
-
-#### Server Components + API Routes (Actual)
-- **Server Components**: Carga inicial de datos usando API routes
-- **API Routes**: Manejan autenticación y lógica RLS
-- **AuthProvider**: Gestiona estado de sesión y estado admin
-- **RLS Policies**: Seguridad a nivel de base de datos
+**Formularios Página Dedicada (Entidades Complejas)**
+- **Uso**: Entidades complejas como Proyectos, Personas, Organizaciones, Noticias
+- **Patrón**: Páginas separadas Client Components para crear/editar
+- **Rutas**: `/new` para crear, `/[id]/edit` para actualizar
+- **Navegación**: Usar `useRouter` hook para redirecciones
 
 ## 🔐 Arquitectura de Seguridad
 
@@ -210,13 +215,6 @@ Event handlers: onClick, onChange, etc.
 2. **Usuario Autenticado**: Acceso a dashboard personal + features IA
 3. **Creador Contenido**: Gestión su propio contenido
 4. **Admin**: Acceso completo sistema
-
-### Políticas RLS (Row Level Security)
-- **Políticas Lectura**: Controlan visibilidad datos basado en rol usuario
-- **Políticas Escritura**: Controlan permisos modificación datos
-- **Override Admin**: Admins pueden ver/editar todo contenido incluyendo soft-deleted
-
-## 🎭 Tipos de Usuario y Permisos Detallados
 
 ### Categorías de Persona (categoria_principal_persona_enum)
 
@@ -252,7 +250,7 @@ Event handlers: onClick, onChange, etc.
 
 ### Flujo de Gestión de Usuarios
 
-#### 1. Registro y Verificación
+#### Registro y Verificación
 ```mermaid
 graph TD
     A[Usuario se registra] --> B[Asignación temporal: ninguno_asignado]
@@ -261,15 +259,10 @@ graph TD
     D --> E[Usuario activado con permisos básicos]
 ```
 
-#### 2. Asignación de Roles Globales
-- Solo admins pueden asignar roles globales (admin, moderator, editor)
-- Se registran en tabla `persona_roles`
-- Permiten acceso transversal al sistema
-
-#### 3. Asignación de Roles por Proyecto
-- Autores de proyectos asignan colaboradores
-- Tutores pueden asignar estudiantes
-- Se registran en tabla `proyecto_persona_rol`
+### Políticas RLS (Row Level Security)
+- **Políticas Lectura**: Controlan visibilidad datos basado en rol usuario
+- **Políticas Escritura**: Controlan permisos modificación datos
+- **Override Admin**: Admins pueden ver/editar todo contenido incluyendo soft-deleted
 
 ## 🎨 Guía de Estilo y Diseño
 
@@ -297,31 +290,94 @@ graph TD
 - **Diseño Responsivo**: Completamente funcional en dispositivos móviles
 - **Feedback Visual**: Feedback claro para todas las acciones usuario
 
-## 🚀 Estado Actual Desarrollo
+## 💻 Reglas de Código y Calidad
 
-### ✅ Features Completadas
-- **Sistema Autenticación**: Login/logout con Supabase Auth
-- **AuthProvider**: Gestión de sesión y verificación de admin
-- **Dashboard Admin**: Layout básico con navegación sidebar
-- **Gestión Temas**: CRUD completo con formularios modal y RLS
-- **Gestión Proyectos**: CRUD básico con formularios página dedicada
-- **Componente AdminDataTable**: Tabla reutilizable con búsqueda/filtro
-- **Sistema Soft Delete**: Borrado lógico con funcionalidad restaurar
-- **Esquemas de Base de Datos**: Diseño completo y documentado
-- **Seguridad RLS**: Políticas básicas implementadas para temas
+### Type Safety
+- **No `any` Types**: El uso de `any` está estrictamente prohibido. Usar tipos TypeScript apropiados o `unknown`
+- **Strict Null Checks**: `strictNullChecks` debe estar habilitado en `tsconfig.json`
+- **Zod Schemas**: Usar Zod para validación runtime, especialmente para inputs de API y datos de formularios
 
-### 🚧 En Progreso (Fase 1A)
-- **RLS Expandido**: Implementando políticas para personas, proyectos, organizaciones, noticias
-- **Utilidades de Permisos**: Creando helpers para verificación de roles
+### Organización de Código & Patrones
+- **Estructura de Archivos**: Seguir estrictamente la estructura definida en este blueprint
+- **Patrón de Servicios**: Seguir estrictamente el "Standalone Service Pattern"
+- **Hooks**: Hooks personalizados deben estar en `/src/hooks` y nombrarse `use[Name]`
 
-### 📋 Próximas Prioridades
-1. **Completar RLS (Fase 1A)**: Políticas de seguridad para todas las entidades
-2. **Gestión Personas**: CRUD completo con manejo de categorías
-3. **Gestión Organizaciones**: Sistema de gestión completo
-4. **Gestión Noticias**: CRUD completo con tipos de contenido
-5. **Sistema de Permisos Avanzado**: Hook usePermissions
+### Reglas Generales UI/UX
+- ✅ Todas las features deben ser mobile-friendly y responsive
+- ✅ Las páginas admin pueden tener layouts simplificados en móvil si es necesario
+- ✅ Las páginas públicas deben ser completamente responsive
+- ✅ Evitar anchos fijos y elementos sobresized
+
+### Manejo de Errores
+- Usar bloques `try-catch` para todas las operaciones async
+- Proveer mensajes de error claros y amigables (ej. via toasts)
+- Logear errores en consola para debugging
+
+### Git Workflow
+- **Nombrado de Branches**: `feature/...`, `bugfix/...`, `docs/...`
+- **Commits**: Escribir mensajes de commit claros y descriptivos usando conventional commits
+
+### Accesibilidad
+- Usar HTML semántico
+- Asegurar que todos los elementos interactivos sean accesibles por teclado
+- Mantener contraste de color suficiente
+
+### Seguridad
+- Validar todas las entradas de usuario
+- Usar Supabase Auth para autenticación
+- Implementar verificaciones de autorización para todas las rutas protegidas
+- Usar variables de entorno para todos los secretos
+
+## 🚀 Estado Actual del Desarrollo
+
+### Base de Datos (35% Completado)
+- **Tablas completas**: `temas` (100%), `noticias` (95%)
+- **En progreso**: `personas`, `proyectos`, `organizaciones`
+- **RLS implementado**: Políticas básicas para temas y noticias
+- **Estado**: BD en desarrollo activo, implementación incremental por tabla
+
+### Servicios y Componentes
+- **Servicios completados**: `temasService.ts`, `authService.ts`, `noticiasService.ts`
+- **Servicios pendientes**: `personasService.ts`, `organizacionesService.ts`
+- **Componentes**: `AdminDataTable`, formularios para temas y noticias (completos), proyectos (básico)
+- **Patrón implementado**: Client Components con useEffect para todas las páginas admin
+
+### Archivos de Tipos y Esquemas
+- **Tipos de BD**: `database.types.ts` (necesita regeneración para sincronizar con BD)
+- **Esquemas Zod completados**: `temaSchema.ts`, `proyectoSchema.ts`, `noticiaSchema.ts`
+- **Esquemas pendientes**: `personaSchema.ts`, `organizacionSchema.ts`
+
+## 📋 Próximas Prioridades
+
+### Fase 1A (En Progreso)
+1. **Completar RLS**: Políticas de seguridad para personas, proyectos, organizaciones
+2. **Regenerar tipos**: Actualizar `database.types.ts` desde BD real
+3. **Gestión Personas**: CRUD completo con manejo de categorías siguiendo patrón Client Components
+
+### Fase 1B (Próxima)
+4. **Gestión Organizaciones**: Sistema de gestión completo
+5. **Sistema de Permisos Avanzado**: Hook `usePermissions`
 6. **Upload Archivos**: Integrar Supabase Storage para manejo archivos
+
+### Fase 2 (Futuro)
+7. **Páginas Públicas**: Implementar rutas públicas para contenido
+8. **Sistema de Búsqueda**: Integrar funcionalidades IA
+9. **Optimización Performance**: Índices avanzados, caching
+
+## 🔧 Tareas de Mantenimiento
+
+### Pendientes Inmediatas
+- [ ] Regenerar `database.types.ts` desde BD actual
+- [ ] Actualizar estado de `noticias` en documentación (marcar como completo)
+- [ ] Implementar `PersonasService.ts` siguiendo patrón Standalone
+- [ ] Crear componentes admin para personas siguiendo patrón Client Components
+
+### Optimizaciones Técnicas
+- [ ] Añadir índices DB para `noticias` (tipo, fecha_publicacion, es_destacada)
+- [ ] Implementar FK relacionales entre `noticias` y `temas`
+- [ ] Validaciones DB para URLs en campos correspondientes
+- [ ] Performance: Índices GIN para campos de texto completo
 
 ---
 
-*Blueprint actualizado para reflejar el estado real del proyecto y guiar el desarrollo futuro.*
+*Blueprint actualizado para reflejar el estado real del proyecto y patrones que funcionan. Documento maestro técnico para desarrollo y colaboración con IA.*

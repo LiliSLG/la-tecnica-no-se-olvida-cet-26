@@ -208,26 +208,139 @@ After a complete refactoring, the project uses an explicit, inheritance-free ser
 
 ## 🔐 Security Architecture
 
-### Role System Design
+## 🔐 Arquitectura de Seguridad - DEFINICIÓN ACTUALIZADA
 
-#### Global Roles (persona_roles table)
-- **admin**: Full system access
-- **moderator**: Content moderation capabilities
-- **editor**: Content creation and editing
+### **📋 Conceptos Clave: Categorías vs Roles**
 
-#### Project-Specific Roles (proyecto_persona_rol table)
-- **autor**: Project creator/owner
-- **tutor**: Project mentor (can be different projects)
-- **colaborador**: Contributor (limited edit access)
-- **revisor**: Review and feedback permissions
+#### **👤 Categorías de Persona (QUÉ ERES - Identidad Institucional)**
+```sql
+categoria_principal_persona_enum:
+- 'estudiante_cet'     -- Estudiantes actuales del CET  
+- 'ex_alumno_cet'      -- Graduados del CET
+- 'productor_rural'    -- Productores agropecuarios locales
+- 'profesional_externo' -- Profesionales de diversas áreas
+- 'investigador'       -- Investigadores académicos
+- 'comunidad_general'  -- Miembros de la comunidad local
+- 'otro'               -- Casos especiales
+- 'ninguno_asignado'   -- Estado temporal hasta verificación
+```
+**Características:** Permanente/semi-permanente, no cambia con proyectos
 
-#### Permission Levels
-1. **Anonymous**: Read-only access to published content
-2. **Authenticated User**: Access to personal dashboard + IA features
-3. **Content Creator**: Manage their own content
-4. **Admin**: Full system access
+#### **🛡️ Roles Globales (QUÉ PUEDES HACER EN EL SISTEMA)**
+```sql
+tabla 'persona_roles':
+- 'admin'      -- Acceso completo al sistema
+- 'moderator'  -- Capacidades moderación contenido (futuro)
+```
+**Características:** Permisos a nivel sistema, asignados por admin
 
-### RLS (Row Level Security) Policies
+#### **🎯 Roles por Proyecto (QUÉ HACES EN PROYECTOS ESPECÍFICOS)**
+```sql
+tabla 'proyecto_persona_rol':
+- 'autor'       -- Gestión total del proyecto (creador)
+- 'tutor'       -- Gestión total del proyecto (mentor) 
+- 'colaborador' -- Solo agregar contenido específico
+```
+**Características:** Dinámico, varía entre proyectos, múltiples roles posibles
+
+---
+
+### **💡 Casos de Uso Reales**
+
+#### **Ejemplo 1: Ex-alumno como Tutor**
+```
+categoria_principal: 'ex_alumno_cet'
++ rol en Proyecto A: 'tutor' 
++ rol en Proyecto B: 'colaborador'
+→ Dashboard: Ve y gestiona Proyecto A + colabora en Proyecto B
+```
+
+#### **Ejemplo 2: Estudiante Actual**  
+```
+categoria_principal: 'estudiante_cet'
++ rol en Su Proyecto: 'autor'
++ rol en Proyecto Grupal: 'colaborador'  
+→ Dashboard: Gestiona su proyecto + colabora en proyecto grupal
+```
+
+#### **Ejemplo 3: Productor Rural**
+```
+categoria_principal: 'productor_rural'
++ rol en Proyecto X: 'colaborador'
+→ Dashboard: Solo puede agregar contenido específico a Proyecto X
+```
+
+---
+
+### **🎯 Lógica de Acceso al Dashboard**
+
+#### **✅ Usuarios que SÍ necesitan dashboard:**
+- **Admins**: Siempre tienen acceso
+- **Cualquier usuario con roles activos en proyectos**: `autor`, `tutor`, `colaborador`
+
+#### **❌ Usuarios que NO necesitan dashboard:**
+- **Usuarios sin roles en proyectos**: Solo acceso de lectura + IA
+
+#### **🔧 Lógica de Creación de Proyectos:**
+- **Solo pueden crear proyectos**: `estudiante_cet`, `ex_alumno_cet`, `admins`
+- **Resto de categorías**: Pueden ser invitados como tutores/colaboradores
+
+---
+
+### **🏗️ Flujo de Asignación de Roles**
+
+```mermaid
+graph TD
+    A[Usuario se registra] --> B[categoria_principal: 'ninguno_asignado']
+    B --> C[Admin verifica identidad]
+    C --> D[Admin asigna categoria_principal]
+    D --> E[Usuario activado - Acceso básico]
+    E --> F[Autor/Tutor invita a proyecto]
+    F --> G[Usuario obtiene rol en proyecto específico]
+    G --> H[Dashboard activado automáticamente]
+```
+
+---
+
+### **⚙️ Implementación Técnica**
+
+#### **Dashboard Access Logic**
+```typescript
+const needsDashboard = user && (
+  isAdmin || 
+  hasActiveProjectRoles(user.id) // Función que chequea tabla proyecto_persona_rol
+);
+
+const canCreateProjects = user && (
+  isAdmin ||
+  user.categoria_principal_persona === 'estudiante_cet' ||
+  user.categoria_principal_persona === 'ex_alumno_cet'
+);
+```
+
+#### **Función Helper**
+```typescript
+async function hasActiveProjectRoles(userId: string): Promise {
+  // Chequear si tiene algún rol activo en proyecto_persona_rol
+  const { data } = await supabase
+    .from('proyecto_persona_rol')
+    .select('id')
+    .eq('persona_id', userId)
+    .eq('is_deleted', false)
+    .limit(1);
+    
+  return data && data.length > 0;
+}
+```
+
+---
+
+### **📝 Notas Importantes**
+
+- **Docentes CET**: Tendrán rol `admin` (no categoría especial)
+- **Categorías `_invitado`**: Son placeholders de uso interno, se eliminarán
+- **Múltiples roles**: Un usuario puede tener diferentes roles en diferentes proyectos
+- **Escalabilidad**: Sistema preparado para agregar nuevos roles por proyecto### RLS (Row Level Security) Policies
 - **Read Policies**: Control data visibility based on user role
 - **Write Policies**: Control data modification permissions
 - **Admin Override**: Admins can see/edit all content including soft-deleted
