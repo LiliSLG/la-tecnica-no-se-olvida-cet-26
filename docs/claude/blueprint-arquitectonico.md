@@ -181,6 +181,196 @@ export default function EntidadPage() {
 - ✅ **Compatibilidad Auth**: Funciona bien con `useAuth` hook
 - ✅ **Debugging Fácil**: Logs claros del lado cliente
 
+### Patrón Híbrido Server + Client (Páginas Públicas)
+✅ PATRÓN PARA PÁGINAS PÚBLICAS: Server Components + Client Components híbrido
+Filosofía del Patrón Híbrido
+
+Server Components: Fetch inicial de datos + renderizado HTML para SEO
+Client Components: Interactividad específica (filtros, búsqueda, paginación)
+Objetivo: Mejor SEO + Performance + UX fluida
+
+Template Página Pública Server Component
+typescript// src/app/(public)/[entidad]/page.tsx
+import { entidadService } from "@/lib/supabase/services/entidadService";
+import { EntidadPublicGrid } from "@/components/public/entidad/EntidadPublicGrid";
+
+export default async function EntidadPublicaPage() {
+  console.log("🔍 Server Public: Loading published entidades");
+  
+  const result = await entidadService.getAllPublished();
+  
+  if (!result.success) {
+    console.error("❌ Server Public: Error loading entidades:", result.error);
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center text-red-600">
+          Error cargando contenido. Intente nuevamente.
+        </div>
+      </div>
+    );
+  }
+
+  const entidades = result.data || [];
+  console.log("📊 Server Public: Loaded published entidades:", entidades.length);
+
+  return (
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-8">Entidades</h1>
+      <EntidadPublicGrid entidades={entidades} />
+    </div>
+  );
+}
+Template Componente Público Híbrido
+typescript// src/components/public/entidad/EntidadPublicGrid.tsx
+"use client";
+
+import { useState, useMemo } from "react";
+import { EntidadCard } from "./EntidadCard";
+
+type EntidadPublica = {
+  id: string;
+  titulo: string;
+  // Solo campos públicos necesarios
+};
+
+interface EntidadPublicGridProps {
+  entidades: EntidadPublica[];
+}
+
+export function EntidadPublicGrid({ entidades }: EntidadPublicGridProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Filtrado del lado cliente para UX fluida
+  const filteredEntidades = useMemo(() => {
+    return entidades.filter(entidad => {
+      const matchesSearch = entidad.titulo.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || entidad.categoria === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [entidades, searchTerm, selectedCategory]);
+
+  return (
+    <div className="space-y-6">
+      {/* Controles interactivos - Client Component */}
+      <div className="flex gap-4">
+        <SearchInput 
+          placeholder="Buscar entidades..." 
+          onSearch={setSearchTerm} 
+        />
+        <CategoryFilter 
+          onCategoryChange={setSelectedCategory} 
+        />
+      </div>
+
+      {/* Grid de resultados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredEntidades.map(entidad => (
+          <EntidadCard key={entidad.id} entidad={entidad} />
+        ))}
+      </div>
+
+      {filteredEntidades.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No se encontraron entidades con los filtros aplicados.
+        </div>
+      )}
+    </div>
+  );
+}
+Servicios Adaptados para Público
+typescript// Métodos adicionales en services para páginas públicas
+class EntidadService {
+  // Métodos admin existentes...
+
+  // ✨ NUEVOS: Para páginas públicas
+  async getAllPublished(): Promise<ServiceResult<EntidadPublica[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from('entidades')
+        .select(`
+          id, titulo, descripcion, fecha_publicacion,
+          imagen_url, categoria,
+          created_by_persona:personas(nombre, apellido)
+        `)
+        .eq('esta_publicada', true)
+        .eq('is_deleted', false)
+        .order('fecha_publicacion', { ascending: false });
+
+      if (error) throw error;
+      return { success: true, data: data || [] };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async getPublishedById(id: string): Promise<ServiceResult<EntidadPublica | null>> {
+    try {
+      const { data, error } = await this.supabase
+        .from('entidades')
+        .select(`
+          id, titulo, descripcion, contenido, fecha_publicacion,
+          imagen_url, categoria, url_externa,
+          created_by_persona:personas(nombre, apellido)
+        `)
+        .eq('id', id)
+        .eq('esta_publicada', true)
+        .eq('is_deleted', false)
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+}
+Estructura de Archivos Páginas Públicas
+/src
+├── /app/
+│   ├── /(public)/                  # Grupo de rutas públicas
+│   │   ├── layout.tsx              # Layout público (diferente al admin)
+│   │   ├── page.tsx                # Homepage - Server Component
+│   │   ├── /noticias/
+│   │   │   ├── page.tsx            # Lista noticias - Server Component
+│   │   │   └── /[id]/page.tsx      # Detalle noticia - Server Component
+│   │   ├── /proyectos/
+│   │   │   ├── page.tsx            # Lista proyectos - Server Component
+│   │   │   └── /[id]/page.tsx      # Detalle proyecto - Server Component
+│   │   └── /personas/
+│   │       ├── page.tsx            # Lista personas - Server Component
+│   │       └── /[id]/page.tsx      # Perfil público - Server Component
+├── /components/
+│   ├── /public/                    # Componentes para páginas públicas
+│   │   ├── /noticias/
+│   │   │   ├── NoticiasPublicGrid.tsx  # Client Component híbrido
+│   │   │   ├── NoticiaCard.tsx         # Presentacional
+│   │   │   └── NoticiaDetail.tsx       # Presentacional
+│   │   ├── /common/
+│   │   │   ├── SearchInput.tsx         # Client Component reutilizable
+│   │   │   ├── CategoryFilter.tsx      # Client Component reutilizable
+│   │   │   └── PublicHeader.tsx        # Server Component
+Ventajas del Patrón Híbrido
+
+✅ SEO Perfecto: Server Components renderizan HTML completo
+✅ Performance: Carga inicial rápida + hidratación selectiva
+✅ UX Fluida: Filtros y búsqueda sin reload de página
+✅ Mobile Optimized: Menos JavaScript inicial
+✅ Caching: Next.js puede cachear automáticamente las páginas
+
+Debugging Híbrido
+
+Server logs: Aparecen en terminal durante build y runtime
+Client logs: Aparecen en DevTools del navegador
+Prefijo recomendado: 🔍 Server Public: para páginas públicas server-side
+
+Consideraciones Importantes
+
+Tipos separados: Usar tipos EntidadPublica sin campos admin
+Metadata para SEO: Implementar generateMetadata en páginas de detalle
+Error handling: Páginas públicas deben ser más resilientes
+Performance: Solo cargar campos necesarios en queries públicas
+
 #### Tipos de Formularios
 
 **Formularios Modal (Entidades Simples)**

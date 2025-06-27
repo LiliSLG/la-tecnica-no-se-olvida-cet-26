@@ -1,5 +1,32 @@
 # Changelog
+## [27/06/25] ✨ Nuevo Patrón Híbrido para Páginas Públicas
 
+**🌐 Implementación completa del patrón Server + Client Components para noticias públicas**
+
+#### Nuevas Funcionalidades
+- **Páginas públicas de noticias** con renderizado Server Component para SEO óptimo
+- **Filtros y búsqueda en tiempo real** del lado cliente sin reload de página
+- **Componentes públicos reutilizables**: SearchInput, CategoryFilter, NoticiasPublicGrid
+- **Metadata dinámico** para SEO en páginas de detalle de noticias
+- **Integración completa de temas** en consultas públicas
+
+#### Arquitectura
+- **Server Components**: Fetch inicial de datos + HTML completo para SEO
+- **Client Components**: Interactividad (filtros, búsqueda) sin perder performance
+- **Servicios extendidos**: Métodos específicos para páginas públicas en noticiasService
+- **Tipos optimizados**: NoticiaPublica sin campos administrativos
+
+#### Mejoras Técnicas
+- Consultas optimizadas que incluyen relaciones con temas via noticia_tema
+- Transformación automática de estructura de datos para UX consistente
+- Manejo robusto de errores para páginas públicas
+- Performance mejorada con menos JavaScript inicial
+
+#### Rutas Implementadas
+- `/noticias` - Lista de noticias públicas con filtros híbridos
+- `/noticias/[id]` - Detalle de noticia con metadata SEO dinámico
+
+**Próximo**: Replicar patrón híbrido para proyectos y personas públicas
 ## [26/06/25]
 
 ### ✨ Nueva Funcionalidad

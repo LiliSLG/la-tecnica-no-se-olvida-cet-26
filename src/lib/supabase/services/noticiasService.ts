@@ -10,6 +10,30 @@ type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 type CreateNoticia = Database["public"]["Tables"]["noticias"]["Insert"];
 type UpdateNoticia = Database["public"]["Tables"]["noticias"]["Update"];
 
+type NoticiaPublica = {
+  id: string;
+  titulo: string;
+  subtitulo: string | null;
+  fecha_publicacion: string | null;
+  tipo: "articulo_propio" | "enlace_externo";
+  autor_noticia: string | null;
+  fuente_externa: string | null;
+  url_externa: string | null;
+  contenido: string | null;
+  imagen_url: string | null;
+  es_destacada: boolean; // ✅ Volver a boolean puro (convertimos el null)
+  created_by_persona: {
+    nombre: string | null;
+    apellido: string | null;
+  } | null;
+  // ✨ INCLUIR TEMAS
+  temas: {
+    id: string;
+    nombre: string;
+    categoria_tema: string | null;
+  }[];
+};
+
 // 🔄 Tipo con campos reales: nombre + apellido
 export type NoticiaWithAuthor = Noticia & {
   created_by_persona?: {
@@ -472,6 +496,204 @@ class NoticiasService {
     }
   }
   */
+
+  // ===== MÉTODOS PARA PÁGINAS PÚBLICAS =====
+
+  // ✨ Obtener todas las noticias publicadas (para página pública)
+  async getAllPublished(): Promise<ServiceResult<NoticiaPublica[]>> {
+    try {
+      console.log("🔍 Server Public: Loading published noticias");
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .select(
+          `
+        id, titulo, subtitulo, fecha_publicacion, tipo,
+        autor_noticia, fuente_externa, url_externa, contenido,
+        imagen_url, es_destacada,
+        created_by_persona:personas!created_by_uid (
+          nombre,
+          apellido
+        ),
+        noticia_tema (
+          temas (
+            id,
+            nombre,
+            categoria_tema
+          )
+        )
+      `
+        )
+        .eq("esta_publicada", true)
+        .eq("is_deleted", false)
+        .order("fecha_publicacion", { ascending: false });
+
+      if (error) throw error;
+
+      // Transformar datos para incluir temas directamente
+      const transformedData: NoticiaPublica[] =
+        data?.map((item) => {
+          const { noticia_tema, ...rest } = item;
+          return {
+            ...rest,
+            temas: noticia_tema?.map((nt) => nt.temas).filter(Boolean) || [],
+          };
+        }) || [];
+
+      console.log(
+        "📊 Server Public: Loaded published noticias:",
+        transformedData.length
+      );
+      return createSuccess(transformedData);
+    } catch (error) {
+      console.error(
+        "❌ Server Public: Error loading published noticias:",
+        error
+      );
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching published noticias",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  // ✨ Obtener noticia publicada por ID (para página de detalle)
+  async getPublishedById(
+    id: string
+  ): Promise<ServiceResult<NoticiaPublica | null>> {
+    try {
+      if (!id) {
+        return createError({
+          name: "ValidationError",
+          message: "ID is required",
+          code: "VALIDATION_ERROR",
+          details: { id },
+        });
+      }
+
+      console.log("🔍 Server Public: Loading published noticia:", id);
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .select(
+          `
+        id, titulo, subtitulo, fecha_publicacion, tipo,
+        autor_noticia, fuente_externa, url_externa, contenido,
+        imagen_url, es_destacada,
+        created_by_persona:personas!created_by_uid (
+          nombre,
+          apellido
+        ),
+        noticia_tema (
+          temas (
+            id,
+            nombre,
+            categoria_tema
+          )
+        )
+      `
+        )
+        .eq("id", id)
+        .eq("esta_publicada", true)
+        .eq("is_deleted", false)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return createSuccess(null);
+        }
+        throw error;
+      }
+
+      // Transformar datos para incluir temas directamente
+      const { noticia_tema, ...rest } = data;
+      const transformedData: NoticiaPublica = {
+        ...rest,
+        temas: noticia_tema?.map((nt) => nt.temas).filter(Boolean) || [],
+      };
+
+      console.log(
+        "📊 Server Public: Found published noticia:",
+        transformedData.titulo
+      );
+      return createSuccess(transformedData);
+    } catch (error) {
+      console.error(
+        "❌ Server Public: Error loading published noticia:",
+        error
+      );
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching published noticia",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  // ✨ Obtener noticias destacadas (para homepage o sección especial)
+  async getFeaturedPublished(): Promise<ServiceResult<NoticiaPublica[]>> {
+    try {
+      console.log("🔍 Server Public: Loading featured noticias");
+
+      const { data, error } = await supabase
+        .from("noticias")
+        .select(
+          `
+        id, titulo, subtitulo, fecha_publicacion, tipo,
+        autor_noticia, fuente_externa, url_externa, contenido,
+        imagen_url, es_destacada,
+        created_by_persona:personas!created_by_uid (
+          nombre,
+          apellido
+        ),
+        noticia_tema (
+          temas (
+            id,
+            nombre,
+            categoria_tema
+          )
+        )
+      `
+        )
+        .eq("esta_publicada", true)
+        .eq("es_destacada", true)
+        .eq("is_deleted", false)
+        .order("fecha_publicacion", { ascending: false })
+        .limit(6);
+
+      if (error) throw error;
+
+      // Transformar datos para incluir temas directamente
+      const transformedData: NoticiaPublica[] =
+        data?.map((item) => {
+          const { noticia_tema, ...rest } = item;
+          return {
+            ...rest,
+            temas: noticia_tema?.map((nt) => nt.temas).filter(Boolean) || [],
+          };
+        }) || [];
+
+      console.log(
+        "📊 Server Public: Loaded featured noticias:",
+        transformedData.length
+      );
+      return createSuccess(transformedData);
+    } catch (error) {
+      console.error(
+        "❌ Server Public: Error loading featured noticias:",
+        error
+      );
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching featured noticias",
+        code: "DB_ERROR",
+        details: error,
+      });
+    }
+  }
 }
 
 export const noticiasService = new NoticiasService();

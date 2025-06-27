@@ -52,8 +52,14 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant={noticia.tipo === "articulo" ? "default" : "secondary"}>
-                  {noticia.tipo === "articulo" ? "Artículo Propio" : "Enlace Externo"}
+                <Badge
+                  variant={
+                    noticia.tipo === "articulo_propio" ? "default" : "secondary"
+                  }
+                >
+                  {noticia.tipo === "articulo_propio"
+                    ? "Artículo Propio"
+                    : "Enlace Externo"}
                 </Badge>
                 {noticia.esta_publicada && (
                   <Badge variant="outline" className="text-green-600">
@@ -66,11 +72,11 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
                   </Badge>
                 )}
               </div>
-              
+
               <CardTitle className="text-3xl font-bold mb-3">
                 {noticia.titulo}
               </CardTitle>
-              
+
               {noticia.subtitulo && (
                 <p className="text-xl text-muted-foreground">
                   {noticia.subtitulo}
@@ -101,7 +107,7 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
                 <span>{noticia.autor_noticia}</span>
               </div>
             )}
-            
+
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Fecha:</span>
@@ -111,8 +117,12 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
             {noticia.fuente_externa && (
               <div className="flex items-start gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <span className="text-sm text-muted-foreground flex-shrink-0">Fuente:</span>
-                <span className="break-words break-all min-w-0">{noticia.fuente_externa}</span>
+                <span className="text-sm text-muted-foreground flex-shrink-0">
+                  Fuente:
+                </span>
+                <span className="break-words break-all min-w-0">
+                  {noticia.fuente_externa}
+                </span>
               </div>
             )}
           </div>
@@ -120,9 +130,11 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
           <Separator />
 
           {/* Contenido según tipo */}
-          {noticia.tipo === "articulo" && noticia.contenido && (
+          {noticia.tipo === "articulo_propio" && noticia.contenido && (
             <div>
-              <h3 className="text-lg font-semibold mb-3">Contenido del Artículo</h3>
+              <h3 className="text-lg font-semibold mb-3">
+                Contenido del Artículo
+              </h3>
               <div className="prose max-w-none">
                 <p className="whitespace-pre-wrap leading-relaxed">
                   {noticia.contenido}
@@ -131,14 +143,14 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
             </div>
           )}
 
-          {noticia.tipo === "link" && noticia.url_externa && (
+          {noticia.tipo === "enlace_externo" && noticia.url_externa && (
             <div>
               <h3 className="text-lg font-semibold mb-3">Enlace Externo</h3>
               <div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
                 <ExternalLink className="h-4 w-4" />
-                <a 
-                  href={noticia.url_externa} 
-                  target="_blank" 
+                <a
+                  href={noticia.url_externa}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline break-all"
                 >
@@ -154,7 +166,7 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
               <Separator />
               <div>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  Resumen / Contexto Interno 
+                  Resumen / Contexto Interno
                   <span className="text-blue-600 text-sm">🤖 IA</span>
                 </h3>
                 <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
@@ -171,10 +183,13 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
                 <div className="flex items-start gap-2">
                   <span className="text-orange-600 text-lg">⚠️</span>
                   <div>
-                    <h4 className="font-semibold text-orange-800 mb-1">Contexto IA Faltante</h4>
+                    <h4 className="font-semibold text-orange-800 mb-1">
+                      Contexto IA Faltante
+                    </h4>
                     <p className="text-sm text-orange-700">
-                      Esta noticia no tiene contexto para la IA. Es recomendable agregarlo para mejorar 
-                      las búsquedas y recomendaciones del sistema.
+                      Esta noticia no tiene contexto para la IA. Es recomendable
+                      agregarlo para mejorar las búsquedas y recomendaciones del
+                      sistema.
                     </p>
                   </div>
                 </div>
@@ -191,7 +206,8 @@ export function NoticiaDetailPage({ noticia }: NoticiaDetailPageProps) {
             </p>
             {noticia.updated_at && (
               <p>
-                <strong>Última actualización:</strong> {formatearFecha(noticia.updated_at)}
+                <strong>Última actualización:</strong>{" "}
+                {formatearFecha(noticia.updated_at)}
                 {noticia.updated_by_uid && ` por ${noticia.updated_by_uid}`}
               </p>
             )}

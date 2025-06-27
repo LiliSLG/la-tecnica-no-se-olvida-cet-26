@@ -1,7 +1,7 @@
 // /src/app/(public)/layout.tsx
 import { ReactNode } from "react";
-import { MainHeader } from "@/components/common/MainHeader";
-import { PublicFooter } from "@/components/common/PublicFooter";
+import { PublicHeader } from "@/components/public/common/PublicHeader";
+import { PublicFooter } from "@/components/public/common/PublicFooter";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -10,8 +10,8 @@ interface PublicLayoutProps {
 export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header común para páginas públicas */}
-      <MainHeader />
+      {/* Header público con navegación */}
+      <PublicHeader />
 
       {/* Contenido principal */}
       <main className="flex-1">{children}</main>

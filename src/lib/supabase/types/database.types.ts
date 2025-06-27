@@ -292,13 +292,13 @@ export type Database = {
           created_by_uid: string | null
           deleted_at: string | null
           deleted_by_uid: string | null
-          es_destacada: boolean | null
+          es_destacada: boolean
           esta_publicada: boolean | null
           fecha_publicacion: string | null
           fuente_externa: string | null
           id: string
           imagen_url: string | null
-          is_deleted: boolean | null
+          is_deleted: boolean
           resumen_o_contexto_interno: string | null
           subtitulo: string | null
           tipo: Database["public"]["Enums"]["tipo_noticia"]
@@ -314,13 +314,13 @@ export type Database = {
           created_by_uid?: string | null
           deleted_at?: string | null
           deleted_by_uid?: string | null
-          es_destacada?: boolean | null
+          es_destacada?: boolean
           esta_publicada?: boolean | null
           fecha_publicacion?: string | null
           fuente_externa?: string | null
           id?: string
           imagen_url?: string | null
-          is_deleted?: boolean | null
+          is_deleted?: boolean
           resumen_o_contexto_interno?: string | null
           subtitulo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_noticia"]
@@ -336,13 +336,13 @@ export type Database = {
           created_by_uid?: string | null
           deleted_at?: string | null
           deleted_by_uid?: string | null
-          es_destacada?: boolean | null
+          es_destacada?: boolean
           esta_publicada?: boolean | null
           fecha_publicacion?: string | null
           fuente_externa?: string | null
           id?: string
           imagen_url?: string | null
-          is_deleted?: boolean | null
+          is_deleted?: boolean
           resumen_o_contexto_interno?: string | null
           subtitulo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_noticia"]
