@@ -23,7 +23,7 @@
 - **Navegación Consistente**: Rutas dashboard vs admin correctamente separadas
 
 ### 🐛 Problemas Conocidos
-- AdminDataTable: Error serialización event handlers en vista mobile (no bloquea funcionalidad)
+- DataTable: Error serialización event handlers en vista mobile (no bloquea funcionalidad)
 - Vista pública noticias: Algunos casos de navegación pendientes de optimizar
 
 ### 📁 Archivos Nuevos
@@ -33,7 +33,7 @@
 - `/components/user/noticias/UserNoticiasListPage.tsx` - Componente lista usuario
 
 ### 🎯 Próximos Pasos
-- Resolver problema AdminDataTable event handlers
+- Resolver problema DataTable event handlers
 - Unificar diseño lista admin vs usuario
 - Optimizar navegación vista pública noticias
 - Documentar patrón para replicar en otras entidades
@@ -83,7 +83,7 @@
 ## [26/06/25]
 
 ### ✨ Nueva Funcionalidad
-- **AdminDataTable Responsivo**: Implementada vista de cards para dispositivos móviles
+- **DataTable Responsivo**: Implementada vista de cards para dispositivos móviles
   - Las tablas ahora se muestran como cards elegantes en pantallas pequeñas (<768px)
   - Soporte para propiedad `mobileHidden` en columnas para ocultar información no esencial
   - Filtros móviles optimizados con Sheet component de shadcn/ui
@@ -92,7 +92,7 @@
 ### 🔧 Mejoras Técnicas
 - **Limpieza de Código**: Eliminados todos los logs de debug de producción
 - **UX Móvil Mejorada**: Experiencia optimizada para gestión de contenido en dispositivos móviles
-- **Patrones Consolidados**: AdminDataTable ahora es completamente responsive por defecto
+- **Patrones Consolidados**: DataTable ahora es completamente responsive por defecto
 
 ### 📱 Responsividad
 - **Temas y Noticias**: Ambas secciones admin ahora funcionan perfectamente en móvil
@@ -106,7 +106,7 @@
 ## [26/06/25]
 
 ### ✨ Nuevas Funcionalidades - Visual Polish Completo
-- **AdminDataTable Responsive**: Vista de tarjetas automática en móvil con navegación optimizada
+- **DataTable Responsive**: Vista de tarjetas automática en móvil con navegación optimizada
 - **Filtros Móviles**: Sheet component para filtros en pantallas pequeñas con indicadores visuales
 - **Login Mejorado**: Diseño moderno con gradientes, branding CET N°26 y mejor UX
 - **Contraseña Visible**: Toggle para mostrar/ocultar contraseña con validación mejorada
@@ -183,14 +183,14 @@
 - src/lib/supabase/services/proyectosService.ts
 - src/lib/supabase/services/noticiasService.ts
 - src/lib/supabase/services/organizacionesService.ts (nuevo)
-## [2025-06-24] - AdminDataTable Mejorado y Navegación
+## [2025-06-24] - DataTable Mejorado y Navegación
 ### Added
 - DropdownMenu para acciones múltiples en tablas
 - Paginación de 10 elementos por página
 - Búsqueda en propiedades anidadas (ej: "autor.nombre")
 - Filtrado exclusivo: solo activos O solo eliminados
 - Stats dinámicos sin información redundante
-- NoticiasListPage con AdminDataTable integrado
+- NoticiasListPage con DataTable integrado
 
 ### Fixed
 - Navegación entre páginas admin sin necesidad de F5
@@ -199,13 +199,13 @@
 - Consistencia en valores de enum tipo_noticia
 
 ### Changed
-- TemasListPage migrado a nuevo patrón AdminDataTable
+- TemasListPage migrado a nuevo patrón DataTable
 - Páginas admin convertidas a Client Components
 - Stats simplificados (removida información duplicada)
 - Acciones de tabla separadas de columnas para mejor mantenimiento
 
 ### Files Modified
-- components/admin/AdminDataTable.tsx
+- components/admin/DataTable.tsx
 - components/admin/temas/TemasListPage.tsx
 - components/admin/noticias/NoticiasListPage.tsx
 - app/admin/noticias/page.tsx
@@ -314,7 +314,7 @@ Objetivo: Personas Management Completo
 Tiempo estimado: 1-2 sesiones
 Checklist Fase 1B:
 
- Lista de personas: Con AdminDataTable y permisos RLS
+ Lista de personas: Con DataTable y permisos RLS
  Formulario CRUD: Creación/edición con validación
  Gestión de roles: Asignación de roles globales y por proyecto
  Upload de fotos: Integración con Supabase Storage
@@ -450,7 +450,7 @@ This Changelog: Now includes context for future AI assistants
 - **CRUD Completo:** Implementada la funcionalidad completa de Crear, Leer, Actualizar y Borrar (CRUD) para la gestión de Proyectos en el panel de administración.
 - **Patrón de Página Dedicada:** Establecido el patrón de usar páginas dedicadas (`/new`, `/[id]/edit`) para los formularios, ideal para entidades complejas.
 - **Lógica de Tabla Perfeccionada:** Refinado el hook `useDataTableState` para manejar correctamente el estado inicial de los filtros y la lógica del switch "Mostrar eliminados".
-- **Robustez de Tipos:** Solucionados todos los errores de TypeScript relacionados con la configuración de `AdminDataTable`, resultando en un componente de tabla 100% type-safe.
+- **Robustez de Tipos:** Solucionados todos los errores de TypeScript relacionados con la configuración de `DataTable`, resultando en un componente de tabla 100% type-safe.
 - El módulo de Proyectos está completo y sirve como un segundo pilar para el desarrollo del resto del panel de administración.
 
 ## [2025-06-13] refactor(core)!: Complete architectural overhaul of the entire service layer
@@ -472,7 +472,7 @@ The application is now stable, fully type-safe, and rests on a solid, profession
 
 ## [2025-06-13] Topics Management Module Completion
 - **Complete CRUD:** Implemented Create, Read, Update, and Delete (CRUD) functionality for Topics management in the admin panel.
-- **Frontend Architecture:** Established the `Server Component` pattern for initial data loading and `Client Component` for interactivity, using the `useDataTableState` hook and `AdminDataTable` component.
+- **Frontend Architecture:** Established the `Server Component` pattern for initial data loading and `Client Component` for interactivity, using the `useDataTableState` hook and `DataTable` component.
 - **Professional UI/UX:** Enhanced the interface with icons, tooltips, confirmation dialogs, and notifications, creating a standard for future admin pages.
 - **Public Detail Page:** Created the public page at `/temas/[id]` to display topic details and related entities (people and projects).
 - **Bug and Type Fixes:** Resolved all client state bugs and TypeScript errors, resulting in robust and type-safe functionality from start to finish.
@@ -484,14 +484,14 @@ The application is now stable, fully type-safe, and rests on a solid, profession
 - **State Bug Fix:** Fixed a bug in the delete logic that incorrectly removed items from client state. Now it updates the `esta_eliminada` flag to maintain consistency with the "Show deleted" filter.
 - **UI/UX Improvements:**
   - Replaced text action buttons with icon buttons (`lucide-react`) with tooltips for better clarity and accessibility.
-  - Added a clear button for the search field in `AdminDataTable`.
+  - Added a clear button for the search field in `DataTable`.
 - The topics management page is considered the final prototype for all future data admin pages.
 
 ## [2025-06-11] CRUD Implementation in Admin Panel
 - **Topics Management Page (`/admin/temas`):** Created the first functional admin page.
   - Uses a Server Component pattern for initial data loading and a Client Component for interactivity.
   - Integrated with the `useDataTableState` hook to handle search, filtering, and pagination logic on the client.
-  - Implemented the reusable `AdminDataTable` component to display data.
+  - Implemented the reusable `DataTable` component to display data.
 - **Delete Functionality (Soft Delete):**
   - Added logical delete functionality for topics.
   - Implemented a confirmation dialog (`AlertDialog`) to prevent accidental deletions.

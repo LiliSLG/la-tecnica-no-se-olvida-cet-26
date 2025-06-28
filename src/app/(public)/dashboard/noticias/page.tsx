@@ -9,7 +9,7 @@ import {
   NoticiaWithAuthor,
 } from "@/lib/supabase/services/noticiasService";
 import { NoticiasListPage } from "@/components/shared/list-pages/NoticiasListPage"; // 🔄 Componente unificado
-import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
+import { DataTableSkeleton } from "@/components/shared/data-tables/DataTableSkeleton";
 
 export default function DashboardNoticiasPage() {
   const { user, isLoading } = useAuth();
@@ -55,7 +55,7 @@ export default function DashboardNoticiasPage() {
   // Loading state
   if (isLoading || loading) {
     return (
-      <AdminDataTableSkeleton
+      <DataTableSkeleton
         title="Mis Noticias"
         addLabel="Nueva Noticia"
         rows={6}

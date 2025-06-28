@@ -34,7 +34,7 @@ Objetivo: Personas Management Completo
 Tiempo estimado: 1-2 sesiones
 Checklist Fase 1B:
 
- Lista de personas: Con AdminDataTable y permisos RLS
+ Lista de personas: Con DataTable y permisos RLS
  Formulario CRUD: Creación/edición con validación
  Gestión de roles: Asignación de roles globales y por proyecto
  Upload de fotos: Integración con Supabase Storage

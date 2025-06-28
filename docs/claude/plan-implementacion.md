@@ -21,7 +21,7 @@
 
 #### Checklist Personas
 - [ ] **Crear páginas admin personas** (Server Components)
-  - [ ] `/admin/personas/page.tsx` - Lista con AdminDataTable
+  - [ ] `/admin/personas/page.tsx` - Lista con DataTable
   - [ ] `/admin/personas/[id]/page.tsx` - Detalle persona
   - [ ] `/admin/personas/new/page.tsx` - Crear persona  
   - [ ] `/admin/personas/[id]/edit/page.tsx` - Editar persona

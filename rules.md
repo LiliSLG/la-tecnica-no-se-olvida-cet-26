@@ -13,7 +13,7 @@ To ensure consistency, follow this checklist before creating or modifying featur
 1.  **Check the `blueprint.md`:** Does this feature require a new architectural pattern or folder? If so, document it there first. This is our architectural source of truth.
 2.  **Check the `schemas.md`:** What is the exact data structure I will be working with?
 3.  **Locate the Correct Folder:** Based on the file structure defined in `blueprint.md`, where should my new component/service/page live?
-4.  **Follow the Correct Pattern:** Am I creating a service? It must follow the "Standalone Service Pattern". Am I creating an admin page? It must use the `AdminDataTable` and `useDataTableState` hook.
+4.  **Follow the Correct Pattern:** Am I creating a service? It must follow the "Standalone Service Pattern". Am I creating an admin page? It must use the `DataTable` and `useDataTableState` hook.
 
 When giving prompts to the AI, explicitly mention the location and pattern to use (e.g., "Create a new service `proyectosService.ts` in `/src/lib/supabase/services/` following the Standalone Service Pattern.").
 

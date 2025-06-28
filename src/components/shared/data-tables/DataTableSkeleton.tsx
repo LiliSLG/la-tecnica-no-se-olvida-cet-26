@@ -1,22 +1,22 @@
-// /components/shared/data-tables/AdminDataTableSkeleton
+// /components/shared/data-tables/DataTableSkeleton
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
-interface AdminDataTableSkeletonProps {
+interface DataTableSkeletonProps {
   title?: string;
   addLabel?: string;
   rows?: number;
   columns?: number;
 }
 
-export function AdminDataTableSkeleton({
+export function DataTableSkeleton({
   title = "Cargando...",
   addLabel = "Agregar",
   rows = 5,
   columns = 3,
-}: AdminDataTableSkeletonProps) {
+}: DataTableSkeletonProps) {
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Header con filtros */}

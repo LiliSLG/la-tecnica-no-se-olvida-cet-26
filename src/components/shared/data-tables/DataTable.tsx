@@ -1,6 +1,6 @@
 // =============================================================================
-// AdminDataTable FINAL - SIN LOGS DE DEBUG
-// Ubicación: /components/shared/data-tables/AdminDataTable
+// DataTable FINAL - SIN LOGS DE DEBUG
+// Ubicación: /components/shared/data-tables/DataTable
 
 // =============================================================================
 
@@ -80,7 +80,7 @@ interface FilterField {
   options?: { value: string; label: string }[];
 }
 
-interface AdminDataTableProps<T extends object> {
+interface DataTableProps<T extends object> {
   title?: string;
   columns: ColumnConfig<T>[];
   config: {
@@ -133,7 +133,7 @@ function useIsMobile() {
 // COMPONENTE PRINCIPAL
 // =============================================================================
 
-export function AdminDataTable<T extends object>({
+export function DataTable<T extends object>({
   title,
   columns,
   config,
@@ -143,7 +143,7 @@ export function AdminDataTable<T extends object>({
   emptyState,
   pageSizes = [5, 10, 20, 50],
   mobileCardView = true,
-}: AdminDataTableProps<T>) {
+}: DataTableProps<T>) {
   const {
     search,
     filters,

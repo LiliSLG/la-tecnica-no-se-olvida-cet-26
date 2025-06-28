@@ -11,7 +11,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { NoticiaForm } from "@/components/admin/noticias/NoticiaForm";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 import { useAuth } from "@/providers/AuthProvider";
 
 export default function CreateNoticiaUserPage() {

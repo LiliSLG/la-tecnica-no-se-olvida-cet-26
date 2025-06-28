@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { TemasListPage } from "@/components/admin/temas/TemasListPage";
-import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
+import { DataTableSkeleton } from "@/components/shared/data-tables/DataTableSkeleton";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Tema = Database["public"]["Tables"]["temas"]["Row"];
@@ -43,7 +43,7 @@ export default function TemasPage() {
   // Show skeleton while loading
   if (isLoading || loading) {
     return (
-      <AdminDataTableSkeleton
+      <DataTableSkeleton
         title="Gestión de Temáticas"
         addLabel="Nueva Temática"
         rows={6}

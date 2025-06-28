@@ -90,7 +90,7 @@ This is the standard folder structure for the project. All new files must be cre
 │   └── globals.css                 # Global styles
 ├── /components/                    # Reusable UI components
 │   ├── /admin/                     # Admin-specific components
-│   │   ├── AdminDataTable.tsx      # Reusable data table
+│   │   ├── DataTable.tsx      # Reusable data table
 │   │   ├── AdminSidebar.tsx        # Admin navigation
 │   │   ├── AdminHeader.tsx         # Admin header
 │   │   └── /[entity]/              # Entity-specific components
@@ -200,7 +200,7 @@ After a complete refactoring, the project uses an explicit, inheritance-free ser
 
 ### UI Patterns
 -   **Admin Sidebar Pattern:** The admin panel uses a layout with a persistent sidebar on desktop and collapsible on mobile.
--   **AdminDataTable Pattern:** All data management lists in the admin must use the reusable `AdminDataTable` component, powered by the `useDataTableState` hook.
+-   **DataTable Pattern:** All data management lists in the admin must use the reusable `DataTable` component, powered by the `useDataTableState` hook.
 -   **Soft Delete Pattern:** All entities support logical deletion with restore functionality.
 -   **Toast Notifications:** User feedback via toast messages for all operations.
 
@@ -401,7 +401,7 @@ async function hasActiveProjectRoles(userId: string): Promise {
 - **Admin Dashboard**: Basic layout with sidebar navigation
 - **Topics Management**: Complete CRUD with modal forms
 - **Projects Management**: Complete CRUD with dedicated page forms
-- **Data Table Component**: Reusable AdminDataTable with search/filter
+- **Data Table Component**: Reusable DataTable with search/filter
 - **Soft Delete System**: Logical deletion with restore functionality
 - **RLS Security**: Basic row-level security policies
 

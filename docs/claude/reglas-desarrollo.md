@@ -7,7 +7,7 @@ Para asegurar consistencia, sigue este checklist antes de crear o modificar feat
 1. **Revisar Blueprint Arquitectónico:** ¿Esta feature requiere un nuevo patrón arquitectónico o carpeta? Si es así, documéntalo ahí primero.
 2. **Revisar Esquemas de Base de Datos:** ¿Cuál es la estructura exacta de datos con la que voy a trabajar?
 3. **Ubicar la Carpeta Correcta:** Basado en la estructura definida en blueprint, ¿dónde debe vivir mi nuevo componente/servicio/página?
-4. **Seguir el Patrón Correcto:** ¿Estoy creando un servicio? Debe seguir el "Standalone Service Pattern". ¿Una página admin? Debe usar `AdminDataTable` y `useDataTableState`.
+4. **Seguir el Patrón Correcto:** ¿Estoy creando un servicio? Debe seguir el "Standalone Service Pattern". ¿Una página admin? Debe usar `DataTable` y `useDataTableState`.
 5. **Actualizar Documentación:** Si cambio algo significativo, actualizar los artifacts correspondientes.
 
 ## 💻 Reglas de Código y Calidad

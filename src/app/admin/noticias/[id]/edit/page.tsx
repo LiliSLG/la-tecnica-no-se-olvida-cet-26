@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { NoticiaForm } from "@/components/admin/noticias/NoticiaForm";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 import { notFound } from "next/navigation";
 import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService";
 

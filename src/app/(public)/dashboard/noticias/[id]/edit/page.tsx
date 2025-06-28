@@ -13,7 +13,7 @@ import {
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService";
 import { NoticiaForm } from "@/components/admin/noticias/NoticiaForm";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 import { useAuth } from "@/providers/AuthProvider";
 import { Database } from "@/lib/supabase/types/database.types";
 

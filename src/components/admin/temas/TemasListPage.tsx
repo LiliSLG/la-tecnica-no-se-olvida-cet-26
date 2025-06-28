@@ -1,5 +1,5 @@
 // =============================================================================
-// TemasListPage ACTUALIZADO - Usando nueva interfaz AdminDataTable modernizado
+// TemasListPage ACTUALIZADO - Usando nueva interfaz DataTable modernizado
 // Ubicación: /src/components/admin/temas/TemasListPage.tsx
 // =============================================================================
 
@@ -13,9 +13,9 @@ import {
   type DataTableConfig,
 } from "@/hooks/useDataTableState";
 import {
-  AdminDataTable,
+  DataTable,
   type ColumnConfig,
-} from "@/components/shared/data-tables/AdminDataTable";
+} from "@/components/shared/data-tables/DataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { Button } from "@/components/ui/button";
@@ -351,8 +351,8 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
 
   return (
     <>
-      {/* ✅ AdminDataTable modernizado */}
-      <AdminDataTable
+      {/* ✅ DataTable modernizado */}
+      <DataTable
         title="Gestión de Temáticas"
         columns={columns}
         config={dataTableConfig}

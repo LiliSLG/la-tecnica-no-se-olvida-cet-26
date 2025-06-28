@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 import { useRouter } from "next/navigation";
 import { Pencil, ExternalLink, Calendar, User, Tag } from "lucide-react";
 import { Database } from "@/lib/supabase/types/database.types";

@@ -9,9 +9,9 @@ import {
   type DataTableConfig,
 } from "@/hooks/useDataTableState";
 import {
-  AdminDataTable,
+  DataTable,
   type ColumnConfig,
-} from "@/components/shared/data-tables/AdminDataTable";
+} from "@/components/shared/data-tables/DataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import {
   noticiasService,
@@ -590,7 +590,7 @@ export function NoticiasListPage({
 
   return (
     <>
-      <AdminDataTable
+      <DataTable
         title={routeConfig.title}
         columns={columns}
         config={dataTableConfig}

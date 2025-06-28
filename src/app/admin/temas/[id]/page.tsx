@@ -5,7 +5,7 @@ import { proyectosService } from "@/lib/supabase/services/proyectosService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;

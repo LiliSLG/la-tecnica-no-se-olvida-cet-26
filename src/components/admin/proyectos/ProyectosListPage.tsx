@@ -2,9 +2,9 @@
 
 import { Database } from "@/lib/supabase/types/database.types";
 import {
-  AdminDataTable,
+  DataTable,
   ColumnConfig,
-} from "@/components/shared/data-tables/AdminDataTable";
+} from "@/components/shared/data-tables/DataTable";
 import { useDataTableState } from "@/hooks/useDataTableState";
 import { Eye, Pencil, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -148,7 +148,7 @@ export function ProyectosListPage({ allProyectos }: ProyectosListPageProps) {
 
   return (
     <div className="p-6">
-      <AdminDataTable
+      <DataTable
         title="Gestión de Proyectos"
         columns={columns}
         config={dataTableConfig} // <-- 3. Le pasamos la MISMA configuración al "cuerpo" (la tabla)

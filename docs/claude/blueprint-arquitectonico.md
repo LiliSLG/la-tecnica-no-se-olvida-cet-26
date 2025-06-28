@@ -12,7 +12,6 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 - **UI Components:** shadcn/ui + Lucide React icons
 
 ## 🗂️ Estructura de Carpetas y Estado Actual
-
 ```
 /src
 ├── /app/                           # Next.js App Router pages
@@ -33,7 +32,7 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 │   │   │   ├── /new/page.tsx       # Crear noticia
 │   │   │   └── /[id]/edit/page.tsx # Editar noticia
 │   │   ├── /personas/              # ❌ Pendiente
-│   │   │   ├── page.tsx            # Lista personas con AdminDataTable
+│   │   │   ├── page.tsx            # Lista personas con DataTable
 │   │   │   ├── /new/page.tsx       # Crear nueva persona
 │   │   │   └── /[id]/edit/page.tsx # Editar persona
 │   │   └── /organizaciones/        # ❌ Pendiente
@@ -46,32 +45,71 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 │   │   ├── /noticias/route.ts      # API Noticias ✅
 │   │   ├── /personas/route.ts      # API Personas ❌
 │   │   └── /organizaciones/route.ts # API Organizaciones ❌
-│   ├── /(public)/                  # Páginas públicas (futuro)
-│   ├── /login/page.tsx             # Página autenticación ✅
+│   ├── /(public)/                  # Páginas públicas
+│   │   ├── layout.tsx              # Layout público con PublicHeader/Footer
+│   │   ├── page.tsx                # Homepage ✅
+│   │   ├── /dashboard/             # Dashboard usuario autenticado
+│   │   │   ├── layout.tsx          # Layout dashboard usuario
+│   │   │   ├── page.tsx            # Dashboard principal usuario
+│   │   │   ├── /noticias/          # ✅ Completo
+│   │   │   │   ├── page.tsx        # "Mis Noticias"
+│   │   │   │   ├── /new/page.tsx   # Crear noticia desde dashboard
+│   │   │   │   └── /[id]/edit/page.tsx # Editar noticia desde dashboard
+│   │   │   ├── /proyectos/         # 🔄 En progreso
+│   │   │   │   ├── page.tsx        # "Mis Proyectos"
+│   │   │   │   └── /new/page.tsx   # Crear proyecto desde dashboard
+│   │   │   └── /perfil/            # ❌ Pendiente
+│   │   │       └── page.tsx        # Gestión perfil usuario
+│   │   ├── /noticias/              # ❌ Páginas públicas pendientes
+│   │   │   ├── page.tsx            # Lista pública noticias
+│   │   │   └── /[id]/page.tsx      # Detalle público noticia
+│   │   ├── /proyectos/             # ❌ Páginas públicas pendientes
+│   │   │   ├── page.tsx            # Lista pública proyectos
+│   │   │   └── /[id]/page.tsx      # Detalle público proyecto
+│   │   └── /login/page.tsx         # Página autenticación ✅
 │   ├── layout.tsx                  # Layout root con AuthProvider ✅
-│   ├── page.tsx                    # Homepage ✅
+│   ├── page.tsx                    # Redirect a homepage ✅
 │   └── globals.css                 # Estilos globales ✅
 ├── /components/                    # Componentes UI reutilizables
-│   ├── /admin/                     # Componentes admin
-│   │   ├── AdminDataTable.tsx      # ✅ Tabla reutilizable
-│   │   ├── AdminSidebar.tsx        # ✅ Navegación admin
+│   ├── /admin/                     # Componentes específicos admin
+│   │   ├── AdminSidebar.tsx        # ✅ Navegación admin desktop
+│   │   ├── MobileSidebar.tsx       # ✅ Navegación admin móvil
+│   │   ├── AdminBreadcrumbs.tsx    # ✅ Breadcrumbs para admin
 │   │   ├── /temas/
 │   │   │   ├── TemasListPage.tsx   # ✅ Client Component
-│   │   │   └── TemasForm.tsx       # ✅ Modal
+│   │   │   └── TemaForm.tsx        # ✅ Modal
 │   │   ├── /proyectos/
 │   │   │   ├── ProyectosListPage.tsx # 🔄 Client Component básico
 │   │   │   └── ProyectoForm.tsx    # ✅ Página dedicada
 │   │   ├── /noticias/
-│   │   │   ├── NoticiasListPage.tsx # ✅ Client Component
-│   │   │   └── NoticiaForm.tsx     # ✅ Página dedicada
+│   │   │   └── NoticiaForm.tsx     # ✅ Página dedicada (reutilizado)
 │   │   ├── /personas/              # ❌ Pendiente
 │   │   └── /organizaciones/        # ❌ Pendiente
-│   ├── /common/                    # Componentes compartidos
-│   │   ├── BackButton.tsx          # ✅ Helper navegación
-│   │   └── LoadingSpinner.tsx      # Estados carga
+│   ├── /shared/                    # Componentes reutilizables cross-context
+│   │   ├── /data-tables/
+│   │   │   ├── DataTable.tsx       # ✅ Tabla reutilizable (ex-AdminDataTable)
+│   │   │   └── DataTableSkeleton.tsx # ✅ Loading states
+│   │   ├── /list-pages/
+│   │   │   └── NoticiasListPage.tsx # ✅ Componente unificado admin+user
+│   │   ├── /navigation/
+│   │   │   └── BackButton.tsx      # ✅ Helper navegación (movido desde /common/)
+│   │   └── /forms/                 # 🆕 Para formularios reutilizables futuros
+│   ├── /user/                      # Componentes específicos dashboard usuario
+│   │   ├── UserSidebar.tsx         # ✅ Navegación usuario desktop
+│   │   └── MobileUserSidebar.tsx   # ✅ Navegación usuario móvil
+│   ├── /public/                    # Componentes específicos páginas públicas
+│   │   ├── /common/
+│   │   │   ├── PublicHeader.tsx    # ✅ Header navegación pública
+│   │   │   ├── PublicFooter.tsx    # ✅ Footer sitio público
+│   │   │   ├── SearchInput.tsx     # ✅ Buscador para páginas públicas
+│   │   │   └── CategoryFilter.tsx  # ✅ Filtros para páginas públicas
+│   │   └── /noticias/
+│   │       └── NoticiasPublicGrid.tsx # ✅ Grid noticias públicas
 │   └── /ui/                        # Componentes shadcn/ui ✅
 ├── /hooks/                         # Custom React hooks
 │   ├── useDataTableState.ts        # ✅ Gestión estado tabla
+│   ├── useProjectRoles.ts          # ✅ Verificación roles proyecto
+│   ├── useAuth.ts                  # 🔄 Hook autenticación (si existe)
 │   ├── usePermissions.ts           # ❌ Verificación permisos (futuro)
 │   └── use-mobile.tsx              # ✅ Detección móvil
 ├── /lib/                           # Utilidades e integraciones
@@ -82,6 +120,7 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 │   │   │   ├── temasService.ts     # ✅ Servicio completo
 │   │   │   ├── proyectosService.ts # 🔄 Básico
 │   │   │   ├── noticiasService.ts  # ✅ Servicio completo
+│   │   │   ├── noticiaTemasService.ts # ✅ Relaciones noticia-temas
 │   │   │   ├── personasService.ts  # ❌ Pendiente
 │   │   │   ├── organizacionesService.ts # ❌ Pendiente
 │   │   │   └── authService.ts      # ✅ Autenticación
@@ -101,6 +140,31 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 └── /providers/                     # Providers React Context
     └── AuthProvider.tsx            # ✅ Contexto autenticación
 ```
+
+## 🎯 Criterios de Organización
+
+### `/admin/` - Componentes Admin Específicos
+- Formularios complejos de entidades
+- Navegación y layout admin
+- Funcionalidades exclusivas administración
+
+### `/shared/` - Componentes Cross-Context
+- **Usado en múltiples contextos**: admin, user, public
+- **Ejemplos**: DataTable, BackButton, NoticiasListPage unificado
+- **Principio**: Si se usa en 2+ contextos diferentes
+
+### `/user/` - Componentes Dashboard Usuario
+- Navegación y layout dashboard usuario
+- Funcionalidades específicas de usuario logueado
+
+### `/public/` - Componentes Páginas Públicas  
+- **`/common/`**: Header, Footer, SearchInput específicos para público
+- **`/entidad/`**: Grids y cards para mostrar contenido público
+- **Principio**: Solo para experiencia pública del sitio
+
+### `/ui/` - Primitivos shadcn/ui
+- Componentes base de diseño
+- Sin lógica de negocio
 
 ## 🏛️ Patrones Arquitectónicos
 
@@ -529,7 +593,7 @@ graph TD
 ### Servicios y Componentes
 - **Servicios completados**: `temasService.ts`, `authService.ts`, `noticiasService.ts`
 - **Servicios pendientes**: `personasService.ts`, `organizacionesService.ts`
-- **Componentes**: `AdminDataTable`, formularios para temas y noticias (completos), proyectos (básico)
+- **Componentes**: `DataTable`, formularios para temas y noticias (completos), proyectos (básico)
 - **Patrón implementado**: Client Components con useEffect para todas las páginas admin
 
 ### Archivos de Tipos y Esquemas

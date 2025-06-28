@@ -14,7 +14,7 @@ This feature manages the "Topics" (Temas), which form the central taxonomy of th
 ## Main Use Cases
 - **Admin Users:**
   - Perform full CRUD (Create, Read, Update, Delete) operations on topics through a dedicated admin page (`/admin/temas`).
-  - The admin view uses the `AdminDataTable` component, which supports searching, sorting, and filtering (including viewing soft-deleted items).
+  - The admin view uses the `DataTable` component, which supports searching, sorting, and filtering (including viewing soft-deleted items).
   - Creation and editing are handled through a modal form with Zod validation.
   - Deletion is a soft-delete operation with a confirmation dialog.
 - **Public Users:**

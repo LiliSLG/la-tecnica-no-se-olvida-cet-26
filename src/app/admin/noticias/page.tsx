@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { NoticiasListPage } from "@/components/shared/list-pages/NoticiasListPage";
-import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
+import { DataTableSkeleton } from "@/components/shared/data-tables/DataTableSkeleton";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
@@ -44,7 +44,7 @@ export default function NoticiasPage() {
   // Show skeleton while loading
   if (isLoading || loading) {
     return (
-      <AdminDataTableSkeleton
+      <DataTableSkeleton
         title="Gestión de Noticias"
         addLabel="Nueva Noticia"
         rows={8}

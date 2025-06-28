@@ -1,6 +1,6 @@
 // src/app/admin/noticias/new/page.tsx
 import { NoticiaForm } from "@/components/admin/noticias/NoticiaForm";
-import { BackButton } from "@/components/common/BackButton";
+import { BackButton } from "@/components/shared/navigation/BackButton";
 
 export default function NewNoticiaPage() {
   return (
