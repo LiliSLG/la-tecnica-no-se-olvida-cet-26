@@ -1,13 +1,9 @@
-// =============================================================================
-// NoticiasListPage ACTUALIZADO - Usando nueva interfaz AdminDataTable modernizado
-// Ubicación: /src/components/admin/noticias/NoticiasListPage.tsx
-// =============================================================================
-
+// /src/components/admin/noticias/NoticiasListPage.tsx - UNIFICADO
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 import {
   useDataTableState,
   type DataTableConfig,
@@ -15,7 +11,7 @@ import {
 import {
   AdminDataTable,
   type ColumnConfig,
-} from "@/components/admin/AdminDataTable";
+} from "@/components/shared/data-tables/AdminDataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import {
   noticiasService,
@@ -42,26 +38,30 @@ type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
 
 interface NoticiasListPageProps {
   allNoticias: NoticiaWithAuthor[];
+  isUserView?: boolean; // 🆕 Nueva prop para distinguir contexto
 }
 
-export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
+export function NoticiasListPage({
+  allNoticias,
+  isUserView = false,
+}: NoticiasListPageProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // ✅ Estados existentes
+  // Estados principales
   const [noticias, setNoticias] = useState<NoticiaWithAuthor[]>(allNoticias);
 
-  // ✅ Estados para confirmación de toggle publicación
+  // Estados para confirmación de toggle publicación
   const [noticiaToToggle, setNoticiaToToggle] = useState<Noticia | null>(null);
   const [isToggling, setIsToggling] = useState(false);
 
-  // ✅ Estados para confirmación de toggle destacada
+  // Estados para confirmación de toggle destacada
   const [noticiaToToggleDestacada, setNoticiaToToggleDestacada] =
     useState<Noticia | null>(null);
   const [isTogglingDestacada, setIsTogglingDestacada] = useState(false);
 
-  // ✅ Estado para manejar temas de cada noticia
+  // Estados para temas
   const [noticiasTemas, setNoticiasTemas] = useState<Record<string, any[]>>({});
   const [loadingTemas, setLoadingTemas] = useState(true);
 
@@ -79,7 +79,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       try {
         const temasMap: Record<string, any[]> = {};
 
-        // Cargar temas para cada noticia
         const temasPromises = noticias.map(async (noticia) => {
           const result = await noticiaTemasService.getTemasWithInfoForNoticia(
             noticia.id
@@ -103,7 +102,38 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     loadTemasForNoticias();
   }, [noticias]);
 
-  // ✅ Configuración de la tabla OPTIMIZADA - Menos filtros, más limpio
+  // 🆕 Configuración dinámica basada en el contexto
+  const getRouteConfig = () => {
+    if (isUserView) {
+      return {
+        createRoute: "/dashboard/noticias/new",
+        editRoute: (id: string) => `/dashboard/noticias/${id}/edit`,
+        viewRoute: (id: string) => `/noticias/${id}`, // Vista pública
+        title: "Mis Noticias",
+        addLabel: "Nueva Noticia",
+        emptyTitle: "No tienes noticias aún",
+        emptyDescription:
+          "Comienza creando tu primera noticia para compartir contenido con la comunidad.",
+        emptyActionLabel: "Crear Primera Noticia",
+      };
+    } else {
+      return {
+        createRoute: "/admin/noticias/new",
+        editRoute: (id: string) => `/admin/noticias/${id}/edit`,
+        viewRoute: (id: string) => `/admin/noticias/${id}`, // Vista admin
+        title: "Gestión de Noticias",
+        addLabel: "Nueva Noticia",
+        emptyTitle: "No hay noticias disponibles",
+        emptyDescription:
+          "Comienza creando tu primera noticia para compartir contenido.",
+        emptyActionLabel: "Crear Primera Noticia",
+      };
+    }
+  };
+
+  const routeConfig = getRouteConfig();
+
+  // Configuración de la tabla
   const dataTableConfig: DataTableConfig<NoticiaWithAuthor> = {
     data: noticias,
     initialFilters: { is_deleted: false },
@@ -135,7 +165,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
 
   const tableState = useDataTableState<NoticiaWithAuthor>(dataTableConfig);
 
-  // ✅ Helper functions
+  // Helper functions
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("es-AR", {
@@ -143,10 +173,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const formatTipo = (tipo: string) => {
-    return tipo === "articulo_propio" ? "📝 Artículo" : "🔗 Enlace";
   };
 
   const formatAutor = (noticia: NoticiaWithAuthor) => {
@@ -185,7 +211,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     return "Sin autor";
   };
 
-  // ✅ Definir columnas OPTIMIZADAS - Sin emojis, menos columnas, mejor diseño
+  // Definir columnas
   const columns: ColumnConfig<NoticiaWithAuthor>[] = [
     {
       key: "titulo",
@@ -193,18 +219,21 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       sortable: true,
       render: (value, noticia) => (
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-foreground truncate">{value}</div>
+          <div className="font-semibold text-foreground">
+            {value || "Sin título"}
+          </div>
           {noticia.subtitulo && (
-            <div className="text-sm text-muted-foreground truncate mt-1">
+            <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {noticia.subtitulo}
             </div>
           )}
-
-          {/* Mostrar temas como badges pequeños debajo del título */}
-          {!loadingTemas &&
-            noticiasTemas[noticia.id] &&
-            noticiasTemas[noticia.id].length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-xs">
+              {noticia.tipo === "articulo_propio" ? "📝 Artículo" : "🔗 Enlace"}
+            </Badge>
+            {!loadingTemas && noticiasTemas[noticia.id]?.length > 0 && (
+              <div className="flex gap-1">
+                {/* Mostrar solo categorías únicas, no nombres completos de temas */}
                 {Array.from(
                   new Set(
                     noticiasTemas[noticia.id]
@@ -215,40 +244,31 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
                   .slice(0, 2)
                   .map((categoria, index) => (
                     <Badge
-                      key={`categoria-${index}`}
+                      key={index}
                       variant="secondary"
-                      className="text-xs px-2 py-0 h-5 capitalize bg-muted/50"
+                      className="text-xs capitalize"
                     >
                       {categoria}
                     </Badge>
                   ))}
                 {noticiasTemas[noticia.id].length > 2 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-xs px-2 py-0 h-5 text-muted-foreground bg-muted/30"
-                  >
+                  <Badge variant="secondary" className="text-xs">
                     +{noticiasTemas[noticia.id].length - 2}
                   </Badge>
                 )}
               </div>
             )}
-
-          {/* URL externa para enlaces */}
-          {noticia.tipo === "enlace_externo" && noticia.url_externa && (
-            <div className="flex items-center gap-1 mt-2">
-              <ExternalLink className="h-3 w-3 text-blue-500" />
-              <span className="text-xs text-blue-500 truncate max-w-[200px]">
-                {noticia.url_externa}
-              </span>
-            </div>
-          )}
+          </div>
         </div>
       ),
+      mobileHidden: false,
     },
     {
       key: "tipo",
       label: "Tipo",
       sortable: true,
+      className: "hidden lg:table-cell",
+      mobileHidden: true,
       render: (value) => (
         <Badge
           variant={value === "articulo_propio" ? "default" : "outline"}
@@ -265,14 +285,11 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     {
       key: "autor_noticia",
       label: "Autor",
-      className: "hidden lg:table-cell", // Ocultar en pantallas medianas
-      mobileHidden: true, // ✅ NUEVO: Ocultar en cards móviles también
+      className: "hidden lg:table-cell",
+      mobileHidden: true,
       render: (value, noticia) => {
         const autor = formatAutor(noticia);
-
-        // Limpiar emojis del autor
         const autorLimpio = autor.replace(/📡|👤|📢|📝/g, "").trim();
-
         const isExternal = noticia.tipo === "enlace_externo";
 
         return (
@@ -295,7 +312,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       key: "fecha_publicacion",
       label: "Publicación",
       sortable: true,
-      mobileHidden: true, // ✅ NUEVO: Ocultar fecha en móvil
+      mobileHidden: true,
       render: (value) => (
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           {formatDate(value)}
@@ -307,7 +324,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       label: "Estado",
       render: (noticia: NoticiaWithAuthor) => (
         <div className="space-y-1">
-          {/* Estado de publicación - CLICKEABLE */}
           <Badge
             variant={noticia.esta_publicada ? "default" : "secondary"}
             className={`text-xs font-medium cursor-pointer transition-colors ${
@@ -320,7 +336,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
             {noticia.esta_publicada ? "Publicada" : "Borrador"}
           </Badge>
 
-          {/* Estado destacada - CLICKEABLE */}
           <Badge
             variant="outline"
             className={`text-xs font-medium cursor-pointer transition-colors ${
@@ -344,26 +359,36 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         <div className="flex items-center gap-1">
           {!noticia.is_deleted ? (
             <>
+              {/* 🔧 BOTÓN VER - Ahora usa Link y solo aparece si está publicada */}
+              {noticia.esta_publicada && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  title="Ver noticia"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                >
+                  <Link
+                    href={routeConfig.viewRoute(noticia.id)}
+                    target={isUserView ? "_blank" : undefined} // Nueva pestaña solo para usuarios
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
+
+              {/* BOTÓN EDITAR */}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/admin/noticias/${noticia.id}`)}
-                title="Ver noticia"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  router.push(`/admin/noticias/${noticia.id}/edit`)
-                }
+                onClick={() => router.push(routeConfig.editRoute(noticia.id))}
                 title="Editar noticia"
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
+
+              {/* BOTÓN ELIMINAR */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -375,24 +400,22 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
               </Button>
             </>
           ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRestore(noticia)}
-                title="Restaurar noticia"
-                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRestore(noticia)}
+              title="Restaurar noticia"
+              className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
           )}
         </div>
       ),
     },
   ];
 
-  // ✅ Función toggle publicación
+  // Funciones de manejo (sin cambios)
   async function handleTogglePublished() {
     if (!noticiaToToggle || !user || isToggling) return;
 
@@ -446,7 +469,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  // ✅ Función toggle destacada
   async function handleToggleDestacada() {
     if (!noticiaToToggleDestacada || !user || isTogglingDestacada) return;
 
@@ -502,8 +524,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  // ✅ Funciones de manejo existentes
-  async function handleDelete(noticia: Noticia) {
+  async function handleDelete(noticia: NoticiaWithAuthor) {
     if (!user) {
       toast({
         title: "Error",
@@ -523,9 +544,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       );
 
       toast({
-        title: "Noticia eliminada",
-        description:
-          "La noticia se movió a eliminados. Puedes restaurarla desde el filtro.",
+        title: "Éxito",
+        description: "Noticia eliminada correctamente.",
       });
     } catch (error) {
       toast({
@@ -536,7 +556,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  async function handleRestore(noticia: Noticia) {
+  async function handleRestore(noticia: NoticiaWithAuthor) {
     if (!user) {
       toast({
         title: "Error",
@@ -556,8 +576,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       );
 
       toast({
-        title: "Noticia restaurada",
-        description: "La noticia volvió a estar disponible.",
+        title: "Éxito",
+        description: "Noticia restaurada correctamente.",
       });
     } catch (error) {
       toast({
@@ -568,30 +588,27 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-
   return (
     <>
-      {/* ✅ AdminDataTable modernizado CON MOBILE CARDS */}
       <AdminDataTable
-        title="Gestión de Noticias"
+        title={routeConfig.title}
         columns={columns}
         config={dataTableConfig}
         state={tableState}
-        addLabel="Nueva Noticia"
-        onAdd={() => router.push("/admin/noticias/new")}
+        addLabel={routeConfig.addLabel}
+        onAdd={() => router.push(routeConfig.createRoute)}
         emptyState={{
-          title: "No hay noticias disponibles",
-          description:
-            "Comienza creando tu primera noticia para compartir contenido.",
+          title: routeConfig.emptyTitle,
+          description: routeConfig.emptyDescription,
           action: {
-            label: "Crear Primera Noticia",
-            onClick: () => router.push("/admin/noticias/new"),
+            label: routeConfig.emptyActionLabel,
+            onClick: () => router.push(routeConfig.createRoute),
           },
         }}
-        mobileCardView={true} // ✅ ACTIVAR VISTA DE CARDS EN MÓVIL
+        mobileCardView={false} // Deshabilitado temporalmente hasta resolver el problema
       />
 
-      {/* ✅ AlertDialog para confirmar cambio de publicación */}
+      {/* AlertDialogs sin cambios */}
       <AlertDialog
         open={!!noticiaToToggle}
         onOpenChange={() => !isToggling && setNoticiaToToggle(null)}
@@ -623,7 +640,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ✅ AlertDialog para confirmar cambio de destacada */}
       <AlertDialog
         open={!!noticiaToToggleDestacada}
         onOpenChange={() =>

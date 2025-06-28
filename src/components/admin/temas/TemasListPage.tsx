@@ -15,7 +15,7 @@ import {
 import {
   AdminDataTable,
   type ColumnConfig,
-} from "@/components/admin/AdminDataTable";
+} from "@/components/shared/data-tables/AdminDataTable";
 import { Database } from "@/lib/supabase/types/database.types";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { Button } from "@/components/ui/button";

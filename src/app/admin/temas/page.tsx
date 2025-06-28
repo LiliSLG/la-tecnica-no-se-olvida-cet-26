@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { temasService } from "@/lib/supabase/services/temasService";
 import { TemasListPage } from "@/components/admin/temas/TemasListPage";
-import { AdminDataTableSkeleton } from "@/components/admin/AdminDataTableSkeleton";
+import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Tema = Database["public"]["Tables"]["temas"]["Row"];

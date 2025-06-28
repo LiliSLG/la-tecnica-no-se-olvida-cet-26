@@ -1,6 +1,7 @@
 // =============================================================================
 // AdminDataTable FINAL - SIN LOGS DE DEBUG
-// Ubicación: /src/components/admin/AdminDataTable.tsx
+// Ubicación: /components/shared/data-tables/AdminDataTable
+
 // =============================================================================
 
 import React, { useState } from "react";

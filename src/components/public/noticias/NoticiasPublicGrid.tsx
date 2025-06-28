@@ -1,4 +1,4 @@
-// /src/components/public/noticias/NoticiasPublicGrid.tsx
+// /src/components/public/noticias/NoticiasPublicGrid.tsx - FIXED
 "use client";
 
 import { useState, useMemo } from "react";
@@ -90,10 +90,6 @@ export function NoticiasPublicGrid({
     }
 
     return "CET N°26";
-  };
-
-  const getTipoLabel = (tipo: string) => {
-    return tipo === "articulo_propio" ? "Artículo" : "Enlace";
   };
 
   const getTipoIcon = (tipo: string) => {
@@ -209,7 +205,7 @@ export function NoticiasPublicGrid({
   );
 }
 
-// Componente de card individual
+// 🔧 COMPONENTE CARD CORREGIDO
 function NoticiaCard({
   noticia,
   isDestacada = false,
@@ -217,11 +213,12 @@ function NoticiaCard({
   noticia: NoticiaPublica;
   isDestacada?: boolean;
 }) {
+  // Helper functions locales
   const formatearFecha = (fecha: string | null) => {
     if (!fecha) return "Sin fecha";
     return new Date(fecha).toLocaleDateString("es-AR", {
       year: "numeric",
-      month: "short",
+      month: "long",
       day: "numeric",
     });
   };
@@ -248,32 +245,9 @@ function NoticiaCard({
   };
 
   return (
-    <Card
-      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg overflow-hidden ${
-        isDestacada
-          ? "border-primary/30 bg-gradient-to-br from-background to-primary/5 hover:shadow-primary/10"
-          : "hover:border-primary/20 hover:shadow-primary/5"
-      }`}
-    >
-      {/* Imagen */}
-      {noticia.imagen_url ? (
-        <div className="aspect-video overflow-hidden">
-          <img
-            src={noticia.imagen_url}
-            alt={noticia.titulo}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      ) : (
-        <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-          <span className="text-6xl opacity-30">
-            {getTipoIcon(noticia.tipo)}
-          </span>
-        </div>
-      )}
-
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
+    <Card className="group transition-all duration-200 hover:shadow-lg border-border bg-card">
+      <CardHeader className="space-y-3">
+        <div className="flex items-center gap-2">
           <Badge
             variant={
               noticia.tipo === "articulo_propio" ? "default" : "secondary"
@@ -318,7 +292,7 @@ function NoticiaCard({
           </div>
         </div>
 
-        {/* Botón de acción */}
+        {/* 🔧 BOTONES DE ACCIÓN CORREGIDOS */}
         {noticia.tipo === "enlace_externo" && noticia.url_externa ? (
           <Button
             variant="outline"
@@ -330,7 +304,6 @@ function NoticiaCard({
               href={noticia.url_externa}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Ver enlace

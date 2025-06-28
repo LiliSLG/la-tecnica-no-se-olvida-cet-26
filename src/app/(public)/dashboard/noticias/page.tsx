@@ -1,4 +1,4 @@
-// /src/app/(public)/dashboard/noticias/page.tsx
+// /src/app/(public)/dashboard/noticias/page.tsx - ACTUALIZADO
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,8 +8,8 @@ import {
   noticiasService,
   NoticiaWithAuthor,
 } from "@/lib/supabase/services/noticiasService";
-import { UserNoticiasListPage } from "@/components/user/noticias/UserNoticiasListPage";
-import { AdminDataTableSkeleton } from "@/components/admin/AdminDataTableSkeleton";
+import { NoticiasListPage } from "@/components/shared/list-pages/NoticiasListPage"; // 🔄 Componente unificado
+import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
 
 export default function DashboardNoticiasPage() {
   const { user, isLoading } = useAuth();
@@ -89,7 +89,8 @@ export default function DashboardNoticiasPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <UserNoticiasListPage userNoticias={noticias} userId={user.id} />
+      {/* 🔄 CAMBIO: Usar componente unificado con isUserView=true */}
+      <NoticiasListPage allNoticias={noticias} isUserView={true} />
     </div>
   );
 }

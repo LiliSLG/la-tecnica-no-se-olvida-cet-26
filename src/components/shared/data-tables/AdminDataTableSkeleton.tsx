@@ -1,4 +1,4 @@
-// /src/components/admin/AdminDataTableSkeleton.tsx
+// /components/shared/data-tables/AdminDataTableSkeleton
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -4,7 +4,7 @@ import { Database } from "@/lib/supabase/types/database.types";
 import {
   AdminDataTable,
   ColumnConfig,
-} from "@/components/admin/AdminDataTable";
+} from "@/components/shared/data-tables/AdminDataTable";
 import { useDataTableState } from "@/hooks/useDataTableState";
 import { Eye, Pencil, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -4,8 +4,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
-import { NoticiasListPage } from "@/components/admin/noticias/NoticiasListPage";
-import { AdminDataTableSkeleton } from "@/components/admin/AdminDataTableSkeleton";
+import { NoticiasListPage } from "@/components/shared/list-pages/NoticiasListPage";
+import { AdminDataTableSkeleton } from "@/components/shared/data-tables/AdminDataTableSkeleton";
 import { Database } from "@/lib/supabase/types/database.types";
 
 type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
