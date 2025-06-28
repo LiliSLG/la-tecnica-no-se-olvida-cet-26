@@ -1,9 +1,11 @@
-// /src/components/public/common/PublicHeader.tsx
+// /src/components/public/common/PublicHeader.tsx - VERSIÓN COMPLETA
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { useProjectRoles } from "@/hooks/useProjectRoles";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -14,7 +16,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Menu,
   Home,
@@ -22,27 +31,56 @@ import {
   FolderOpen,
   Users,
   BookOpen,
+  BrainCircuit,
   LogIn,
   Settings,
   Shield,
   User,
+  LogOut,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
+// Navegación principal unificada
 const publicNavItems = [
-  { href: "/", label: "Inicio", icon: Home },
-  { href: "/noticias", label: "Noticias", icon: Newspaper },
-  { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
-  { href: "/personas", label: "Comunidad", icon: Users },
-  { href: "/historias", label: "Historias", icon: BookOpen },
+  { href: "/", label: "Inicio", icon: Home, public: true },
+  { href: "/noticias", label: "Noticias", icon: Newspaper, public: true },
+  { href: "/proyectos", label: "Proyectos", icon: FolderOpen, public: true },
+  {
+    href: "/consulta-ia",
+    label: "Consulta IA",
+    icon: BrainCircuit,
+    public: true,
+  },
+  { href: "/comunidad", label: "Comunidad", icon: Users, public: true },
+  { href: "/historias", label: "Historias", icon: BookOpen, public: true },
 ];
 
 export function PublicHeader() {
-  const { user, isAdmin, signOut } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { hasActiveRoles, isLoading: rolesLoading } = useProjectRoles();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Determinar si estamos en área admin
+  const isInAdminArea = pathname?.startsWith("/admin");
+
+  // Determinar si el usuario necesita dashboard
+  const needsDashboard = user && (isAdmin || hasActiveRoles);
 
   const getUserInitials = (email: string | null) => {
     if (!email) return "U";
     return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
+
+  const handleMobileNavClick = (href: string) => {
+    setIsMobileMenuOpen(false);
+    router.push(href);
   };
 
   const closeMobileMenu = () => {
@@ -53,29 +91,44 @@ export function PublicHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-3">
           <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">
               CET
             </span>
           </div>
           <div className="hidden sm:block">
-            <div className="font-bold text-lg">La Técnica no se Olvida</div>
+            <div className="font-bold text-lg leading-tight">
+              La Técnica no se Olvida
+            </div>
             <div className="text-xs text-muted-foreground -mt-1">
               CET N°26 - Ing. Jacobacci
             </div>
+          </div>
+          <div className="sm:hidden">
+            <div className="font-bold text-base">La Técnica</div>
           </div>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
           {publicNavItems.map((item) => {
+            // Mostrar solo rutas públicas, o todas si el usuario está logueado
+            if (!item.public && !user) return null;
+
             const Icon = item.icon;
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname?.startsWith(item.href));
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-foreground/80",
+                  isActive ? "text-foreground" : "text-foreground/60"
+                )}
               >
                 <Icon className="h-4 w-4" />
                 <span>{item.label}</span>
@@ -84,78 +137,11 @@ export function PublicHeader() {
           })}
         </nav>
 
-        {/* Right side - User menu o login */}
+        {/* User Actions */}
         <div className="flex items-center space-x-4">
-          {/* Mobile menu */}
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="outline" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <div className="flex flex-col space-y-4 mt-4">
-                <div className="px-3 py-2 text-lg font-semibold">
-                  Navegación
-                </div>
-                {publicNavItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={closeMobileMenu}
-                      className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-
-                {/* User actions in mobile */}
-                {user ? (
-                  <div className="space-y-1 border-t pt-4">
-                    <div className="px-3 py-2 text-sm font-semibold text-muted-foreground">
-                      Mi Cuenta
-                    </div>
-                    <Link
-                      href="/dashboard"
-                      onClick={closeMobileMenu}
-                      className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Mi Dashboard</span>
-                    </Link>
-                    {isAdmin && (
-                      <Link
-                        href="/admin"
-                        onClick={closeMobileMenu}
-                        className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Shield className="h-4 w-4" />
-                        <span>Panel Admin</span>
-                      </Link>
-                    )}
-                  </div>
-                ) : (
-                  <div className="border-t pt-4">
-                    <Link
-                      href="/login"
-                      onClick={closeMobileMenu}
-                      className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      <span>Iniciar Sesión</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Desktop User Menu */}
-          {user ? (
+          {isLoading ? (
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -163,7 +149,7 @@ export function PublicHeader() {
                   className="relative h-8 w-8 rounded-full"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>
+                    <AvatarFallback className="text-xs">
                       {getUserInitials(user.email)}
                     </AvatarFallback>
                   </Avatar>
@@ -173,56 +159,187 @@ export function PublicHeader() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user.nombre || "Usuario"}
+                      {user.nombre && user.apellido
+                        ? `${user.nombre} ${user.apellido}`
+                        : user.email}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email || "Sin email"}
+                      {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild>
-                  <Link href="/perfil">
-                    <User className="mr-2 h-4 w-4" />
-                    Mi Perfil
-                  </Link>
+                {/* Perfil */}
+                <DropdownMenuItem onClick={() => router.push("/perfil")}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Mi Perfil</span>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard">
+                {/* Dashboard según contexto */}
+                {isInAdminArea ? (
+                  <DropdownMenuItem onClick={() => router.push("/dashboard")}>
                     <Settings className="mr-2 h-4 w-4" />
-                    Mi Dashboard
-                  </Link>
-                </DropdownMenuItem>
-
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <Shield className="mr-2 h-4 w-4" />
-                        Panel Admin
-                      </Link>
+                    <span>Dashboard Usuario</span>
+                  </DropdownMenuItem>
+                ) : (
+                  needsDashboard && (
+                    <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Mi Dashboard</span>
                     </DropdownMenuItem>
-                  </>
+                  )
+                )}
+
+                {/* Admin Panel */}
+                {isAdmin && (
+                  <DropdownMenuItem
+                    onClick={() => router.push(isInAdminArea ? "/" : "/admin")}
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>
+                      {isInAdminArea ? "Salir del Admin" : "Panel Admin"}
+                    </span>
+                  </DropdownMenuItem>
                 )}
 
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Cerrar Sesión
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="default">
-              <Link href="/login">
-                <LogIn className="h-4 w-4 mr-2" />
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/login")}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
                 Ingresar
-              </Link>
-            </Button>
+              </Button>
+            </div>
           )}
+
+          {/* Mobile menu button */}
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="md:hidden">
+                <Menu className="h-4 w-4" />
+                <span className="sr-only">Abrir menú</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80">
+              <SheetHeader>
+                <SheetTitle className="text-left">Navegación</SheetTitle>
+                <SheetDescription className="text-left">
+                  Accede a todas las secciones de la plataforma
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-6">
+                {/* Navigation Links */}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                    Secciones
+                  </h4>
+                  {publicNavItems.map((item) => {
+                    // Mostrar solo rutas públicas, o todas si el usuario está logueado
+                    if (!item.public && !user) return null;
+
+                    const Icon = item.icon;
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/" && pathname?.startsWith(item.href));
+
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => handleMobileNavClick(item.href)}
+                        className={cn(
+                          "flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* User Actions */}
+                {user && (
+                  <div className="space-y-1 border-t pt-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                      Mi Cuenta
+                    </h4>
+
+                    <button
+                      onClick={() => handleMobileNavClick("/perfil")}
+                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Mi Perfil</span>
+                    </button>
+
+                    {/* Dashboard según contexto */}
+                    {isInAdminArea ? (
+                      <button
+                        onClick={() => handleMobileNavClick("/dashboard")}
+                        className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>Dashboard Usuario</span>
+                      </button>
+                    ) : (
+                      needsDashboard && (
+                        <button
+                          onClick={() => handleMobileNavClick("/dashboard")}
+                          className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <Settings className="h-4 w-4" />
+                          <span>Mi Dashboard</span>
+                        </button>
+                      )
+                    )}
+
+                    {/* Admin Panel */}
+                    {isAdmin && (
+                      <button
+                        onClick={() =>
+                          handleMobileNavClick(isInAdminArea ? "/" : "/admin")
+                        }
+                        className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Shield className="h-4 w-4" />
+                        <span>
+                          {isInAdminArea ? "Salir del Admin" : "Panel Admin"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Login for non-authenticated users */}
+                {!user && (
+                  <div className="border-t pt-4">
+                    <Button
+                      onClick={() => handleMobileNavClick("/login")}
+                      className="w-full"
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Ingresar a la Plataforma
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

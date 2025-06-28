@@ -1,4 +1,19 @@
 # Changelog
+## [27/06/25]
+
+### 🚀 Nuevas Funcionalidades
+- **Página Consulta IA**: Chat interactivo con límite de 2 preguntas para usuarios anónimos
+- **Homepage Pública**: Página de inicio con noticias destacadas y estadísticas del CET
+- **Layout Público Completo**: Header y footer consistentes para todas las páginas públicas
+
+### 🔧 Correcciones Técnicas
+- **Layouts Separados**: Resuelto conflicto entre MainHeader y AdminSidebar
+- **Auth Flow**: Eliminado "Verificando sesión..." en rutas admin y login
+- **Navegación**: Integrada consulta IA en menú principal
+
+### 📊 Mejoras de Contenido
+- **Datos Reales**: Estadísticas y mocks completados en páginas públicas
+- **UX Mejorada**: Flujo claro entre páginas públicas, login y admin
 ## [27/06/25] ✨ Nuevo Patrón Híbrido para Páginas Públicas
 
 **🌐 Implementación completa del patrón Server + Client Components para noticias públicas**

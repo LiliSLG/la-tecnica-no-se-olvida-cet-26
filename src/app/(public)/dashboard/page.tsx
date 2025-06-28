@@ -1,56 +1,86 @@
-// src/app/(public)/dashboard/page.tsx
+// /src/app/(public)/dashboard/page.tsx - CON STATS REALES
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { redirect } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useProjectRoles } from "@/hooks/useProjectRoles";
+import { statsService } from "@/lib/supabase/services/statsService";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardFooter,
+  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   FolderOpen,
   Newspaper,
   Users,
   PlusCircle,
-  BookOpen,
   Eye,
-  Settings,
-  BarChart,
-  Clock,
-  TrendingUp,
-  CheckCircle,
-  Star,
+  BookOpen,
   Activity,
-  Calendar,
+  Settings,
   MapPin,
+  TrendingUp,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
+interface DashboardPageProps {
+  // Props si necesitas pasar data desde un Server Component padre
+}
+
+// Server Component wrapper que carga las stats del usuario
 export default function DashboardPage() {
+  // Nota: En una implementación real, necesitarías obtener el userId del servidor
+  // Por ahora, es un Client Component que maneja todo
+
+  return <DashboardContent />;
+}
+
+// Client Component que maneja la UI y auth
+function DashboardContent() {
   const router = useRouter();
   const { user, isAdmin, isLoading } = useAuth();
-  const { hasActiveRoles, isLoading: rolesLoading } = useProjectRoles();
+  const { hasActiveRoles } = useProjectRoles();
 
-  // NO redirigir admins automáticamente - déjalos ver su dashboard personal también
+  // Estados para stats del usuario
+  const [userStats, setUserStats] = useState<{
+    misProyectos: number;
+    misNoticias: number;
+    colaboraciones: number;
+    temasInteres: number;
+  } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Cargar stats del usuario
   useEffect(() => {
-    if (!isLoading && !rolesLoading && user && !isAdmin) {
-      if (!hasActiveRoles) {
-        router.push("/");
+    async function loadUserStats() {
+      if (!user?.id) return;
+
+      try {
+        const result = await statsService.getUserStats(user.id);
+        if (result.success && result.data) {
+          setUserStats(result.data);
+        }
+      } catch (error) {
+        console.error("Error loading user stats:", error);
+      } finally {
+        setStatsLoading(false);
       }
     }
-  }, [user, isAdmin, hasActiveRoles, isLoading, rolesLoading, router]);
 
-  // Loading states
-  if (isLoading || rolesLoading) {
+    loadUserStats();
+  }, [user?.id]);
+
+  // Redirects
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">Cargando dashboard...</p>
@@ -59,49 +89,54 @@ export default function DashboardPage() {
     );
   }
 
-  // Access guard for non-admin users
-  if (!user || (!isAdmin && !hasActiveRoles)) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="animate-pulse w-12 h-12 bg-muted rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Redirigiendo...</p>
-        </div>
-      </div>
-    );
+  if (!user) {
+    redirect("/login");
   }
 
-  // Determinar permisos
-  const canCreateProjects =
-    user &&
-    (user.categoria_principal === "estudiante_cet" ||
-      user.categoria_principal === "ex_alumno_cet");
+  // Verificar permisos para crear proyectos
+  const canCreateProjects = Boolean(
+    user.categoria_principal === "estudiante_cet" ||
+      user.categoria_principal === "ex_alumno_cet" ||
+      user.categoria_principal === "docente_cet" ||
+      isAdmin
+  );
 
-  // Estadísticas rápidas (placeholder data)
+  // Estadísticas con datos reales y comentarios (con null safety)
   const quickStats = [
     {
       title: "Mis Proyectos",
-      value: "3",
-      change: "+1 nuevo",
+      value: userStats?.misProyectos?.toString() || "0",
+      change:
+        (userStats?.misProyectos || 0) > 0
+          ? (userStats?.misProyectos || 0) === 1
+            ? "proyecto activo"
+            : "proyectos activos"
+          : "sin proyectos",
       icon: FolderOpen,
-      trend: "up",
+      trend: (userStats?.misProyectos || 0) > 0 ? "up" : "neutral",
       description: "Participando activamente",
     },
     {
       title: "Mis Noticias",
-      value: "7",
-      change: "+2 esta semana",
+      value: userStats?.misNoticias?.toString() || "0",
+      change:
+        (userStats?.misNoticias || 0) > 0 ? "publicadas" : "crear primera",
       icon: Newspaper,
-      trend: "up",
-      description: "Publicadas",
+      trend: (userStats?.misNoticias || 0) > 0 ? "up" : "neutral",
+      description: "Contenido compartido",
     },
     {
       title: "Colaboraciones",
-      value: "12",
-      change: "4 activas",
+      value: userStats?.colaboraciones?.toString() || "0",
+      change:
+        (userStats?.colaboraciones || 0) > 0
+          ? (userStats?.colaboraciones || 0) === 1
+            ? "colaboración"
+            : "colaboraciones"
+          : "únete a proyectos",
       icon: Users,
-      trend: "neutral",
-      description: "En total",
+      trend: (userStats?.colaboraciones || 0) > 0 ? "up" : "neutral",
+      description: "En proyectos",
     },
   ];
 
@@ -113,7 +148,15 @@ export default function DashboardPage() {
         "Gestiona los proyectos donde participas como autor, tutor o colaborador",
       icon: FolderOpen,
       href: "/dashboard/proyectos",
-      stats: { active: "2", total: "3" },
+      stats: userStats
+        ? {
+            active:
+              (userStats.misProyectos || 0) > 0
+                ? (userStats.misProyectos || 0).toString()
+                : "0",
+            total: (userStats.misProyectos || 0).toString(),
+          }
+        : null,
       isActive: true,
       badge: "Activo",
     },
@@ -137,7 +180,12 @@ export default function DashboardPage() {
         "Administra las noticias que has creado o en las que colaboras",
       icon: Newspaper,
       href: "/dashboard/noticias",
-      stats: { published: "5", drafts: "2" },
+      stats: userStats
+        ? {
+            published: (userStats.misNoticias || 0).toString(),
+            drafts: "0", // Esto lo podríamos calcular si tuviéramos campo de borradores
+          }
+        : null,
       isActive: true,
       badge: "Contenido",
     },
@@ -147,13 +195,18 @@ export default function DashboardPage() {
         "Actualiza tu información personal, categoría y preferencias",
       icon: Users,
       href: "/perfil",
-      stats: null,
+      stats: userStats
+        ? {
+            temas:
+              (userStats.temasInteres || 0).toString() + " temas de interés",
+          }
+        : null,
       isActive: true,
       badge: "Perfil",
     },
   ];
 
-  // Secciones de exploración mejoradas
+  // Secciones de exploración
   const exploreSections = [
     {
       title: "Noticias Comunidad",
@@ -191,8 +244,12 @@ export default function DashboardPage() {
       estudiante_cet: "Estudiante CET",
       ex_alumno_cet: "Ex Alumno CET",
       docente_cet: "Docente CET",
-      tutor_externo: "Tutor Externo",
-      colaborador_externo: "Colaborador",
+      tutor_invitado: "Tutor Invitado",
+      colaborador_invitado: "Colaborador",
+      productor_rural: "Productor Rural",
+      profesional_externo: "Profesional Externo",
+      investigador: "Investigador",
+      comunidad_general: "Comunidad General",
     };
     return categorias[categoria] || categoria;
   };
@@ -240,7 +297,11 @@ export default function DashboardPage() {
                     {stat.title}
                   </p>
                   <div className="flex items-center gap-2">
-                    <p className="text-2xl font-bold">{stat.value}</p>
+                    {statsLoading ? (
+                      <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                    ) : (
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    )}
                     <Badge
                       variant={stat.trend === "up" ? "default" : "secondary"}
                       className="text-xs"
@@ -261,6 +322,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Resto del contenido igual... */}
       {/* Secciones principales */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -303,6 +365,9 @@ export default function DashboardPage() {
                             )}
                             {section.stats.drafts && (
                               <span>• {section.stats.drafts} borradores</span>
+                            )}
+                            {section.stats.temas && (
+                              <span>{section.stats.temas}</span>
                             )}
                           </div>
                         )}
@@ -353,24 +418,17 @@ export default function DashboardPage() {
                     <div
                       className={`p-2 rounded-lg ${
                         section.isActive
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-accent/10 text-accent"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
                       <IconComponent className="h-5 w-5" />
                     </div>
-                    <div className="space-y-1">
-                      <CardTitle className="text-base leading-tight">
-                        {section.title}
-                      </CardTitle>
-                      {!section.isActive && (
-                        <Badge variant="secondary" className="text-xs">
-                          Próximamente
-                        </Badge>
-                      )}
-                    </div>
+                    <CardTitle className="text-base leading-tight">
+                      {section.title}
+                    </CardTitle>
                   </div>
-                  <CardDescription className="text-sm leading-relaxed">
+                  <CardDescription className="text-sm leading-relaxed mt-2">
                     {section.description}
                   </CardDescription>
                 </CardHeader>
@@ -378,8 +436,8 @@ export default function DashboardPage() {
                 <CardFooter className="pt-0 mt-auto">
                   <Button
                     variant={section.isActive ? "default" : "secondary"}
-                    className="w-full text-sm"
                     disabled={!section.isActive}
+                    className="w-full text-sm"
                   >
                     {section.isActive ? "Explorar" : "Próximamente"}
                   </Button>
@@ -387,50 +445,6 @@ export default function DashboardPage() {
               </Card>
             );
           })}
-        </div>
-      </section>
-
-      {/* Quick actions */}
-      <section className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg p-6 border border-primary/20">
-        <div className="max-w-4xl mx-auto text-center space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-primary">
-              Tu espacio en La Técnica no se Olvida
-            </h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Gestiona tus proyectos, colabora con la comunidad y mantén vivo el
-              conocimiento técnico del CET N°26. Tu participación hace la
-              diferencia.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/noticias")}
-              className="bg-white/60 hover:bg-white/80"
-            >
-              <Newspaper className="h-4 w-4 mr-2" />
-              Ver Noticias
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/perfil")}
-              className="bg-white/60 hover:bg-white/80"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Editar Perfil
-            </Button>
-            {isAdmin && (
-              <Button
-                onClick={() => router.push("/admin")}
-                className="bg-primary/90 hover:bg-primary"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Panel Admin
-              </Button>
-            )}
-          </div>
         </div>
       </section>
     </div>

@@ -1,4 +1,4 @@
-// src/providers/AuthProvider.tsx (CORREGIDO - SIN LOOPS)
+// src/providers/AuthProvider.tsx - VERSIÓN SIMPLIFICADA Y ARREGLADA
 "use client";
 
 import {
@@ -39,29 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { toast } = useToast();
 
-  // Ref para evitar múltiples ejecuciones simultáneas
-  const isProcessingAuth = useRef(false);
-  const hasInitialized = useRef(false);
+  const isInitialized = useRef(false);
 
-  // Función para verificar si es admin (INDEPENDIENTE)
+  // Función para verificar admin status
   const checkAdminStatus = useCallback(async (): Promise<boolean> => {
-    // Solo verificar si hay una sesión activa
-    const {
-      data: { session: currentSession },
-    } = await supabase.auth.getSession();
-
-    if (!currentSession?.user?.id) {
-      setIsAdmin(false);
-      return false;
-    }
-
     try {
-      console.log(
-        "🔍 Checking admin status for user:",
-        currentSession.user.email
-      );
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
 
-      // Llamar a la función RPC is_admin()
+      if (!currentSession?.user?.id) {
+        setIsAdmin(false);
+        return false;
+      }
+
+      console.log("🔍 Checking admin status for:", currentSession.user.email);
+
       const { data: adminFlag, error } = await (supabase as any).rpc(
         "is_admin"
       );
@@ -81,27 +74,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAdmin(false);
       return false;
     }
-  }, []); // Sin dependencias para evitar loops
+  }, []);
 
-  // Función para obtener el perfil del usuario (SIN checkAdminStatus automático)
+  // Función para obtener/crear perfil de usuario
   const fetchUserProfile = useCallback(
-    async (authUser: User | null): Promise<Persona | null> => {
-      if (!authUser) {
-        return null;
-      }
-
+    async (authUser: User): Promise<Persona | null> => {
       try {
-        console.log("👤 Fetching profile for user:", authUser.email);
+        console.log("👤 Fetching profile for:", authUser.email);
 
-        // 1. Buscar perfil existente
-        const { data: persona } = await personasService.getById(authUser.id);
+        // Buscar perfil existente
+        const { data: existingPersona } = await personasService.getById(
+          authUser.id
+        );
 
-        if (persona) {
-          console.log("✅ Profile found:", persona.email);
-          return persona;
+        if (existingPersona) {
+          console.log("✅ Profile found:", existingPersona.email);
+          return existingPersona;
         }
 
-        // 2. Crear perfil si no existe
+        // Crear perfil si no existe
         console.log("➕ Creating new profile for:", authUser.email);
         const { data: newPersona } = await personasService.create({
           id: authUser.id,
@@ -121,11 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "¡Bienvenido/a!",
             description: "Hemos creado tu perfil.",
           });
+          return newPersona;
         }
 
-        return newPersona;
-      } catch (err) {
-        console.error("❌ Error fetching/creating user profile:", err);
+        return null;
+      } catch (error) {
+        console.error("❌ Error fetching/creating user profile:", error);
         toast({
           title: "Error de Perfil",
           description: "No se pudo cargar el perfil de usuario",
@@ -137,103 +129,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [toast]
   );
 
-  // Función principal para procesar cambios de autenticación
-  const processAuthChange = useCallback(
-    async (event: string, newSession: Session | null) => {
-      // Evitar procesamiento simultáneo
-      if (isProcessingAuth.current) {
-        console.log("⏳ Auth change already processing, skipping...");
-        return;
-      }
-
-      isProcessingAuth.current = true;
-      console.log("🔄 Processing auth change:", event, newSession?.user?.email);
+  // Procesar sesión (obtener perfil + verificar admin)
+  const processSession = useCallback(
+    async (newSession: Session | null) => {
+      console.log("🔄 Processing session:", newSession?.user?.email || "null");
 
       try {
-        // Caso 1: Usuario cerró sesión
-        if (event === "SIGNED_OUT" || !newSession) {
-          console.log("👋 User signed out");
+        if (!newSession) {
+          // No hay sesión
           setSession(null);
           setUser(null);
           setIsAdmin(false);
-          setIsSigningOut(false);
+          setIsLoading(false);
           return;
         }
 
-        // Caso 2: Usuario inició sesión o sesión inicial
+        // Hay sesión
         setSession(newSession);
 
-        // Obtener/crear perfil de usuario
+        // Obtener perfil del usuario
         const userProfile = await fetchUserProfile(newSession.user);
         setUser(userProfile);
 
-        // Verificar status de admin DESPUÉS de establecer el perfil
+        // Verificar admin status inmediatamente (sin setTimeout)
         if (userProfile) {
-          // Usar setTimeout para evitar que interfiera con el flujo principal
-          setTimeout(() => {
-            checkAdminStatus();
-          }, 100);
+          await checkAdminStatus();
         }
 
-        console.log("✅ Auth change processed successfully");
+        setIsLoading(false);
+        console.log("✅ Session processed successfully");
       } catch (error) {
-        console.error("❌ Error processing auth change:", error);
-        // En caso de error, limpiar el estado
+        console.error("❌ Error processing session:", error);
+        setSession(null);
         setUser(null);
         setIsAdmin(false);
-      } finally {
-        isProcessingAuth.current = false;
         setIsLoading(false);
       }
     },
     [fetchUserProfile, checkAdminStatus]
   );
 
-  // Efecto para manejar cambios de autenticación
+  // Inicializar auth al montar el componente
   useEffect(() => {
-    let mounted = true;
+    if (isInitialized.current) return;
+    isInitialized.current = true;
 
     const initializeAuth = async () => {
       try {
+        console.log("🚀 Initializing auth...");
+
         // Obtener sesión inicial
         const {
           data: { session: initialSession },
         } = await supabase.auth.getSession();
 
-        if (mounted && !hasInitialized.current) {
-          hasInitialized.current = true;
-          await processAuthChange("INITIAL_SESSION", initialSession);
-        }
+        // Procesar sesión inicial
+        await processSession(initialSession);
+
+        // Configurar listener para cambios
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("🔄 Auth state change:", event);
+
+          if (event === "SIGNED_OUT") {
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            setIsSigningOut(false);
+            setIsLoading(false);
+          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            await processSession(session);
+          }
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error("❌ Error initializing auth:", error);
-        if (mounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
-    // Inicializar autenticación
     initializeAuth();
-
-    // Escuchar cambios de autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Ignorar el evento inicial si ya se procesó
-      if (event === "INITIAL_SESSION" && hasInitialized.current) {
-        return;
-      }
-
-      if (mounted) {
-        await processAuthChange(event, session);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [processAuthChange]);
+  }, [processSession]);
 
   // Función de login
   const signIn = async (email: string, password: string) => {
@@ -260,10 +240,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("👋 Starting sign out process...");
       setIsSigningOut(true);
-
-      // Limpiar estado local inmediatamente
-      setUser(null);
-      setIsAdmin(false);
 
       // Ejecutar signOut de Supabase
       const result = await authService.signOut();

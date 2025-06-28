@@ -1,4 +1,4 @@
-// /src/components/admin/AdminSidebar.tsx
+// /src/components/admin/AdminSidebar.tsx - MEJORADO
 "use client";
 
 import Link from "next/link";
@@ -19,6 +19,8 @@ import {
   Briefcase,
   Settings,
   LogOut,
+  Home,
+  ExternalLink,
 } from "lucide-react";
 
 type Persona = Database["public"]["Tables"]["personas"]["Row"];
@@ -111,19 +113,36 @@ function SidebarContent({
   };
 
   return (
-    <div className="flex h-full max-h-screen flex-col gap-2">
-      {/* Header del desktop - se mantiene simple */}
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+    <div className="flex h-full max-h-screen flex-col">
+      {/* Header principal con nombre del sitio */}
+      <div className="flex flex-col border-b px-4 py-4 lg:px-6">
+        {/* Nombre del sitio */}
+        <div className="flex items-center gap-2 mb-3">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-lg font-bold text-primary">
+              La Técnica no se Olvida
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Panel Administrativo
+            </p>
+          </div>
+        </div>
+
+        {/* Link para ir al sitio público */}
         <Link
-          href="/admin"
-          className="flex items-center gap-2 font-semibold"
-          onClick={() => handleLinkClick("/admin")}
+          href="/"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
+          onClick={() => handleLinkClick("/")}
         >
-          <span>Panel Admin</span>
+          <Home className="h-4 w-4" />
+          <span>Ir al sitio</span>
+          <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100" />
         </Link>
       </div>
 
-      <div className="flex-1">
+      {/* Navegación principal */}
+      <div className="flex-1 pt-2">
         <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
           {sidebarLinks.map((link) => {
             const Icon = link.icon;
@@ -152,9 +171,12 @@ function SidebarContent({
         </nav>
       </div>
 
+      {/* Footer con info del usuario */}
       <div className="mt-auto p-4 border-t">
-        <div className="text-sm font-medium text-muted-foreground mb-2">
-          {user?.email}
+        <div className="text-sm font-medium text-muted-foreground mb-2 truncate">
+          {user?.nombre && user?.apellido
+            ? `${user.nombre} ${user.apellido}`
+            : user?.email}
         </div>
         <Button
           variant="ghost"
