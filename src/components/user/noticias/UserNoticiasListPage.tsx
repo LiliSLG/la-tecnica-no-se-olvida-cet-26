@@ -1,13 +1,8 @@
-// =============================================================================
-// NoticiasListPage ACTUALIZADO - Usando nueva interfaz AdminDataTable modernizado
-// Ubicación: /src/components/admin/noticias/NoticiasListPage.tsx
-// =============================================================================
-
+// /src/components/user/noticias/UserNoticiasListPage.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
 import {
   useDataTableState,
   type DataTableConfig,
@@ -16,7 +11,6 @@ import {
   AdminDataTable,
   type ColumnConfig,
 } from "@/components/admin/AdminDataTable";
-import { Database } from "@/lib/supabase/types/database.types";
 import {
   noticiasService,
   NoticiaWithAuthor,
@@ -38,36 +32,39 @@ import {
 } from "@/components/ui/alert-dialog";
 import { noticiaTemasService } from "@/lib/supabase/services/noticiaTemasService";
 
-type Noticia = Database["public"]["Tables"]["noticias"]["Row"];
-
-interface NoticiasListPageProps {
-  allNoticias: NoticiaWithAuthor[];
+interface UserNoticiasListPageProps {
+  userNoticias: NoticiaWithAuthor[];
+  userId: string;
 }
 
-export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
+export function UserNoticiasListPage({
+  userNoticias,
+  userId,
+}: UserNoticiasListPageProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // ✅ Estados existentes
-  const [noticias, setNoticias] = useState<NoticiaWithAuthor[]>(allNoticias);
+  // Estados principales
+  const [noticias, setNoticias] = useState<NoticiaWithAuthor[]>(userNoticias);
 
-  // ✅ Estados para confirmación de toggle publicación
-  const [noticiaToToggle, setNoticiaToToggle] = useState<Noticia | null>(null);
+  // Estados para confirmación de toggle publicación
+  const [noticiaToToggle, setNoticiaToToggle] =
+    useState<NoticiaWithAuthor | null>(null);
   const [isToggling, setIsToggling] = useState(false);
 
-  // ✅ Estados para confirmación de toggle destacada
+  // Estados para confirmación de toggle destacada
   const [noticiaToToggleDestacada, setNoticiaToToggleDestacada] =
-    useState<Noticia | null>(null);
+    useState<NoticiaWithAuthor | null>(null);
   const [isTogglingDestacada, setIsTogglingDestacada] = useState(false);
 
-  // ✅ Estado para manejar temas de cada noticia
+  // Estados para temas
   const [noticiasTemas, setNoticiasTemas] = useState<Record<string, any[]>>({});
   const [loadingTemas, setLoadingTemas] = useState(true);
 
   useEffect(() => {
-    setNoticias(allNoticias);
-  }, [allNoticias]);
+    setNoticias(userNoticias);
+  }, [userNoticias]);
 
   useEffect(() => {
     async function loadTemasForNoticias() {
@@ -79,7 +76,6 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       try {
         const temasMap: Record<string, any[]> = {};
 
-        // Cargar temas para cada noticia
         const temasPromises = noticias.map(async (noticia) => {
           const result = await noticiaTemasService.getTemasWithInfoForNoticia(
             noticia.id
@@ -103,7 +99,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     loadTemasForNoticias();
   }, [noticias]);
 
-  // ✅ Configuración de la tabla OPTIMIZADA - Menos filtros, más limpio
+  // Configuración de la tabla (igual que admin)
   const dataTableConfig: DataTableConfig<NoticiaWithAuthor> = {
     data: noticias,
     initialFilters: { is_deleted: false },
@@ -135,7 +131,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
 
   const tableState = useDataTableState<NoticiaWithAuthor>(dataTableConfig);
 
-  // ✅ Helper functions
+  // Helper functions (igual que admin)
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("es-AR", {
@@ -185,7 +181,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     return "Sin autor";
   };
 
-  // ✅ Definir columnas OPTIMIZADAS - Sin emojis, menos columnas, mejor diseño
+  // Columnas (exactamente igual que admin)
   const columns: ColumnConfig<NoticiaWithAuthor>[] = [
     {
       key: "titulo",
@@ -193,137 +189,79 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       sortable: true,
       render: (value, noticia) => (
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-foreground truncate">{value}</div>
+          <div className="font-semibold text-foreground">
+            {value || "Sin título"}
+          </div>
           {noticia.subtitulo && (
-            <div className="text-sm text-muted-foreground truncate mt-1">
+            <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {noticia.subtitulo}
             </div>
           )}
-
-          {/* Mostrar temas como badges pequeños debajo del título */}
-          {!loadingTemas &&
-            noticiasTemas[noticia.id] &&
-            noticiasTemas[noticia.id].length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {Array.from(
-                  new Set(
-                    noticiasTemas[noticia.id]
-                      .map((tema) => tema.categoria_tema)
-                      .filter(Boolean)
-                  )
-                )
-                  .slice(0, 2)
-                  .map((categoria, index) => (
-                    <Badge
-                      key={`categoria-${index}`}
-                      variant="secondary"
-                      className="text-xs px-2 py-0 h-5 capitalize bg-muted/50"
-                    >
-                      {categoria}
-                    </Badge>
-                  ))}
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-xs">
+              {formatTipo(noticia.tipo)}
+            </Badge>
+            {!loadingTemas && noticiasTemas[noticia.id]?.length > 0 && (
+              <div className="flex gap-1">
+                {noticiasTemas[noticia.id].slice(0, 2).map((tema) => (
+                  <Badge key={tema.id} variant="secondary" className="text-xs">
+                    {tema.nombre}
+                  </Badge>
+                ))}
                 {noticiasTemas[noticia.id].length > 2 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-xs px-2 py-0 h-5 text-muted-foreground bg-muted/30"
-                  >
+                  <Badge variant="secondary" className="text-xs">
                     +{noticiasTemas[noticia.id].length - 2}
                   </Badge>
                 )}
               </div>
             )}
-
-          {/* URL externa para enlaces */}
-          {noticia.tipo === "enlace_externo" && noticia.url_externa && (
-            <div className="flex items-center gap-1 mt-2">
-              <ExternalLink className="h-3 w-3 text-blue-500" />
-              <span className="text-xs text-blue-500 truncate max-w-[200px]">
-                {noticia.url_externa}
-              </span>
-            </div>
-          )}
+          </div>
         </div>
       ),
-    },
-    {
-      key: "tipo",
-      label: "Tipo",
-      sortable: true,
-      render: (value) => (
-        <Badge
-          variant={value === "articulo_propio" ? "default" : "outline"}
-          className={`font-medium ${
-            value === "articulo_propio"
-              ? "bg-primary/10 text-primary border-primary/20"
-              : "bg-blue-50 text-blue-700 border-blue-200"
-          }`}
-        >
-          {value === "articulo_propio" ? "Artículo" : "Enlace"}
-        </Badge>
-      ),
-    },
-    {
-      key: "autor_noticia",
-      label: "Autor",
-      className: "hidden lg:table-cell", // Ocultar en pantallas medianas
-      mobileHidden: true, // ✅ NUEVO: Ocultar en cards móviles también
-      render: (value, noticia) => {
-        const autor = formatAutor(noticia);
-
-        // Limpiar emojis del autor
-        const autorLimpio = autor.replace(/📡|👤|📢|📝/g, "").trim();
-
-        const isExternal = noticia.tipo === "enlace_externo";
-
-        return (
-          <div className="text-sm">
-            <span
-              className={`${isExternal ? "text-blue-600" : "text-foreground"}`}
-            >
-              {autorLimpio}
-            </span>
-            {isExternal && (
-              <div className="text-xs text-muted-foreground">
-                Fuente externa
-              </div>
-            )}
-          </div>
-        );
-      },
+      mobileHidden: false,
     },
     {
       key: "fecha_publicacion",
-      label: "Publicación",
+      label: "Fecha",
       sortable: true,
-      mobileHidden: true, // ✅ NUEVO: Ocultar fecha en móvil
       render: (value) => (
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           {formatDate(value)}
         </div>
       ),
+      mobileHidden: true,
+      className: "w-32",
     },
     {
-      key: "action_estado" as `action_${string}`,
+      key: "autor_noticia",
+      label: "Autor",
+      render: (value, noticia) => (
+        <div className="text-sm text-muted-foreground whitespace-nowrap">
+          {formatAutor(noticia)}
+        </div>
+      ),
+      mobileHidden: true,
+      className: "w-40",
+    },
+    {
+      key: "esta_publicada",
       label: "Estado",
-      render: (noticia: NoticiaWithAuthor) => (
-        <div className="space-y-1">
-          {/* Estado de publicación - CLICKEABLE */}
+      render: (value, noticia) => (
+        <div className="flex flex-col gap-1">
           <Badge
-            variant={noticia.esta_publicada ? "default" : "secondary"}
-            className={`text-xs font-medium cursor-pointer transition-colors ${
-              noticia.esta_publicada
+            variant="outline"
+            className={`cursor-pointer transition-colors ${
+              value
                 ? "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
-                : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
             }`}
             onClick={() => !noticia.is_deleted && setNoticiaToToggle(noticia)}
           >
-            {noticia.esta_publicada ? "Publicada" : "Borrador"}
+            {value ? "Publicada" : "Borrador"}
           </Badge>
-
-          {/* Estado destacada - CLICKEABLE */}
           <Badge
             variant="outline"
-            className={`text-xs font-medium cursor-pointer transition-colors ${
+            className={`cursor-pointer transition-colors ${
               noticia.es_destacada
                 ? "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200"
                 : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300"
@@ -336,6 +274,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
           </Badge>
         </div>
       ),
+      className: "w-24",
     },
     {
       key: "action_buttons" as `action_${string}`,
@@ -344,20 +283,22 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         <div className="flex items-center gap-1">
           {!noticia.is_deleted ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/admin/noticias/${noticia.id}`)}
-                title="Ver noticia"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
+              {noticia.esta_publicada && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/noticias/${noticia.id}`)}
+                  title="Ver noticia pública"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  router.push(`/admin/noticias/${noticia.id}/edit`)
+                  router.push(`/dashboard/noticias/${noticia.id}/edit`)
                 }
                 title="Editar noticia"
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
@@ -375,24 +316,22 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
               </Button>
             </>
           ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRestore(noticia)}
-                title="Restaurar noticia"
-                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRestore(noticia)}
+              title="Restaurar noticia"
+              className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
           )}
         </div>
       ),
     },
   ];
 
-  // ✅ Función toggle publicación
+  // Función toggle publicación
   async function handleTogglePublished() {
     if (!noticiaToToggle || !user || isToggling) return;
 
@@ -446,7 +385,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  // ✅ Función toggle destacada
+  // Función toggle destacada
   async function handleToggleDestacada() {
     if (!noticiaToToggleDestacada || !user || isTogglingDestacada) return;
 
@@ -502,8 +441,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  // ✅ Funciones de manejo existentes
-  async function handleDelete(noticia: Noticia) {
+  // Función eliminar
+  async function handleDelete(noticia: NoticiaWithAuthor) {
     if (!user) {
       toast({
         title: "Error",
@@ -523,9 +462,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       );
 
       toast({
-        title: "Noticia eliminada",
-        description:
-          "La noticia se movió a eliminados. Puedes restaurarla desde el filtro.",
+        title: "Éxito",
+        description: "Noticia eliminada correctamente.",
       });
     } catch (error) {
       toast({
@@ -536,7 +474,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-  async function handleRestore(noticia: Noticia) {
+  // Función restaurar
+  async function handleRestore(noticia: NoticiaWithAuthor) {
     if (!user) {
       toast({
         title: "Error",
@@ -556,8 +495,8 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
       );
 
       toast({
-        title: "Noticia restaurada",
-        description: "La noticia volvió a estar disponible.",
+        title: "Éxito",
+        description: "Noticia restaurada correctamente.",
       });
     } catch (error) {
       toast({
@@ -568,30 +507,29 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
     }
   }
 
-
   return (
     <>
-      {/* ✅ AdminDataTable modernizado CON MOBILE CARDS */}
+      {/* AdminDataTable - igual que admin */}
       <AdminDataTable
-        title="Gestión de Noticias"
+        title="Mis Noticias"
         columns={columns}
         config={dataTableConfig}
         state={tableState}
         addLabel="Nueva Noticia"
-        onAdd={() => router.push("/admin/noticias/new")}
+        onAdd={() => router.push("/dashboard/noticias/new")}
         emptyState={{
-          title: "No hay noticias disponibles",
+          title: "No tienes noticias aún",
           description:
-            "Comienza creando tu primera noticia para compartir contenido.",
+            "Comienza creando tu primera noticia para compartir contenido con la comunidad.",
           action: {
             label: "Crear Primera Noticia",
-            onClick: () => router.push("/admin/noticias/new"),
+            onClick: () => router.push("/dashboard/noticias/new"),
           },
         }}
-        mobileCardView={true} // ✅ ACTIVAR VISTA DE CARDS EN MÓVIL
+        mobileCardView={true}
       />
 
-      {/* ✅ AlertDialog para confirmar cambio de publicación */}
+      {/* AlertDialog para confirmar cambio de publicación */}
       <AlertDialog
         open={!!noticiaToToggle}
         onOpenChange={() => !isToggling && setNoticiaToToggle(null)}
@@ -623,7 +561,7 @@ export function NoticiasListPage({ allNoticias }: NoticiasListPageProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ✅ AlertDialog para confirmar cambio de destacada */}
+      {/* AlertDialog para confirmar cambio de destacada */}
       <AlertDialog
         open={!!noticiaToToggleDestacada}
         onOpenChange={() =>

@@ -179,74 +179,95 @@ class StatsService {
 
   /**
    * Obtener estadísticas para el dashboard de un usuario específico
+   * VERSIÓN INCREMENTAL: Solo consulta tablas implementadas completamente
    */
   async getUserStats(userId: string): Promise<
     ServiceResult<{
       misProyectos: number;
       misNoticias: number;
+      misNoticiasBorradores: number;
       colaboraciones: number;
       temasInteres: number;
     }>
   > {
     try {
-      console.log("🔍 Server: Loading user stats for:", userId);
+      // ✅ NOTICIAS - Consulta real de publicadas y borradores
+      let misNoticiasCount = 0;
+      let misNoticiasBorradoresCount = 0;
 
-      const [
-        misProyectosResult,
-        misNoticiasResult,
-        colaboracionesResult,
-        temasInteresResult,
-      ] = await Promise.all([
-        // Proyectos creados por el usuario
-        supabase
-          .from("proyectos")
-          .select("id", { count: "exact", head: true })
-          .eq("created_by_uid", userId)
-          .eq("is_deleted", false),
-
-        // Noticias creadas por el usuario
-        supabase
+      try {
+        // Noticias publicadas
+        const publicadasResult = await supabase
           .from("noticias")
           .select("id", { count: "exact", head: true })
           .eq("created_by_uid", userId)
-          .eq("is_deleted", false),
+          .eq("is_deleted", false)
+          .eq("esta_publicada", true);
 
-        // Colaboraciones activas (proyectos donde participa)
-        supabase
-          .from("proyecto_persona_rol")
+        // Noticias borradores
+        const borradoresResult = await supabase
+          .from("noticias")
           .select("id", { count: "exact", head: true })
-          .eq("persona_id", userId)
-          .eq("is_deleted", false),
+          .eq("created_by_uid", userId)
+          .eq("is_deleted", false)
+          .eq("esta_publicada", false);
 
-        // Temas de interés del usuario
-        supabase
-          .from("persona_tema")
-          .select("id", { count: "exact", head: true })
-          .eq("persona_id", userId)
-          .eq("is_deleted", false),
-      ]);
+        misNoticiasCount = publicadasResult.count || 0;
+        misNoticiasBorradoresCount = borradoresResult.count || 0;
 
-      const results = [
-        misProyectosResult,
-        misNoticiasResult,
-        colaboracionesResult,
-        temasInteresResult,
-      ];
-
-      for (const result of results) {
-        if (result.error) {
-          throw result.error;
-        }
+        console.log("✅ Noticias publicadas:", misNoticiasCount);
+        console.log("✅ Noticias borradores:", misNoticiasBorradoresCount);
+      } catch (error) {
+        console.warn("⚠️ Error loading noticias:", error);
       }
 
+      // 🔄 PROYECTOS - Tabla básica implementada (25%)
+      let misProyectosCount = 0;
+      try {
+        const misProyectosResult = await supabase
+          .from("proyectos")
+          .select("id", { count: "exact", head: true })
+          .eq("created_by_uid", userId)
+          .eq("is_deleted", false);
+
+        if (misProyectosResult.error) {
+          console.warn(
+            "⚠️ Server: Error loading user proyectos:",
+            misProyectosResult.error
+          );
+        } else {
+          misProyectosCount = misProyectosResult.count || 0;
+          console.log("✅ Server: User proyectos count:", misProyectosCount);
+        }
+      } catch (error) {
+        console.log(
+          "ℹ️ Server: Proyectos stats not fully available yet, using 0"
+        );
+      }
+
+      // ❌ COLABORACIONES - Tabla relacional no implementada
+      // TODO: Implementar cuando proyecto_persona_rol esté listo
+      const colaboracionesCount = 0;
+      console.log(
+        "ℹ️ Server: Colaboraciones stats not implemented yet, using 0"
+      );
+
+      // ❌ TEMAS DE INTERÉS - Tabla relacional no implementada
+      // TODO: Implementar cuando persona_tema esté listo
+      const temasInteresCount = 0;
+      console.log(
+        "ℹ️ Server: Temas interés stats not implemented yet, using 0"
+      );
+
       const userStats = {
-        misProyectos: misProyectosResult.count || 0,
-        misNoticias: misNoticiasResult.count || 0,
-        colaboraciones: colaboracionesResult.count || 0,
-        temasInteres: temasInteresResult.count || 0,
+        misProyectos: misProyectosCount,
+        misNoticias: misNoticiasCount,
+        misNoticiasBorradores: misNoticiasBorradoresCount,
+        colaboraciones: colaboracionesCount,
+        temasInteres: temasInteresCount,
       };
 
-      console.log("📊 Server: User stats:", userStats);
+      console.log("📊 Server: User stats loaded successfully:", userStats);
       return createSuccess(userStats);
     } catch (error) {
       console.error("❌ Server: Error loading user stats:", error);
@@ -256,6 +277,46 @@ class StatsService {
         code: "DB_ERROR",
         details: error,
       });
+    }
+  }
+
+  /**
+   * FUTURO: Método para agregar estadísticas de colaboraciones
+   * cuando proyecto_persona_rol esté implementado
+   */
+  private async getUserCollaborations(userId: string): Promise<number> {
+    try {
+      const result = await supabase
+        .from("proyecto_persona_rol")
+        .select("id", { count: "exact", head: true })
+        .eq("persona_id", userId)
+        .eq("is_deleted", false);
+
+      if (result.error) throw result.error;
+      return result.count || 0;
+    } catch (error) {
+      console.log("ℹ️ Server: Colaboraciones table not ready:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * FUTURO: Método para agregar estadísticas de temas de interés
+   * cuando persona_tema esté implementado
+   */
+  private async getUserTopicsOfInterest(userId: string): Promise<number> {
+    try {
+      const result = await supabase
+        .from("persona_tema")
+        .select("id", { count: "exact", head: true })
+        .eq("persona_id", userId)
+        .eq("is_deleted", false);
+
+      if (result.error) throw result.error;
+      return result.count || 0;
+    } catch (error) {
+      console.log("ℹ️ Server: Persona_tema table not ready:", error);
+      return 0;
     }
   }
 }

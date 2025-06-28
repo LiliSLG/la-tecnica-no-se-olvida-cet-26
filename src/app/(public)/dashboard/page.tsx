@@ -1,8 +1,7 @@
-// /src/app/(public)/dashboard/page.tsx - CON STATS REALES
+// /src/app/(public)/dashboard/page.tsx - DASHBOARD CON SIDEBAR
 "use client";
 
 import { useState, useEffect } from "react";
-import { redirect } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useProjectRoles } from "@/hooks/useProjectRoles";
 import { statsService } from "@/lib/supabase/services/statsService";
@@ -30,28 +29,16 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-interface DashboardPageProps {
-  // Props si necesitas pasar data desde un Server Component padre
-}
-
-// Server Component wrapper que carga las stats del usuario
 export default function DashboardPage() {
-  // Nota: En una implementación real, necesitarías obtener el userId del servidor
-  // Por ahora, es un Client Component que maneja todo
-
-  return <DashboardContent />;
-}
-
-// Client Component que maneja la UI y auth
-function DashboardContent() {
   const router = useRouter();
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { hasActiveRoles } = useProjectRoles();
 
   // Estados para stats del usuario
   const [userStats, setUserStats] = useState<{
     misProyectos: number;
     misNoticias: number;
+    misNoticiasBorradores: number;
     colaboraciones: number;
     temasInteres: number;
   } | null>(null);
@@ -77,31 +64,15 @@ function DashboardContent() {
     loadUserStats();
   }, [user?.id]);
 
-  // Redirects
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Cargando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    redirect("/login");
-  }
-
   // Verificar permisos para crear proyectos
   const canCreateProjects = Boolean(
-    user.categoria_principal === "estudiante_cet" ||
-      user.categoria_principal === "ex_alumno_cet" ||
-      user.categoria_principal === "docente_cet" ||
+    user?.categoria_principal === "estudiante_cet" ||
+      user?.categoria_principal === "ex_alumno_cet" ||
+      user?.categoria_principal === "docente_cet" ||
       isAdmin
   );
 
-  // Estadísticas con datos reales y comentarios (con null safety)
+  // Estadísticas rápidas con noticias unificadas
   const quickStats = [
     {
       title: "Mis Proyectos",
@@ -118,12 +89,27 @@ function DashboardContent() {
     },
     {
       title: "Mis Noticias",
-      value: userStats?.misNoticias?.toString() || "0",
+      value: (
+        (userStats?.misNoticias || 0) + (userStats?.misNoticiasBorradores || 0)
+      ).toString(),
       change:
         (userStats?.misNoticias || 0) > 0 ? "publicadas" : "crear primera",
       icon: Newspaper,
-      trend: (userStats?.misNoticias || 0) > 0 ? "up" : "neutral",
-      description: "Contenido compartido",
+      trend:
+        (userStats?.misNoticias || 0) +
+          (userStats?.misNoticiasBorradores || 0) >
+        0
+          ? "up"
+          : "neutral",
+      description: "Contenido creado",
+      badge:
+        (userStats?.misNoticiasBorradores || 0) > 0
+          ? `${userStats?.misNoticiasBorradores} ${
+              (userStats?.misNoticiasBorradores || 0) === 1
+                ? "borrador"
+                : "borradores"
+            }`
+          : null,
     },
     {
       title: "Colaboraciones",
@@ -140,7 +126,7 @@ function DashboardContent() {
     },
   ];
 
-  // Secciones principales mejoradas
+  // Secciones principales
   const userSections = [
     {
       title: "Mis Proyectos",
@@ -150,10 +136,7 @@ function DashboardContent() {
       href: "/dashboard/proyectos",
       stats: userStats
         ? {
-            active:
-              (userStats.misProyectos || 0) > 0
-                ? (userStats.misProyectos || 0).toString()
-                : "0",
+            active: (userStats.misProyectos || 0).toString(),
             total: (userStats.misProyectos || 0).toString(),
           }
         : null,
@@ -183,7 +166,7 @@ function DashboardContent() {
       stats: userStats
         ? {
             published: (userStats.misNoticias || 0).toString(),
-            drafts: "0", // Esto lo podríamos calcular si tuviéramos campo de borradores
+            drafts: (userStats.misNoticiasBorradores || 0).toString(),
           }
         : null,
       isActive: true,
@@ -194,7 +177,7 @@ function DashboardContent() {
       description:
         "Actualiza tu información personal, categoría y preferencias",
       icon: Users,
-      href: "/perfil",
+      href: "/dashboard/perfil",
       stats: userStats
         ? {
             temas:
@@ -262,7 +245,7 @@ function DashboardContent() {
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-bold">Mi Dashboard</h1>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <span>Bienvenido/a, {user.nombre || user.email}</span>
+              <span>Bienvenido/a, {user?.nombre || user?.email}</span>
               <MapPin className="h-4 w-4" />
               <span className="text-sm">CET N°26</span>
             </div>
@@ -272,7 +255,7 @@ function DashboardContent() {
               variant="outline"
               className="bg-primary/10 text-primary border-primary/30"
             >
-              {formatCategoria(user.categoria_principal || "")}
+              {formatCategoria(user?.categoria_principal || "")}
             </Badge>
             {isAdmin && (
               <Badge
@@ -293,9 +276,19 @@ function DashboardContent() {
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </p>
+                    {stat.badge && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                      >
+                        {stat.badge}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {statsLoading ? (
                       <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
@@ -322,7 +315,6 @@ function DashboardContent() {
         ))}
       </div>
 
-      {/* Resto del contenido igual... */}
       {/* Secciones principales */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -363,9 +355,10 @@ function DashboardContent() {
                             {section.stats.published && (
                               <span>{section.stats.published} publicadas</span>
                             )}
-                            {section.stats.drafts && (
-                              <span>• {section.stats.drafts} borradores</span>
-                            )}
+                            {section.stats.drafts &&
+                              section.stats.drafts !== "0" && (
+                                <span>• {section.stats.drafts} borradores</span>
+                              )}
                             {section.stats.temas && (
                               <span>{section.stats.temas}</span>
                             )}
@@ -418,15 +411,17 @@ function DashboardContent() {
                     <div
                       className={`p-2 rounded-lg ${
                         section.isActive
-                          ? "bg-accent/10 text-accent"
+                          ? "bg-primary/10 text-primary"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
                       <IconComponent className="h-5 w-5" />
                     </div>
-                    <CardTitle className="text-base leading-tight">
-                      {section.title}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-base leading-tight">
+                        {section.title}
+                      </CardTitle>
+                    </div>
                   </div>
                   <CardDescription className="text-sm leading-relaxed mt-2">
                     {section.description}
@@ -436,8 +431,8 @@ function DashboardContent() {
                 <CardFooter className="pt-0 mt-auto">
                   <Button
                     variant={section.isActive ? "default" : "secondary"}
-                    disabled={!section.isActive}
                     className="w-full text-sm"
+                    disabled={!section.isActive}
                   >
                     {section.isActive ? "Explorar" : "Próximamente"}
                   </Button>

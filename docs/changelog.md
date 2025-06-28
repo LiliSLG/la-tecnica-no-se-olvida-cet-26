@@ -1,4 +1,42 @@
 # Changelog
+
+## [28/06/25] - Dashboard Usuario: Circuito Noticias Completo
+
+### ✅ Nuevas Funcionalidades
+- **Dashboard Noticias Usuario**: Lista completa "Mis Noticias" con filtros y búsqueda
+- **Crear Noticia**: Formulario completo reutilizando `NoticiaForm` desde `/dashboard/noticias/new`
+- **Editar Noticia**: Funcionalidad completa desde `/dashboard/noticias/[id]/edit`
+- **Ver Noticia**: Redirección a vista pública `/noticias/[id]` (en desarrollo)
+- **Gestión Estados**: Publicar/despublicar y destacar/desmarcar desde dashboard usuario
+
+### 🔧 Mejoras Técnicas
+- **BackButton Mejorado**: Acepta props `href` y `label` opcionales, mantiene retrocompatibilidad
+- **Página Pública Arreglada**: Fix `await params` en `/noticias/[id]/page.tsx`
+- **RLS Automático**: Usuarios solo ven y editan sus propias noticias
+- **Error Handling**: Estados de loading y error en todas las páginas
+- **Mobile Responsive**: Diseño adaptativo en todas las vistas
+
+### 🏗️ Arquitectura
+- **Patrón Client Components**: Todas las páginas dashboard usan `useEffect` + `useState`
+- **Reutilización Formularios**: Mismo `NoticiaForm` para admin y usuario con `redirectPath`
+- **Servicios Unificados**: `noticiasService.getUserNoticias()` para filtrado por usuario
+- **Navegación Consistente**: Rutas dashboard vs admin correctamente separadas
+
+### 🐛 Problemas Conocidos
+- AdminDataTable: Error serialización event handlers en vista mobile (no bloquea funcionalidad)
+- Vista pública noticias: Algunos casos de navegación pendientes de optimizar
+
+### 📁 Archivos Nuevos
+- `/app/(public)/dashboard/noticias/page.tsx` - Lista "Mis Noticias"
+- `/app/(public)/dashboard/noticias/new/page.tsx` - Crear noticia usuario
+- `/app/(public)/dashboard/noticias/[id]/edit/page.tsx` - Editar noticia usuario
+- `/components/user/noticias/UserNoticiasListPage.tsx` - Componente lista usuario
+
+### 🎯 Próximos Pasos
+- Resolver problema AdminDataTable event handlers
+- Unificar diseño lista admin vs usuario
+- Optimizar navegación vista pública noticias
+- Documentar patrón para replicar en otras entidades
 ## [27/06/25]
 
 ### 🚀 Nuevas Funcionalidades

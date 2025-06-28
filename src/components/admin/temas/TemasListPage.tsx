@@ -54,7 +54,6 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
 
   // ✅ Estado local para manejar la lista
   const [temas, setTemas] = useState<Tema[]>(allTemas);
-  const [temaToDelete, setTemaToDelete] = useState<Tema | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTema, setEditingTema] = useState<Tema | null>(null);
 
@@ -168,7 +167,7 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setTemaToDelete(tema)}
+                onClick={() => handleDelete(tema)}
                 title="Eliminar temática"
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               >
@@ -307,9 +306,9 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
     }
   };
 
-  // ✅ Manejar eliminación confirmada
-  const handleConfirmDelete = async () => {
-    if (!temaToDelete || !user) {
+  // Función eliminar (directo, sin confirmación)
+  async function handleDelete(tema: Tema) {
+    if (!user) {
       toast({
         title: "Error",
         description: "Debes iniciar sesión.",
@@ -319,39 +318,36 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
     }
 
     try {
-      const result = await temasService.delete(temaToDelete.id, user.id);
+      const result = await temasService.delete(tema.id, user.id);
 
-      if (!result.success) {
+      if (result.success) {
+        setTemas((prevTemas) =>
+          prevTemas.map((t) =>
+            t.id === tema.id ? { ...t, is_deleted: true } : t
+          )
+        );
+
+        toast({
+          title: "Temática eliminada",
+          description:
+            "La temática se movió a eliminados. Puedes restaurarla desde el filtro.",
+        });
+      } else {
         toast({
           title: "Error",
-          description: "No se pudo eliminar el tema.",
+          description:
+            result.error?.message || "No se pudo eliminar la temática.",
           variant: "destructive",
         });
-        return;
       }
-
-      // Actualizar estado local
-      setTemas((prevTemas) =>
-        prevTemas.map((t) =>
-          t.id === temaToDelete.id ? { ...t, is_deleted: true } : t
-        )
-      );
-
-      toast({
-        title: "Éxito",
-        description: "Tema eliminado correctamente.",
-      });
-
-      setTemaToDelete(null);
     } catch (error) {
-      console.error("Error deleting tema:", error);
       toast({
         title: "Error",
-        description: "Error inesperado al eliminar el tema.",
+        description: "Error inesperado al eliminar la temática.",
         variant: "destructive",
       });
     }
-  };
+  }
 
   return (
     <>
@@ -395,30 +391,7 @@ export function TemasListPage({ allTemas }: TemasListPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ AlertDialog de confirmación de eliminación */}
-      <AlertDialog
-        open={!!temaToDelete}
-        onOpenChange={() => setTemaToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción marcará la temática como eliminada. Podrás restaurarla
-              después si es necesario.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </>
   );
 }

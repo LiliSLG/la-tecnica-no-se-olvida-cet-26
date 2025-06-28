@@ -42,6 +42,7 @@ type Tema = Database["public"]["Tables"]["temas"]["Row"];
 interface NoticiaFormProps {
   initialData?: Noticia;
   initialTemas?: string[]; // IDs de temas iniciales
+  redirectPath?: string;
 }
 // ✅ CORREGIDO: Esquema con valores correctos del enum de BD
 const formSchema = z.object({
@@ -82,7 +83,11 @@ const formSchema = z.object({
   esta_publicada: z.boolean().default(false),
 });
 
-export function NoticiaForm({ initialData, initialTemas }: NoticiaFormProps) {
+export function NoticiaForm({
+  initialData,
+  initialTemas,
+  redirectPath = "/admin/noticias", // ← DEFAULT ADMIN
+}: NoticiaFormProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [fetchingOgData, setFetchingOgData] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -432,7 +437,7 @@ export function NoticiaForm({ initialData, initialTemas }: NoticiaFormProps) {
       }
 
       // Redirigir solo si todo salió bien
-      router.push("/admin/noticias");
+      router.push(redirectPath);
     } catch (error) {
       console.error("❌ Unexpected error:", error);
       toast({

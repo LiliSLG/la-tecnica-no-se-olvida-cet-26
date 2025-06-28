@@ -1,4 +1,4 @@
-// /src/app/(public)/noticias/[id]/page.tsx
+// /src/app/(public)/noticias/[id]/page.tsx - FIXED
 import { noticiasService } from "@/lib/supabase/services/noticiasService";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,13 +9,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 
-// Generar metadata dinámico para SEO
+// ✅ FIX: generateMetadata con await params
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>; // ✅ Promise<>
 }): Promise<Metadata> {
-  const result = await noticiasService.getPublishedById(params.id);
+  const { id } = await params; // ✅ await params
+
+  const result = await noticiasService.getPublishedById(id);
 
   if (!result.success || !result.data) {
     return {
@@ -43,14 +45,17 @@ export async function generateMetadata({
   };
 }
 
+// ✅ FIX: Componente principal con await params
 export default async function NoticiaPublicaDetallePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>; // ✅ Promise<>
 }) {
-  console.log("🔍 Server Public: Loading noticia detail:", params.id);
+  const { id } = await params; // ✅ await params
 
-  const result = await noticiasService.getPublishedById(params.id);
+  console.log("🔍 Server Public: Loading noticia detail:", id);
+
+  const result = await noticiasService.getPublishedById(id);
 
   if (!result.success) {
     console.error(
@@ -61,10 +66,7 @@ export default async function NoticiaPublicaDetallePage({
   }
 
   if (!result.data) {
-    console.log(
-      "📭 Server Public: Noticia not found or not published:",
-      params.id
-    );
+    console.log("📭 Server Public: Noticia not found or not published:", id);
     notFound();
   }
 
@@ -97,15 +99,15 @@ export default async function NoticiaPublicaDetallePage({
       return apellido ? `${nombre} ${apellido}` : nombre;
     }
 
-    return "CET N°26";
+    return "Autor CET";
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-primary/5">
-      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Navegación */}
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header con navegación */}
         <div className="mb-8">
-          <Button variant="outline" asChild className="mb-4">
+          <Button variant="ghost" asChild className="mb-4">
             <Link href="/noticias">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a noticias
@@ -115,21 +117,21 @@ export default async function NoticiaPublicaDetallePage({
 
         {/* Contenido principal */}
         <div className="max-w-4xl mx-auto">
-          <Card className="overflow-hidden">
-            {/* Imagen principal */}
-            {noticia.imagen_url && (
-              <div className="aspect-video sm:aspect-[2/1] overflow-hidden">
-                <img
-                  src={noticia.imagen_url}
-                  alt={noticia.titulo}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
+          <Card className="border-0 shadow-lg bg-card/95 backdrop-blur">
             <CardHeader className="space-y-6">
-              {/* Badges y metadata */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Imagen destacada */}
+              {noticia.imagen_url && (
+                <div className="w-full">
+                  <img
+                    src={noticia.imagen_url}
+                    alt={noticia.titulo}
+                    className="w-full h-64 sm:h-80 object-cover rounded-lg border border-border"
+                  />
+                </div>
+              )}
+
+              {/* Metadata y badges */}
+              <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Badge
                   variant={
                     noticia.tipo === "articulo_propio" ? "default" : "secondary"
@@ -235,15 +237,17 @@ export default async function NoticiaPublicaDetallePage({
                     </h3>
 
                     {noticia.url_externa && (
-                      <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg border">
-                        <ExternalLink className="h-5 w-5 text-primary" />
-                        <div className="space-y-1 flex-1">
-                          <p className="text-sm font-medium">Enlace externo</p>
+                      <div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
+                        <ExternalLink className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">
+                            Enlace original:
+                          </p>
                           <a
                             href={noticia.url_externa}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline break-all text-sm"
+                            className="text-sm text-primary hover:underline break-all"
                           >
                             {noticia.url_externa}
                           </a>
@@ -252,47 +256,55 @@ export default async function NoticiaPublicaDetallePage({
                     )}
 
                     {noticia.fuente_externa && (
-                      <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
-                        <p className="text-sm font-medium text-accent-foreground mb-1">
-                          Fuente
-                        </p>
-                        <p className="text-accent-foreground">
-                          {noticia.fuente_externa}
-                        </p>
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Fuente:</strong> {noticia.fuente_externa}
                       </div>
                     )}
                   </div>
                 </>
               )}
 
-              {/* Información de la comunidad */}
-              <Separator />
-              <div className="bg-primary/5 rounded-lg p-6 border border-primary/10">
-                <div className="text-center space-y-3">
-                  <h4 className="font-semibold text-primary">
-                    Comunidad CET N°26
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Esta noticia forma parte del conocimiento compartido por
-                    nuestra comunidad educativa en Ingeniero Jacobacci, Río
-                    Negro.
-                  </p>
-                  <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                    <span>📍 Ingeniero Jacobacci</span>
-                    <span>🎓 Educación Técnica Rural</span>
-                    <span>🤝 Conocimiento Compartido</span>
+              {/* Temas relacionados */}
+              {noticia.temas && noticia.temas.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold">
+                      Temas relacionados
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {noticia.temas.map((tema) => (
+                        <Badge key={tema.id} variant="outline">
+                          {tema.nombre}
+                          {tema.categoria_tema && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({tema.categoria_tema})
+                            </span>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
+                </>
+              )}
+
+              {/* Footer */}
+              <Separator />
+              <div className="text-center space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  ¿Te gustó esta noticia? Únete a nuestra comunidad educativa.
+                </p>
+                <div className="flex flex-wrap justify-center gap-4">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/noticias">Ver más noticias</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/">Conocer el proyecto</Link>
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Navegación inferior */}
-          <div className="mt-8 text-center">
-            <Button variant="outline" asChild>
-              <Link href="/noticias">Ver más noticias de la comunidad</Link>
-            </Button>
-          </div>
         </div>
       </div>
     </div>

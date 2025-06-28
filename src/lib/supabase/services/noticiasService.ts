@@ -422,6 +422,86 @@ class NoticiasService {
     }
   }
 
+  /**
+   * Obtener todas las noticias de un usuario específico con información del autor
+   * Para uso en dashboard de usuario - solo ve sus propias noticias
+   */
+  async getUserNoticias(
+    userId: string,
+    includeDeleted: boolean = false
+  ): Promise<ServiceResult<NoticiaWithAuthor[]>> {
+    try {
+      if (!userId) {
+        return createError({
+          name: "ValidationError",
+          message: "User ID is required",
+          code: "VALIDATION_ERROR",
+          details: { userId },
+        });
+      }
+
+      console.log(
+        "🔍 NoticiasService.getUserNoticias called for user:",
+        userId,
+        "includeDeleted:",
+        includeDeleted
+      );
+
+      // Query para obtener solo noticias del usuario con información del autor
+      let query = supabase
+        .from("noticias")
+        .select(
+          `
+        *,
+        created_by_persona:personas!created_by_uid (
+          nombre,
+          apellido,
+          email
+        )
+      `
+        )
+        .eq("created_by_uid", userId);
+
+      // Filtrar eliminadas si no se especifica incluirlas
+      if (!includeDeleted) {
+        query = query.eq("is_deleted", false);
+      }
+
+      // Ordenar por fecha de creación (más recientes primero)
+      query = query.order("created_at", { ascending: false });
+
+      console.log("⏳ Executing user noticias query...");
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw error;
+      }
+
+      if (!data) {
+        console.log("📭 No noticias found for user:", userId);
+        return createSuccess([]);
+      }
+
+      // Transformar datos para mantener consistencia con otros métodos
+      const result = data as any[];
+      const transformedData: NoticiaWithAuthor[] = result.map((item) => ({
+        ...item,
+        created_by_persona: item.created_by_persona || null,
+      }));
+
+      console.log("✅ Found noticias for user:", transformedData.length);
+      return createSuccess(transformedData);
+    } catch (error) {
+      console.error("❌ Service error:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error fetching user noticias",
+        code: "DB_ERROR",
+        details: { userId, error },
+      });
+    }
+  }
   // 🔄 CORREGIDO: getById con sintaxis explícita
   async getByIdWithAuthor(
     id: string
