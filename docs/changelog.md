@@ -1,5 +1,28 @@
 # Changelog
 
+## [28/06/25] - Continued
+
+### 🐛 Bug Fixes
+- **Mobile Sidebar**: Dashboard accordion navigation now works on mobile
+- **Mobile Cards**: News now display as cards on mobile (like themes)
+- **DataTable**: Fixed mobile detection using correct hook
+- **Layout Consistency**: Dashboard now uses same grid structure as admin
+## [28/06/25]
+
+### ✨ Features
+- **Dashboard Noticias**: Nueva vista individual con sidebar y diseño consistente
+- **Layout Unificado**: Dashboard ahora usa la misma estructura visual que admin
+- **UX Mejorada**: Botón "Previsualizar en público" con hint explicativo
+- **Panel de Autor**: Acciones contextuales para creadores de noticias
+
+### 🔄 Changes
+- **Navegación**: Desde "Mis Noticias" ahora va a vista dashboard (con sidebar)
+- **Estructura**: Layout dashboard actualizado con grid y fondo gris
+- **Responsivo**: Header móvil mejorado para abrir sidebar
+
+### 🐛 Fixes
+- **Consistencia Visual**: Dashboard y admin ahora tienen el mismo aspecto
+- **Navegación Contextual**: Rutas correctas según contexto de usuario
 ## [28/06/25] - Dashboard Usuario: Circuito Noticias Completo
 
 ### ✅ Nuevas Funcionalidades

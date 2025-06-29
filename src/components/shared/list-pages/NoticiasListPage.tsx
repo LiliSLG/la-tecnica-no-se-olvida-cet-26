@@ -108,8 +108,7 @@ export function NoticiasListPage({
       return {
         createRoute: "/dashboard/noticias/new",
         editRoute: (id: string) => `/dashboard/noticias/${id}/edit`,
-        viewRoute: (id: string) => `/dashboard/noticias/${id}`, // Nueva vista dashboard con sidebar        title: "Mis Noticias",
-        addLabel: "Nueva Noticia",
+        viewRoute: (id: string) => `/dashboard/noticias/${id}`, // Nueva vista dashboard con sidebar        addLabel: "Nueva Noticia",
         emptyTitle: "No tienes noticias aún",
         emptyDescription:
           "Comienza creando tu primera noticia para compartir contenido con la comunidad.",
@@ -601,7 +600,7 @@ export function NoticiasListPage({
             onClick: () => router.push(routeConfig.createRoute),
           },
         }}
-        mobileCardView={false} // Deshabilitado temporalmente hasta resolver el problema
+        mobileCardView={true}
       />
 
       {/* AlertDialogs sin cambios */}

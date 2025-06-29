@@ -42,6 +42,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* ESTRUCTURA GRID COMO ADMIN - Esto arregla el accordion móvil */}
       <div className="grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         {/* UserSidebar - Estilo similar a admin */}
         <UserSidebar
