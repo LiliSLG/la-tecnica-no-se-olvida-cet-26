@@ -108,8 +108,7 @@ export function NoticiasListPage({
       return {
         createRoute: "/dashboard/noticias/new",
         editRoute: (id: string) => `/dashboard/noticias/${id}/edit`,
-        viewRoute: (id: string) => `/noticias/${id}?from=dashboard`, // Vista pública con origen
-        title: "Mis Noticias",
+        viewRoute: (id: string) => `/dashboard/noticias/${id}`, // Nueva vista dashboard con sidebar        title: "Mis Noticias",
         addLabel: "Nueva Noticia",
         emptyTitle: "No tienes noticias aún",
         emptyDescription:

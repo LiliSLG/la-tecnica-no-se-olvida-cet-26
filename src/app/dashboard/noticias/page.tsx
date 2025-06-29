@@ -88,7 +88,7 @@ export default function DashboardNoticiasPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       {/* 🔄 Usar componente unificado con isUserView=true */}
       <NoticiasListPage allNoticias={noticias} isUserView={true} />
     </div>

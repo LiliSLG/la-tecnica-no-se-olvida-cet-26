@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { UserSidebar } from "@/components/user/UserSidebar";
-import { MobileUserSidebar } from "@/components/user/MobileUserSidebar";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
@@ -43,8 +42,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar (Desktop + Mobile integrado) */}
+      <div className="grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        {/* UserSidebar - Estilo similar a admin */}
         <UserSidebar
           user={user}
           onSignOut={signOut}
@@ -52,23 +51,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onMobileClose={() => setIsMobileSidebarOpen(false)}
         />
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile header */}
-          <div className="md:hidden flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* Contenido Principal - Layout idéntico a admin */}
+        <div className="flex flex-col min-h-screen">
+          {/* Header Mobile - Solo para abrir sidebar */}
+          <div className="md:hidden flex items-center justify-between p-4 border-b bg-card">
+            <h1 className="text-lg font-semibold">Mi Dashboard</h1>
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="sm"
               onClick={() => setIsMobileSidebarOpen(true)}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </Button>
-            <div className="text-sm font-medium">Mi Dashboard</div>
-            <div className="w-8" /> {/* Spacer */}
           </div>
 
-          {/* Page content */}
-          <main className="flex-1 overflow-auto">{children}</main>
+          {/* Page content con mismo padding que admin */}
+          <main className="flex-1 p-6 bg-muted/30">{children}</main>
         </div>
       </div>
     </div>
