@@ -108,7 +108,7 @@ export function NoticiasListPage({
       return {
         createRoute: "/dashboard/noticias/new",
         editRoute: (id: string) => `/dashboard/noticias/${id}/edit`,
-        viewRoute: (id: string) => `/noticias/${id}`, // Vista pública
+        viewRoute: (id: string) => `/noticias/${id}?from=dashboard`, // Vista pública con origen
         title: "Mis Noticias",
         addLabel: "Nueva Noticia",
         emptyTitle: "No tienes noticias aún",
@@ -368,10 +368,7 @@ export function NoticiasListPage({
                   title="Ver noticia"
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 >
-                  <Link
-                    href={routeConfig.viewRoute(noticia.id)}
-                    target={isUserView ? "_blank" : undefined} // Nueva pestaña solo para usuarios
-                  >
+                  <Link href={routeConfig.viewRoute(noticia.id)}>
                     <Eye className="h-4 w-4" />
                   </Link>
                 </Button>

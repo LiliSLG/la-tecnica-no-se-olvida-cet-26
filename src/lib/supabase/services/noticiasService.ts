@@ -21,7 +21,8 @@ type NoticiaPublica = {
   url_externa: string | null;
   contenido: string | null;
   imagen_url: string | null;
-  es_destacada: boolean; // ✅ Volver a boolean puro (convertimos el null)
+  es_destacada: boolean;
+  resumen_o_contexto_interno: string | null;
   created_by_persona: {
     nombre: string | null;
     apellido: string | null;
@@ -590,7 +591,7 @@ class NoticiasService {
           `
         id, titulo, subtitulo, fecha_publicacion, tipo,
         autor_noticia, fuente_externa, url_externa, contenido,
-        imagen_url, es_destacada,
+        imagen_url, es_destacada,resumen_o_contexto_interno,
         created_by_persona:personas!created_by_uid (
           nombre,
           apellido
@@ -661,7 +662,7 @@ class NoticiasService {
           `
         id, titulo, subtitulo, fecha_publicacion, tipo,
         autor_noticia, fuente_externa, url_externa, contenido,
-        imagen_url, es_destacada,
+        imagen_url, es_destacada,resumen_o_contexto_interno,
         created_by_persona:personas!created_by_uid (
           nombre,
           apellido
@@ -724,7 +725,7 @@ class NoticiasService {
           `
         id, titulo, subtitulo, fecha_publicacion, tipo,
         autor_noticia, fuente_externa, url_externa, contenido,
-        imagen_url, es_destacada,
+        imagen_url, es_destacada,resumen_o_contexto_interno,
         created_by_persona:personas!created_by_uid (
           nombre,
           apellido
