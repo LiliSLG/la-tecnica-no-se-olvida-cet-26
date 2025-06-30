@@ -1142,6 +1142,7 @@ export type Database = {
         | "estancia_productiva"
         | "organismo_gubernamental"
         | "otro"
+        | "cooperativa"
       tipo_relacion_proyecto_enum:
         | "referencia"
         | "continuacion"
@@ -1341,6 +1342,7 @@ export const Constants = {
         "estancia_productiva",
         "organismo_gubernamental",
         "otro",
+        "cooperativa",
       ],
       tipo_relacion_proyecto_enum: [
         "referencia",

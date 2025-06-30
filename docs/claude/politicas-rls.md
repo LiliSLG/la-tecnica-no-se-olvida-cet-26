@@ -11,7 +11,7 @@ Este documento registra todas las políticas RLS necesarias para el funcionamien
 | `personas` | 🎯 | 🎯 | 🎯 | 🎯 | **Fase 1A** |
 | `organizaciones` | 🎯 | 🎯 | 🎯 | 🎯 | **Fase 1A** |
 | `proyectos` | 🎯 | 🎯 | 🎯 | 🎯 | **Fase 1A** |
-| `noticias` | 🎯 | 🎯 | 🎯 | 🎯 | **Fase 1A** |
+| `noticias` | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | `historias_orales` | ❌ | ❌ | ❌ | ❌ | Pendiente |
 | `roles` | ❌ | ❌ | ❌ | ❌ | Pendiente |
 | `persona_roles` | ❌ | ❌ | ❌ | ❌ | Pendiente |

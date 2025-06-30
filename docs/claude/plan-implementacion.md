@@ -15,28 +15,37 @@
 
 ## 📋 **Roadmap Actualizado**
 
-### 🎯 **Fase 1B: Personas (Próxima)**
-**Objetivo**: CRUD completo personas + RLS específico  
-**Tiempo estimado**: 1-2 sesiones
+### 🎯 **Fase 1B: Organizaciones (Próxima - Más Simple)**
+**Objetivo**: CRUD completo organizaciones + RLS + índices básicos  
+**Tiempo estimado**: 1 sesión
+**Razón del cambio**: Aplicar patrón en entidad simple antes de personas (más compleja)
 
-#### Checklist Personas
-- [ ] **Crear páginas admin personas** (Server Components)
-  - [ ] `/admin/personas/page.tsx` - Lista con DataTable
-  - [ ] `/admin/personas/[id]/page.tsx` - Detalle persona
-  - [ ] `/admin/personas/new/page.tsx` - Crear persona  
-  - [ ] `/admin/personas/[id]/edit/page.tsx` - Editar persona
-- [ ] **Implementar PersonaForm** (componente ya diseñado)
-- [ ] **📋 Implementar RLS Personas** (solo políticas necesarias)
+#### Checklist Organizaciones
+- [ ] **Crear páginas admin organizaciones** (Client Components)
+  - [ ] `/admin/organizaciones/page.tsx` - Lista con DataTable
+  - [ ] `/admin/organizaciones/[id]/page.tsx` - Detalle organización
+  - [ ] `/admin/organizaciones/new/page.tsx` - Crear organización  
+  - [ ] `/admin/organizaciones/[id]/edit/page.tsx` - Editar organización
+- [ ] **Implementar OrganizacionForm** (formulario página dedicada)
+- [ ] **📋 Completar índices noticias** (aprovechar para terminar noticias 100%)
+- [ ] **📋 Implementar RLS Organizaciones**
   ```sql
-  -- Personas: Admin + propio perfil + visibilidad configurada
-  CREATE POLICY "personas_select_visible" ON "public"."personas"
+  -- Organizaciones: Admin + creador + públicas si abiertas
+  CREATE POLICY "organizaciones_select_visible" ON "public"."organizaciones"
   FOR SELECT TO public USING (
     is_admin() OR 
-    auth.uid()::uuid = id OR
-    (is_deleted = false AND visibilidad_perfil != 'privado')
+    auth.uid()::uuid = created_by_uid OR
+    (is_deleted = false AND abierta_a_colaboraciones = true)
   );
-  ```
-- [ ] **Testing completo** personas
+
+ 📋 Implementar FK e índices organizaciones
+ Testing completo organizaciones
+
+### 🎯 Fase 1C: Personas (Después de Organizaciones)
+Objetivo: CRUD completo personas + RLS específico
+Tiempo estimado: 2 sesiones
+Razón: Más compleja (categorías, permisos, visibilidad)
+
 
 ### 🎯 **Fase 1C: Proyectos (Después de Personas)**  
 **Objetivo**: CRUD completo proyectos + RLS específico  
@@ -59,9 +68,7 @@
 - [ ] **Sistema básico de roles por proyecto**
 - [ ] **Testing completo** proyectos
 
-### 🎯 **Fase 1D: Organizaciones (Al final)**
-**Objetivo**: CRUD completo organizaciones  
-**Tiempo estimado**: 1 sesión
+
 
 #### Checklist Organizaciones  
 - [ ] **Crear páginas admin organizaciones**
@@ -91,10 +98,10 @@
 
 ## 📊 **Métricas Actualizadas**
 
-### Progreso Actual: **40% Completado** 🎉
+### Progreso Actual: **55% Completado** 🎉
 - ✅ **Arquitectura y Base**: 100%
 - ✅ **Temas**: 100% (con RLS)
-- ✅ **Noticias**: 100% (con RLS)  
+- ✅ **Noticias**: 100% (Admin + Dashboard + Público + RLS + Índices + Validaciones) ✨✨
 - 🎯 **Personas**: 0% (Próxima)
 - ⏳ **Proyectos**: 30% (service existe)
 - ⏳ **Organizaciones**: 0%

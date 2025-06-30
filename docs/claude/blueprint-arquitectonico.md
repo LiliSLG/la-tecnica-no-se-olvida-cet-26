@@ -27,7 +27,7 @@ Plataforma digital para preservar y diseminar conocimiento rural y proyectos té
 │   │   │   └── /[id]/
 │   │   │       ├── page.tsx        # Página detalle
 │   │   │       └── /edit/page.tsx  # Formulario editar
-│   │   ├── /noticias/              # ✅ Completo (Client Components)
+│   │   ├── /noticias/              # ✅ COMPLETO (Admin + Dashboard + Público)
 │   │   │   ├── page.tsx            # Lista noticias
 │   │   │   ├── /new/page.tsx       # Crear noticia
 │   │   │   └── /[id]/edit/page.tsx # Editar noticia
@@ -176,11 +176,9 @@ Todos los servicios de entidad siguen estas reglas:
 - **Export Singleton:** Exportan una sola instancia del servicio
 - **Ubicación:** `/src/lib/supabase/services/`
 
-### Patrón Client Components (Implementado y Funcional)
+### **✅ PATRÓN ACTUAL:** Client Components con useEffect para páginas admin
 
-**✅ PATRÓN ACTUAL:** Client Components con useEffect para páginas admin
-
-#### Template Client Component Estándar
+#### Template Client Component Estándar (Páginas Admin)
 ```typescript
 // src/app/admin/[entidad]/page.tsx
 "use client";
@@ -204,24 +202,24 @@ export default function EntidadPage() {
       if (isAdmin === undefined) return; // Esperar si isAdmin aún es undefined
 
       try {
-        console.log("🔍 Fetching entidades, isAdmin:", isAdmin);
+        console.log("🔍 Client: Fetching entidades, isAdmin:", isAdmin);
         const result = await entidadService.getAll(isAdmin);
 
         if (result.success && result.data) {
-          console.log("📊 Server entidades:", result.data.length);
+          console.log("📊 Client: Loaded entidades:", result.data.length);
           setEntidades(result.data);
         } else {
-          console.error("Error fetching entidades:", result.error);
+          console.error("❌ Client: Error fetching entidades:", result.error);
         }
       } catch (error) {
-        console.error("Error in fetchEntidades:", error);
+        console.error("❌ Client: Error in fetchEntidades:", error);
       } finally {
         setLoading(false);
       }
     }
 
     fetchEntidades();
-  }, [isAdmin, isLoading]); // Incluir ambas dependencias
+  }, [isAdmin, isLoading]);
 
   if (isLoading || loading) {
     return (
@@ -237,14 +235,20 @@ export default function EntidadPage() {
 
   return <EntidadListPage allEntidades={entidades} />;
 }
-```
+✅ Filosofía: Funcionamiento > SEO en Admin
 
-#### Ventajas del Patrón Client Components Actual
-- ✅ **RLS Funciona Correctamente**: Se resolvieron problemas de auth y permisos
-- ✅ **Manejo de Estados**: Control fino sobre loading y error states
-- ✅ **Compatibilidad Auth**: Funciona bien con `useAuth` hook
-- ✅ **Debugging Fácil**: Logs claros del lado cliente
+Prioridad: Gestión fluida y estados complejos
+Trade-off aceptado: SEO no es crítico en páginas admin protegidas
+Beneficio: Control total sobre loading states y interactividad
 
+Ventajas del Patrón Client Components Admin
+
+✅ RLS Funciona Correctamente: Se resolvieron problemas de auth y permisos
+✅ Manejo de Estados: Control fino sobre loading y error states
+✅ Compatibilidad Auth: Funciona perfectamente con useAuth hook
+✅ Debugging Fácil: Logs claros del lado cliente
+✅ Interactividad Completa: Formularios, modales, filtros sin restricciones
+✅ Gestión de Errores: Manejo granular de estados de error
 ### Patrón Híbrido Server + Client (Páginas Públicas)
 ✅ PATRÓN PARA PÁGINAS PÚBLICAS: Server Components + Client Components híbrido
 Filosofía del Patrón Híbrido
@@ -584,8 +588,8 @@ graph TD
 
 ## 🚀 Estado Actual del Desarrollo
 
-### Base de Datos (35% Completado)
-- **Tablas completas**: `temas` (100%), `noticias` (95%)
+### Base de Datos (45% Completado)
+- **Tablas completas**: `temas` (100%), `noticias` (100%) ✨
 - **En progreso**: `personas`, `proyectos`, `organizaciones`
 - **RLS implementado**: Políticas básicas para temas y noticias
 - **Estado**: BD en desarrollo activo, implementación incremental por tabla
@@ -622,15 +626,18 @@ graph TD
 
 ### Pendientes Inmediatas
 - [ ] Regenerar `database.types.ts` desde BD actual
-- [ ] Actualizar estado de `noticias` en documentación (marcar como completo)
 - [ ] Implementar `PersonasService.ts` siguiendo patrón Standalone
 - [ ] Crear componentes admin para personas siguiendo patrón Client Components
 
-### Optimizaciones Técnicas
-- [ ] Añadir índices DB para `noticias` (tipo, fecha_publicacion, es_destacada)
+### Optimizaciones Técnicas Completadas ✅
+- [x] ✅ Índices DB para `noticias` (tipo, fecha_publicacion, es_destacada)
+- [x] ✅ Validaciones DB para URLs en campos correspondientes  
+- [x] ✅ Performance: Índices GIN para campos de texto completo
+- [x] ✅ Índices compuestos para consultas públicas optimizadas
+
+### Próximas Optimizaciones
 - [ ] Implementar FK relacionales entre `noticias` y `temas`
-- [ ] Validaciones DB para URLs en campos correspondientes
-- [ ] Performance: Índices GIN para campos de texto completo
+- [ ] Índices para tabla `organizaciones` (próxima entidad)
 
 ---
 

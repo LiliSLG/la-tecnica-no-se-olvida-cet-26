@@ -133,44 +133,23 @@ Patrón de Componentes Server vs Client
 #### Regla de Oro: Server First
 **Default a Server Components** para todas las páginas admin nuevas, excepto cuando se necesite interactividad específica del cliente.
 
-#### Páginas que DEBEN ser Server Components
-- ✅ **Listados de entidades** (`/admin/entidades/page.tsx`)
-- ✅ **Páginas de detalle** (`/admin/entidades/[id]/page.tsx`)
-- ✅ **Páginas de lectura** (sin formularios complejos)
+#### Páginas ADMIN: Client Components (Patrón Establecido)
+- ✅ **Páginas admin** (`/admin/entidades/page.tsx`) → Client Components con useEffect
+- ✅ **Formularios complejos** → Client Components dedicados
+- ✅ **Gestión estados** → useState + useEffect pattern
+- **Razón**: Funcionamiento y UX fluida > SEO en área administrativa
+
+#### Páginas PÚBLICAS: Server Components (SEO Prioritario)  
+- ✅ **Listados públicos** (`/(public)/entidades/page.tsx`) → Server Components
+- ✅ **Páginas de detalle públicas** → Server Components con metadata
+- ✅ **SEO optimizado** → generateMetadata + renderizado server-side
+- **Razón**: SEO y performance > interactividad inicial
 
 #### Componentes que DEBEN ser Client Components
 - ✅ **Formularios interactivos** (`EntidadForm.tsx`)
 - ✅ **Modales y dialogs** (con `useState`)
 - ✅ **Componentes con event handlers** (onClick, onChange)
 - ✅ **Componentes que usan hooks** (useRouter, useAuth, useToast)
-
-#### Template Server Component Estándar
-```typescript
-// src/app/admin/[entidad]/page.tsx
-import { entidadService } from "@/lib/supabase/services/entidadService";
-import { EntidadListPage } from "@/components/admin/entidad/EntidadListPage";
-
-export default async function EntidadPage() {
-  console.log("🔍 Server: Loading entidad");
-  
-  const result = await entidadService.getAll(true);
-  
-  if (!result.success) {
-    console.error("❌ Server: Error loading entidad:", result.error);
-    return (
-      <div className="p-6">
-        <div className="text-red-600">Error: {result.error?.message}</div>
-      </div>
-    );
-  }
-
-  const entidades = result.data || [];
-  console.log("📊 Server: Loaded entidades:", entidades.length);
-
-  return <EntidadListPage allEntidades={entidades} />;
-}
-```
-
 #### Debugging Server vs Client
 - **Server logs:** Aparecen en terminal/console del servidor
 - **Client logs:** Aparecen en DevTools del navegador

@@ -9,7 +9,7 @@
 | Tabla | Estructura | RLS | FK | Índices | Optimización | Estado |
 |-------|------------|-----|----|---------|--------------| -------|
 | `temas` | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
-| `noticias` | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | **75% - En progreso** |
+| `noticias` | ✅ | ✅ | ✅ | ✅ | ✅ | **✅ COMPLETO** |
 | `personas` | ✅ | ❌ | ❌ | ❌ | ❌ | **25% - Estructura básica** |
 | `proyectos` | ✅ | ❌ | ❌ | ❌ | ❌ | **25% - Estructura básica** |
 | `organizaciones` | ✅ | ❌ | ❌ | ❌ | ❌ | **20% - Estructura básica** |
@@ -20,8 +20,7 @@
 **Leyenda:** ✅ Completo | ⚠️ Parcial | ❌ Pendiente
 
 ---
-
-## 🚀 **Tabla `noticias` - Estado Actual**
+## 🎉 **Tabla `noticias` - ✅ COMPLETADA 100%**
 
 ### ✅ **Completado**
 - **Estructura**: Schema completo con todos los campos necesarios
@@ -29,14 +28,34 @@
 - **FK**: Foreign keys para auditoría (`created_by_uid`, `updated_by_uid`, `deleted_by_uid`)
 - **Funcionalidad**: CRUD completo con nombres de autores reales
 - **UI**: Toggle publicada/destacada con confirmación
+- **Índices Performance**: 
+  - Índices básicos: `tipo`, `fecha_publicacion`, `es_destacada`, `esta_publicada`, `is_deleted`
+  - Índices compuestos: consultas públicas y destacadas optimizadas
+  - Índices GIN: búsqueda full-text en `titulo`, `contenido`, `subtitulo`
+  - Índices FK: campos de auditoría para "mis noticias"
+- **Validaciones DB**: 
+  - URLs válidas en `url_externa`
+  - Constraint enlace externo requiere URL
+  - Constraint artículo propio requiere contenido
+- **Performance**: Queries públicas optimizadas con índices compuestos
 
-### ⚠️ **Pendiente en Noticias**
-- **Índices adicionales**: Para `tipo`, `fecha_publicacion`, `es_destacada`
-- **FK relacionales**: Con `temas` a través de `noticia_tema`
-- **Validación DB**: Constraints para URLs válidas
-- **Performance**: Índices GIN para campos de texto completo
+### 🎯 **Tabla Lista para Producción**
+- ✅ Estructura robusta con validaciones
+- ✅ Performance optimizada para carga
+- ✅ RLS completo para todos los contextos
+- ✅ Patrón establecido para replicar en otras entidades
 
----
+### 🔗 **Tabla Relacional `noticia_tema` - ✅ COMPLETA**
+
+- **✅ Estructura**: Tabla many-to-many entre noticias y temas
+- **✅ FK**: Referencias a `noticias.id` y `temas.id`
+- **✅ Servicio**: `noticiaTemasService.ts` completamente implementado
+- **✅ Funcionalidad**: CRUD completo de relaciones
+- **✅ Uso en app**: Integrado en dashboard y vistas públicas
+- **✅ Métodos avanzados**: 
+  - `getTemasWithInfoForNoticia()` - Con datos completos del tema
+  - `updateTemasForNoticia()` - Actualización masiva
+  - `getTemasStats()` - Estadísticas de uso
 
 ## 📋 **Próximas Tablas por Implementar**
 
