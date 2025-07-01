@@ -58,7 +58,7 @@ const sidebarLinks = [
   },
   {
     id: "organizations",
-    href: "#",
+    href: "/admin/organizaciones",
     label: "Organizaciones",
     icon: Building,
   },

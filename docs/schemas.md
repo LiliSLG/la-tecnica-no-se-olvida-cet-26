@@ -370,7 +370,7 @@ is_deleted (boolean, optional)
 - empresa
 - institucion_educativa
 - ONG
-- estancia_productiva
+- establecimiento_ganadero
 - organismo_gubernamental
 - otro
 

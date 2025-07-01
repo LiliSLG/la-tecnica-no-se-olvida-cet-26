@@ -425,69 +425,192 @@ export type Database = {
       }
       organizaciones: {
         Row: {
-          abierta_a_colaboraciones: boolean | null
-          areas_de_interes: string[] | null
+          abierta_a_colaboraciones: boolean
+          aprobada_por_admin_uid: string | null
+          areas_de_interes: string[]
           created_at: string | null
           created_by_uid: string | null
           deleted_at: string | null
           deleted_by_uid: string | null
-          descripcion: string | null
+          descripcion: string
           email_contacto: string | null
+          estado_verificacion: Database["public"]["Enums"]["estado_verificacion_enum"]
+          fecha_aprobacion_admin: string | null
+          fecha_reclamacion: string | null
+          fecha_ultima_invitacion: string | null
           id: string
-          is_deleted: boolean | null
-          logourl: string | null
+          is_deleted: boolean
+          logo_url: string | null
           nombre_fantasia: string | null
           nombre_oficial: string
+          reclamada_por_uid: string | null
           sitio_web: string | null
           telefono_contacto: string | null
-          tipo: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          tipo: Database["public"]["Enums"]["tipo_organizacion_enum"]
+          token_reclamacion: string | null
           ubicacion: Json | null
           updated_at: string | null
           updated_by_uid: string | null
         }
         Insert: {
-          abierta_a_colaboraciones?: boolean | null
-          areas_de_interes?: string[] | null
+          abierta_a_colaboraciones?: boolean
+          aprobada_por_admin_uid?: string | null
+          areas_de_interes: string[]
           created_at?: string | null
           created_by_uid?: string | null
           deleted_at?: string | null
           deleted_by_uid?: string | null
-          descripcion?: string | null
+          descripcion: string
           email_contacto?: string | null
+          estado_verificacion?: Database["public"]["Enums"]["estado_verificacion_enum"]
+          fecha_aprobacion_admin?: string | null
+          fecha_reclamacion?: string | null
+          fecha_ultima_invitacion?: string | null
           id?: string
-          is_deleted?: boolean | null
-          logourl?: string | null
+          is_deleted?: boolean
+          logo_url?: string | null
           nombre_fantasia?: string | null
           nombre_oficial: string
+          reclamada_por_uid?: string | null
           sitio_web?: string | null
           telefono_contacto?: string | null
-          tipo?: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          tipo: Database["public"]["Enums"]["tipo_organizacion_enum"]
+          token_reclamacion?: string | null
           ubicacion?: Json | null
           updated_at?: string | null
           updated_by_uid?: string | null
         }
         Update: {
-          abierta_a_colaboraciones?: boolean | null
-          areas_de_interes?: string[] | null
+          abierta_a_colaboraciones?: boolean
+          aprobada_por_admin_uid?: string | null
+          areas_de_interes?: string[]
           created_at?: string | null
           created_by_uid?: string | null
           deleted_at?: string | null
           deleted_by_uid?: string | null
-          descripcion?: string | null
+          descripcion?: string
           email_contacto?: string | null
+          estado_verificacion?: Database["public"]["Enums"]["estado_verificacion_enum"]
+          fecha_aprobacion_admin?: string | null
+          fecha_reclamacion?: string | null
+          fecha_ultima_invitacion?: string | null
           id?: string
-          is_deleted?: boolean | null
-          logourl?: string | null
+          is_deleted?: boolean
+          logo_url?: string | null
           nombre_fantasia?: string | null
           nombre_oficial?: string
+          reclamada_por_uid?: string | null
           sitio_web?: string | null
           telefono_contacto?: string | null
-          tipo?: Database["public"]["Enums"]["tipo_organizacion_enum"] | null
+          tipo?: Database["public"]["Enums"]["tipo_organizacion_enum"]
+          token_reclamacion?: string | null
           ubicacion?: Json | null
           updated_at?: string | null
           updated_by_uid?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_org_aprobada_por"
+            columns: ["aprobada_por_admin_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_org_reclamada_por"
+            columns: ["reclamada_por_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      persona_organizacion: {
+        Row: {
+          cargo: string | null
+          created_at: string | null
+          created_by_uid: string | null
+          deleted_at: string | null
+          deleted_by_uid: string | null
+          es_contacto_principal: boolean | null
+          fecha_fin: string | null
+          fecha_inicio: string | null
+          id: string
+          is_deleted: boolean | null
+          organizacion_id: string
+          persona_id: string
+          updated_at: string | null
+          updated_by_uid: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string | null
+          created_by_uid?: string | null
+          deleted_at?: string | null
+          deleted_by_uid?: string | null
+          es_contacto_principal?: boolean | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          organizacion_id: string
+          persona_id: string
+          updated_at?: string | null
+          updated_by_uid?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string | null
+          created_by_uid?: string | null
+          deleted_at?: string | null
+          deleted_by_uid?: string | null
+          es_contacto_principal?: boolean | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          organizacion_id?: string
+          persona_id?: string
+          updated_at?: string | null
+          updated_by_uid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "persona_organizacion_created_by_uid_fkey"
+            columns: ["created_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "persona_organizacion_deleted_by_uid_fkey"
+            columns: ["deleted_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "persona_organizacion_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "persona_organizacion_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "persona_organizacion_updated_by_uid_fkey"
+            columns: ["updated_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       persona_roles: {
         Row: {
@@ -1112,6 +1235,12 @@ export type Database = {
         | "no_especificado"
         | "jubilado"
         | "otro"
+      estado_verificacion_enum:
+        | "sin_invitacion"
+        | "pendiente_aprobacion"
+        | "invitacion_enviada"
+        | "verificada"
+        | "rechazada"
       nivel_curso_enum: "basico" | "intermedio" | "avanzado"
       plataforma_video_enum:
         | "firebase_storage"
@@ -1139,7 +1268,7 @@ export type Database = {
         | "empresa"
         | "institucion_educativa"
         | "ONG"
-        | "estancia_productiva"
+        | "establecimiento_ganadero"
         | "organismo_gubernamental"
         | "otro"
         | "cooperativa"
@@ -1310,6 +1439,13 @@ export const Constants = {
         "jubilado",
         "otro",
       ],
+      estado_verificacion_enum: [
+        "sin_invitacion",
+        "pendiente_aprobacion",
+        "invitacion_enviada",
+        "verificada",
+        "rechazada",
+      ],
       nivel_curso_enum: ["basico", "intermedio", "avanzado"],
       plataforma_video_enum: [
         "firebase_storage",
@@ -1339,7 +1475,7 @@ export const Constants = {
         "empresa",
         "institucion_educativa",
         "ONG",
-        "estancia_productiva",
+        "establecimiento_ganadero",
         "organismo_gubernamental",
         "otro",
         "cooperativa",

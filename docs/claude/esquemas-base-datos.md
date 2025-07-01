@@ -375,7 +375,7 @@ CREATE TYPE tipo_organizacion_enum AS ENUM (
   'empresa',
   'institucion_educativa',
   'ONG',
-  'estancia_productiva',
+  'establecimiento_ganadero',
   'organismo_gubernamental',
   'otro'
 );

@@ -77,7 +77,7 @@ export default function AdminDashboard() {
       description:
         "Administrar las organizaciones que colaboran o se vinculan con la comunidad.",
       href: "/admin/organizaciones",
-      isActive: false,
+      isActive: true,
       icon: Building,
       stats: { total: "0", new: "0" },
     },

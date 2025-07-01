@@ -1,3 +1,4 @@
+// src/lib/supabase/services/organizacionesService.ts - CORREGIDO
 import { Database } from "../types/database.types";
 import { ServiceResult } from "../types/serviceResult";
 import {
@@ -12,6 +13,8 @@ type CreateOrganizacion =
 type UpdateOrganizacion =
   Database["public"]["Tables"]["organizaciones"]["Update"];
 
+export type { Organizacion as OrganizacionRow };
+
 class OrganizacionesService {
   async create(
     data: CreateOrganizacion
@@ -19,15 +22,14 @@ class OrganizacionesService {
     try {
       const { data: result, error } = await supabase
         .from("organizaciones")
-        .insert({
-          ...data,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .insert(data)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       return createSuccess(result);
     } catch (error) {
       return createError({
@@ -118,23 +120,20 @@ class OrganizacionesService {
 
   async getAll(
     includeDeleted: boolean = false
-  ): Promise<ServiceResult<Organizacion[] | null>> {
+  ): Promise<ServiceResult<Organizacion[]>> {
     try {
-      let query = supabase
-        .from("organizaciones")
-        .select("*")
-        .order("nombre_oficial", { ascending: true });
+      let query = supabase.from("organizaciones").select("*");
 
       if (!includeDeleted) {
         query = query.eq("is_deleted", false);
       }
 
+      query = query.order("nombre_oficial", { ascending: true });
+
       const { data, error } = await query;
 
       if (error) throw error;
-      if (!data) return createSuccess(null);
-
-      return createSuccess(data);
+      return createSuccess(data || []);
     } catch (error) {
       return createError({
         name: "ServiceError",
@@ -153,12 +152,12 @@ class OrganizacionesService {
     deletedByUid: string
   ): Promise<ServiceResult<boolean>> {
     try {
-      if (!id) {
+      if (!id || !deletedByUid) {
         return createError({
           name: "ValidationError",
-          message: "ID is required",
+          message: "ID and deletedByUid are required",
           code: "VALIDATION_ERROR",
-          details: { id },
+          details: { id, deletedByUid },
         });
       }
 
@@ -267,32 +266,6 @@ class OrganizacionesService {
       return createError({
         name: "ServiceError",
         message: "Error fetching organizaciones abiertas",
-        code: "DB_ERROR",
-        details: error,
-      });
-    }
-  }
-
-  async getAllTipos(): Promise<ServiceResult<string[]>> {
-    try {
-      const { data, error } = await supabase
-        .from("organizaciones")
-        .select("tipo")
-        .eq("is_deleted", false)
-        .not("tipo", "is", null);
-
-      if (error) throw error;
-
-      // Extraer tipos únicos
-      const tipos = [
-        ...new Set(data?.map((item) => item.tipo).filter(Boolean)),
-      ] as string[];
-
-      return createSuccess(tipos);
-    } catch (error) {
-      return createError({
-        name: "ServiceError",
-        message: "Error fetching organization tipos",
         code: "DB_ERROR",
         details: error,
       });
