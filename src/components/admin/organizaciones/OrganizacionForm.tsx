@@ -72,7 +72,10 @@ export function OrganizacionForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    initialData?.logo_url || null
+  );
   // Estados para áreas de interés
   const [selectedAreas, setSelectedAreas] = useState<string[]>(
     initialData?.areas_de_interes || []
@@ -92,6 +95,47 @@ export function OrganizacionForm({
       abierta_a_colaboraciones: initialData?.abierta_a_colaboraciones ?? true,
     },
   });
+  // Agregar esta función (basada en handleImageSelect de noticias):
+  const handleLogoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar archivo
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+    ];
+
+    if (file.size > maxSize) {
+      toast({
+        title: "Archivo muy grande",
+        description: "El logo debe ser menor a 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Tipo de archivo no válido",
+        description: "Solo se permiten imágenes: JPG, PNG, WebP, GIF, SVG",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string);
+      setSelectedLogoFile(file);
+      form.setValue("logo_url", "");
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Sincronizar áreas de interés con el formulario
   useEffect(() => {
@@ -111,74 +155,119 @@ export function OrganizacionForm({
 
   // Envío del formulario
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("🚀 Starting form submit with values:", values);
-
-    if (!user?.id) {
-      toast({
+    if (!user) {
+      return toast({
         title: "Error",
-        description: "Usuario no autenticado",
+        description: "Debes iniciar sesión.",
         variant: "destructive",
       });
-      return;
     }
 
     setLoading(true);
 
     try {
-      let result;
+      let finalLogoUrl = values.logo_url;
 
-      if (initialData?.id) {
-        console.log("📝 Updating existing organization:", initialData.id);
-        // ACTUALIZAR
-        result = await organizacionesService.update(initialData.id, {
-          ...values,
+      // Upload de logo si hay archivo seleccionado
+      if (selectedLogoFile) {
+        toast({
+          title: "Subiendo logo...",
+          description: "Por favor espera mientras se sube el logo",
+        });
+
+        try {
+          const { uploadOrganizacionLogo } = await import(
+            "@/lib/supabase/supabaseStorage"
+          );
+          finalLogoUrl = await uploadOrganizacionLogo(selectedLogoFile);
+          console.log("✅ Logo uploaded:", finalLogoUrl);
+        } catch (uploadError) {
+          console.error("❌ Logo upload failed:", uploadError);
+          toast({
+            title: "Error subiendo logo",
+            description: "No se pudo subir el logo. Intenta de nuevo.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // ✅ PROCESAR DATOS: Convertir strings vacíos a null
+      const processedValues = {
+        ...values,
+        logo_url: finalLogoUrl,
+        areas_de_interes: selectedAreas,
+        // ✅ Convertir strings vacíos a null para que pasen los constraints
+        email_contacto:
+          values.email_contacto?.trim() === "" ? null : values.email_contacto,
+        telefono_contacto:
+          values.telefono_contacto?.trim() === ""
+            ? null
+            : values.telefono_contacto,
+        sitio_web: values.sitio_web?.trim() === "" ? null : values.sitio_web,
+        nombre_fantasia:
+          values.nombre_fantasia?.trim() === "" ? null : values.nombre_fantasia,
+      };
+
+      console.log(
+        "🔥 Submitting organización with processed data:",
+        processedValues
+      );
+
+      // Resto del código igual...
+      if (initialData) {
+        const updateData = {
+          ...processedValues,
           updated_by_uid: user.id,
           updated_at: new Date().toISOString(),
+        };
+        const result = await organizacionesService.update(
+          initialData.id,
+          updateData
+        );
+
+        if (!result.success) {
+          toast({
+            title: "Error",
+            description:
+              result.error?.message || "Error al actualizar la organización",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Éxito",
+          description: "Organización actualizada correctamente.",
         });
       } else {
-        console.log("🆕 Creating new organization");
-        // CREAR
         const createData = {
-          ...values,
-          estado_verificacion: "sin_invitacion" as const,
+          ...processedValues,
           created_by_uid: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          estado_verificacion: "sin_invitacion" as const,
         };
 
-        console.log("📤 Sending create data:", createData);
-        result = await organizacionesService.create(createData);
-        console.log("📥 Service response:", result);
-      }
+        const result = await organizacionesService.create(createData);
 
-      if (!result.success) {
-        console.error("❌ Service error:", result.error);
+        if (!result.success) {
+          toast({
+            title: "Error",
+            description:
+              result.error?.message || "Error al crear la organización",
+            variant: "destructive",
+          });
+          return;
+        }
+
         toast({
-          title: "Error",
-          description:
-            result.error?.message || "Error al crear la organización",
-          variant: "destructive",
+          title: "Éxito",
+          description: "Organización creada correctamente.",
         });
-        return;
       }
 
-      console.log("✅ Organization saved successfully");
-      toast({
-        title: "Éxito",
-        description: initialData
-          ? "Organización actualizada correctamente."
-          : "Organización creada correctamente.",
-      });
-
-      // Redirigir
       router.push(redirectPath);
     } catch (error) {
-      console.error("❌ Error inesperado:", error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al guardar la organización.",
-        variant: "destructive",
-      });
+      // ...
     } finally {
       setLoading(false);
     }
@@ -321,6 +410,68 @@ export function OrganizacionForm({
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/*Logo de la Organización */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Logo de la Organización
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                {/* Preview del logo */}
+                {logoPreview && (
+                  <div className="relative">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="w-20 h-20 object-contain rounded border"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={() => {
+                        setLogoPreview(null);
+                        setSelectedLogoFile(null);
+                        form.setValue("logo_url", "");
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Input de archivo */}
+                <div className="flex-1">
+                  <label htmlFor="logo-upload" className="cursor-pointer">
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
+                      <Building className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {selectedLogoFile
+                          ? `Archivo seleccionado: ${selectedLogoFile.name}`
+                          : "Haz clic para subir logo"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        JPG, PNG, WebP, GIF o SVG. Máximo 5MB.
+                      </p>
+                    </div>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoSelect}
+                      disabled={loading}
+                    />
+                  </label>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

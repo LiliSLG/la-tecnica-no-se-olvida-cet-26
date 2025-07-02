@@ -1,8 +1,8 @@
-// src/lib/supabase/supabaseStorage.ts - ACTUALIZADO
-import { supabase } from "./client"; // ✅ Cambiar import
+// src/lib/supabase/supabaseStorage.ts - ACTUALIZADO CON BUCKET ORGANIZACIONES
+import { supabase } from "./client";
 import { toast } from "@/hooks/use-toast";
 
-// Storage configuration - ✅ EXPANDIDO
+// Storage configuration - ✅ EXPANDIDO CON BUCKET ORGANIZACIONES
 const STORAGE_CONFIG = {
   buckets: {
     public: {
@@ -21,7 +21,7 @@ const STORAGE_CONFIG = {
         interviews: "interviews",
       },
     },
-    // ✅ AGREGAR BUCKET NOTICIAS
+    // ✅ BUCKET ESPECÍFICO PARA NOTICIAS
     noticias: {
       name: "noticias",
       maxFileSize: 10 * 1024 * 1024, // 10MB
@@ -35,7 +35,22 @@ const STORAGE_CONFIG = {
         images: "images",
       },
     },
-    // ✅ AGREGAR BUCKET PERSONAS (que ya tienes)
+    // ✅ NUEVO: BUCKET ESPECÍFICO PARA ORGANIZACIONES
+    organizaciones: {
+      name: "organizaciones",
+      maxFileSize: 5 * 1024 * 1024, // 5MB
+      allowedTypes: [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/svg+xml", // Para logos SVG
+      ] as const,
+      folders: {
+        logos: "logos",
+      },
+    },
+    // ✅ BUCKET PARA PERSONAS
     personas: {
       name: "personas",
       maxFileSize: 5 * 1024 * 1024, // 5MB
@@ -49,8 +64,6 @@ const STORAGE_CONFIG = {
 
 type BucketName = keyof typeof STORAGE_CONFIG.buckets;
 
-// ✅ SIMPLIFICAR: Remover el tipo genérico complejo
-
 /**
  * Validates a file before upload
  */
@@ -63,7 +76,7 @@ function validateFile<T extends BucketName>(file: File, bucketName: T): void {
     );
   }
 
-  // ✅ ARREGLO: Simplificar la validación de tipos
+  // ✅ Simplificar la validación de tipos
   const allowedTypes = config.allowedTypes as readonly string[];
   if (!allowedTypes.includes(file.type)) {
     throw new Error(
@@ -75,7 +88,7 @@ function validateFile<T extends BucketName>(file: File, bucketName: T): void {
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Sube archivo a cualquier bucket
+ * ✅ FUNCIÓN PRINCIPAL: Sube archivo a cualquier bucket
  */
 export async function uploadFileToAnyBucket<T extends BucketName>(
   file: File,
@@ -141,6 +154,21 @@ export async function uploadFileToAnyBucket<T extends BucketName>(
     console.error("Error in uploadFileToAnyBucket:", error);
     throw error;
   }
+}
+
+/**
+ * ✅ FUNCIÓN ESPECÍFICA PARA LOGOS DE ORGANIZACIONES
+ */
+export async function uploadOrganizacionLogo(
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<string> {
+  return uploadFileToAnyBucket(
+    file,
+    "organizaciones",
+    STORAGE_CONFIG.buckets.organizaciones.folders.logos,
+    onProgress
+  );
 }
 
 /**

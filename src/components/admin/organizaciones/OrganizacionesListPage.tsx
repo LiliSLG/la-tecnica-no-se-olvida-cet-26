@@ -21,6 +21,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ColumnConfig } from "@/components/shared/data-tables/DataTable";
@@ -77,6 +78,13 @@ export function OrganizacionesListPage({
   // 🆕 Estado para filtros rápidos y toggle de expansión
   const [quickFilter, setQuickFilter] = useState<string | null>(null);
   const [showTypeFilters, setShowTypeFilters] = useState(false);
+
+  // ✅ AGREGAR: Calcular pendientes totales
+  const pendientesAprobacion = organizaciones.filter(
+    (org) =>
+      org.estado_verificacion === "pendiente_aprobacion" ||
+      org.estado_verificacion === "sin_invitacion"
+  ).length;
 
   useEffect(() => {
     setOrganizaciones(allOrganizaciones);
@@ -204,7 +212,6 @@ export function OrganizacionesListPage({
   const handleDelete = async (organizacion: OrganizacionRow) => {
     if (!user?.id) return;
 
-
     try {
       console.log("🗑️ Deleting organization:", organizacion.id);
       const result = await organizacionesService.delete(
@@ -292,31 +299,49 @@ export function OrganizacionesListPage({
       label: "Organización",
       sortable: true,
       render: (value, organizacion) => (
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-foreground">
-            {value || "Sin nombre"}
-          </div>
-          {organizacion?.nombre_fantasia && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {organizacion.nombre_fantasia}
-            </div>
-          )}
-          {/* Áreas de interés - Solo las primeras 2 */}
-          {organizacion?.areas_de_interes &&
-            organizacion.areas_de_interes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {organizacion.areas_de_interes.slice(0, 2).map((area) => (
-                  <Badge key={area} variant="outline" className="text-xs">
-                    {area}
-                  </Badge>
-                ))}
-                {organizacion.areas_de_interes.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{organizacion.areas_de_interes.length - 2} más
-                  </Badge>
-                )}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* ✅ NUEVO: Avatar con logo */}
+          <div className="flex-shrink-0">
+            {organizacion?.logo_url ? (
+              <img
+                src={organizacion.logo_url}
+                alt={`Logo de ${value}`}
+                className="w-10 h-10 object-contain rounded-full border bg-white"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
+                {getTipoIcon(organizacion?.tipo)}
               </div>
             )}
+          </div>
+
+          {/* Información de la organización */}
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-foreground">
+              {value || "Sin nombre"}
+            </div>
+            {organizacion?.nombre_fantasia && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {organizacion.nombre_fantasia}
+              </div>
+            )}
+            {/* Áreas de interés - Solo las primeras 2 */}
+            {organizacion?.areas_de_interes &&
+              organizacion.areas_de_interes.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {organizacion.areas_de_interes.slice(0, 2).map((area) => (
+                    <Badge key={area} variant="outline" className="text-xs">
+                      {area}
+                    </Badge>
+                  ))}
+                  {organizacion.areas_de_interes.length > 2 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{organizacion.areas_de_interes.length - 2} más
+                    </Badge>
+                  )}
+                </div>
+              )}
+          </div>
         </div>
       ),
     },
@@ -447,10 +472,24 @@ export function OrganizacionesListPage({
             Administra las organizaciones colaboradoras del CET N°26
           </p>
         </div>
-        <Button onClick={() => router.push("/admin/organizaciones/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Organización
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => router.push("/admin/organizaciones/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Organización
+          </Button>
+
+          {/* ✅ NUEVO: Botón de gestionar pendientes */}
+          {pendientesAprobacion > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => router.push("/admin/organizaciones/pendientes")}
+              className="flex items-center gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              Gestionar Pendientes ({pendientesAprobacion})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 🆕 ALERTA DE PENDIENTES CRÍTICAS */}
@@ -482,7 +521,6 @@ export function OrganizacionesListPage({
                   className="border-orange-300 text-orange-700 hover:bg-orange-100"
                   onClick={() => {
                     setQuickFilter(null);
-                    // TODO: Implementar filtro rápido a pendientes
                     console.log("Filtrar pendientes de aprobación");
                   }}
                 >
@@ -504,8 +542,6 @@ export function OrganizacionesListPage({
           </div>
         </div>
       )}
-
-
 
       {/* Stats rápidas */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -540,6 +576,7 @@ export function OrganizacionesListPage({
         </div>
 
         {/* Pendientes de aprobación - CONDICIONAL */}
+
         <div
           className={`bg-card p-4 rounded-lg border ${
             filteredByQuickFilter.filter(

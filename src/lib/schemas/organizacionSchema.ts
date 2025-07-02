@@ -91,7 +91,10 @@ export const organizacionSchema = z.object({
   nombre_oficial: z
     .string()
     .min(2, "El nombre oficial debe tener al menos 2 caracteres"),
-  nombre_fantasia: z.string().optional().or(z.literal("")),
+  nombre_fantasia: z
+    .string()
+    .transform((val) => (val === "" ? null : val))
+    .optional(),
   tipo: z
     .enum([
       "empresa",
@@ -110,18 +113,11 @@ export const organizacionSchema = z.object({
 
   // Información de contacto
   logo_url: z.string().url("URL del logo inválida").nullable().optional(),
-  sitio_web: z
-    .string()
-    .url("URL del sitio web inválida")
-    .optional()
-    .or(z.literal("")),
-  email_contacto: z
-    .string()
-    .email("Email inválido")
-    .optional()
-    .or(z.literal("")),
-  telefono_contacto: z.string().nullable().optional(),
   ubicacion: z.any().nullable().optional(), // JSONB
+
+  email_contacto: z.string().optional().nullable(),
+  telefono_contacto: z.string().optional().nullable(),
+  sitio_web: z.string().optional().nullable(),
 
   // Áreas de trabajo y colaboración
   areas_de_interes: z
@@ -177,12 +173,16 @@ export const createOrganizacionSchema = organizacionSchema.omit({
 // Schema para actualizar organización
 export const updateOrganizacionSchema = createOrganizacionSchema.partial();
 
-// Schema específico para el formulario (solo campos editables por admin)
+// ✅ SCHEMA ESPECÍFICO PARA EL FORMULARIO (campos no obligatorios excepto los críticos)
 export const organizacionFormSchema = z.object({
   nombre_oficial: z
     .string()
     .min(2, "El nombre oficial debe tener al menos 2 caracteres"),
-  nombre_fantasia: z.string().optional().or(z.literal("")),
+  // ✅ ARREGLADO: nombre_fantasia totalmente opcional, no valida si está vacío
+  nombre_fantasia: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? null : val)), // ✅ Convierte string vacío a null
   tipo: z.enum([
     "empresa",
     "institucion_educativa",
@@ -195,21 +195,37 @@ export const organizacionFormSchema = z.object({
   descripcion: z
     .string()
     .min(10, "La descripción debe tener al menos 10 caracteres"),
+  // ✅ ARREGLADO: Campos de contacto opcionales con transformación a null
   email_contacto: z
     .string()
-    .email("Email inválido")
     .optional()
-    .or(z.literal("")),
-  telefono_contacto: z.string().optional(),
+    .refine((val) => !val || z.string().email().safeParse(val).success, {
+      message: "Email inválido",
+    })
+    .transform((val) => (val === "" || !val ? null : val)), // ✅ Convierte vacío a null
+  telefono_contacto: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? null : val)), // ✅ Convierte vacío a null
   sitio_web: z
     .string()
-    .url("URL del sitio web inválida")
     .optional()
-    .or(z.literal("")),
+    .refine((val) => !val || z.string().url().safeParse(val).success, {
+      message: "URL del sitio web inválida",
+    })
+    .transform((val) => (val === "" || !val ? null : val)), // ✅ Convierte vacío a null
   areas_de_interes: z
     .array(z.string())
     .min(1, "Debe seleccionar al menos un área de interés"),
   abierta_a_colaboraciones: z.boolean().default(true),
+  // ✅ NUEVO: Campo para logo
+  logo_url: z
+    .string()
+    .optional()
+    .refine((val) => !val || z.string().url().safeParse(val).success, {
+      message: "URL del logo inválida",
+    })
+    .transform((val) => (val === "" || !val ? null : val)), // ✅ Convierte vacío a null
 });
 
 // 🆕 HELPERS para trabajar con tipos

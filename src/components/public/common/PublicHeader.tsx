@@ -1,4 +1,4 @@
-// /src/components/public/common/PublicHeader.tsx - VERSIÓN COMPLETA
+// /src/components/public/common/PublicHeader.tsx - VERSIÓN CON SUBMENU COMUNIDAD
 "use client";
 
 import { useState } from "react";
@@ -15,6 +15,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Sheet,
@@ -37,10 +40,13 @@ import {
   Shield,
   User,
   LogOut,
+  ChevronDown,
+  Building,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Navegación principal unificada
+// Navegación principal unificada con submenu
 const publicNavItems = [
   { href: "/", label: "Inicio", icon: Home, public: true },
   { href: "/noticias", label: "Noticias", icon: Newspaper, public: true },
@@ -51,7 +57,27 @@ const publicNavItems = [
     icon: BrainCircuit,
     public: true,
   },
-  { href: "/comunidad", label: "Comunidad", icon: Users, public: true },
+  // Comunidad ahora es un submenu
+  {
+    href: "/comunidad",
+    label: "Comunidad",
+    icon: Users,
+    public: true,
+    submenu: [
+      {
+        href: "/personas",
+        label: "Personas",
+        icon: UserCheck,
+        description: "Miembros de la comunidad",
+      },
+      {
+        href: "/organizaciones",
+        label: "Organizaciones",
+        icon: Building,
+        description: "Organizaciones colaboradoras",
+      },
+    ],
+  },
   { href: "/historias", label: "Historias", icon: BookOpen, public: true },
 ];
 
@@ -87,6 +113,15 @@ export function PublicHeader() {
     setIsMobileMenuOpen(false);
   };
 
+  // Helper para determinar si una ruta está activa
+  const isRouteActive = (href: string, submenu?: any[]) => {
+    if (submenu) {
+      // Para submenus, verificar si alguna subruta está activa
+      return submenu.some((item) => pathname?.startsWith(item.href));
+    }
+    return pathname === href || (href !== "/" && pathname?.startsWith(href));
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -117,10 +152,51 @@ export function PublicHeader() {
             if (!item.public && !user) return null;
 
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname?.startsWith(item.href));
+            const isActive = isRouteActive(item.href, item.submenu);
 
+            // Si tiene submenu, renderizar dropdown
+            if (item.submenu) {
+              return (
+                <DropdownMenu key={item.href}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-foreground/80",
+                        isActive ? "text-foreground" : "text-foreground/60"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    {item.submenu.map((subitem) => {
+                      const SubIcon = subitem.icon;
+                      return (
+                        <DropdownMenuItem key={subitem.href} asChild>
+                          <Link
+                            href={subitem.href}
+                            className="flex items-center gap-2 w-full"
+                          >
+                            <SubIcon className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">{subitem.label}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {subitem.description}
+                              </div>
+                            </div>
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+
+            // Navegación normal sin submenu
             return (
               <Link
                 key={item.href}
@@ -250,10 +326,64 @@ export function PublicHeader() {
                     if (!item.public && !user) return null;
 
                     const Icon = item.icon;
-                    const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/" && pathname?.startsWith(item.href));
+                    const isActive = isRouteActive(item.href, item.submenu);
 
+                    // Si tiene submenu, renderizar grupo expandido
+                    if (item.submenu) {
+                      return (
+                        <div key={item.href} className="space-y-1">
+                          {/* Header del grupo */}
+                          <div
+                            className={cn(
+                              "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium",
+                              isActive
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </div>
+
+                          {/* Subitems */}
+                          <div className="ml-4 space-y-1">
+                            {item.submenu.map((subitem) => {
+                              const SubIcon = subitem.icon;
+                              const isSubActive = pathname?.startsWith(
+                                subitem.href
+                              );
+
+                              return (
+                                <button
+                                  key={subitem.href}
+                                  onClick={() =>
+                                    handleMobileNavClick(subitem.href)
+                                  }
+                                  className={cn(
+                                    "flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors",
+                                    isSubActive
+                                      ? "bg-primary text-primary-foreground"
+                                      : "hover:bg-muted text-foreground"
+                                  )}
+                                >
+                                  <SubIcon className="h-4 w-4" />
+                                  <div className="text-left">
+                                    <div className="font-medium">
+                                      {subitem.label}
+                                    </div>
+                                    <div className="text-xs opacity-70">
+                                      {subitem.description}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Item normal sin submenu
                     return (
                       <button
                         key={item.href}
@@ -261,8 +391,8 @@ export function PublicHeader() {
                         className={cn(
                           "flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors",
                           isActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted text-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -272,70 +402,63 @@ export function PublicHeader() {
                   })}
                 </div>
 
-                {/* User Actions */}
+                {/* User section in mobile */}
                 {user && (
-                  <div className="space-y-1 border-t pt-4">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                      Mi Cuenta
-                    </h4>
-
-                    <button
-                      onClick={() => handleMobileNavClick("/perfil")}
-                      className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <User className="h-4 w-4" />
-                      <span>Mi Perfil</span>
-                    </button>
-
-                    {/* Dashboard según contexto */}
-                    {isInAdminArea ? (
-                      <button
-                        onClick={() => handleMobileNavClick("/dashboard")}
-                        className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Settings className="h-4 w-4" />
-                        <span>Dashboard Usuario</span>
-                      </button>
-                    ) : (
-                      needsDashboard && (
+                  <>
+                    <div className="border-t pt-6">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                        Mi Cuenta
+                      </h4>
+                      <div className="space-y-1">
                         <button
-                          onClick={() => handleMobileNavClick("/dashboard")}
-                          className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          onClick={() => handleMobileNavClick("/perfil")}
+                          className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors hover:bg-muted text-foreground"
                         >
-                          <Settings className="h-4 w-4" />
-                          <span>Mi Dashboard</span>
+                          <User className="h-4 w-4" />
+                          <span>Mi Perfil</span>
                         </button>
-                      )
-                    )}
 
-                    {/* Admin Panel */}
-                    {isAdmin && (
-                      <button
-                        onClick={() =>
-                          handleMobileNavClick(isInAdminArea ? "/" : "/admin")
-                        }
-                        className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Shield className="h-4 w-4" />
-                        <span>
-                          {isInAdminArea ? "Salir del Admin" : "Panel Admin"}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                        {needsDashboard && (
+                          <button
+                            onClick={() => handleMobileNavClick("/dashboard")}
+                            className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors hover:bg-muted text-foreground"
+                          >
+                            <Settings className="h-4 w-4" />
+                            <span>Mi Dashboard</span>
+                          </button>
+                        )}
 
-                {/* Login for non-authenticated users */}
-                {!user && (
-                  <div className="border-t pt-4">
-                    <Button
-                      onClick={() => handleMobileNavClick("/login")}
-                      className="w-full"
-                    >
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Ingresar a la Plataforma
-                    </Button>
-                  </div>
+                        {isAdmin && (
+                          <button
+                            onClick={() =>
+                              handleMobileNavClick(
+                                isInAdminArea ? "/" : "/admin"
+                              )
+                            }
+                            className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors hover:bg-muted text-foreground"
+                          >
+                            <Shield className="h-4 w-4" />
+                            <span>
+                              {isInAdminArea
+                                ? "Salir del Admin"
+                                : "Panel Admin"}
+                            </span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            closeMobileMenu();
+                            handleSignOut();
+                          }}
+                          className="flex items-center space-x-3 w-full px-3 py-2 rounded-md text-sm transition-colors hover:bg-muted text-foreground"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Cerrar Sesión</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </SheetContent>

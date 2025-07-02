@@ -345,12 +345,18 @@ find src -name "*organizacion*" -type f
 ## 🎯 **INICIO RECOMENDADO EN NUEVO CHAT:**
 
 ```
-"Hola! Necesito continuar con la implementación del módulo Organizaciones. 
+"Hola! Necesito continuar con la implementación del módulo Organizaciones.
 
-Por favor:
-1. Busca en project knowledge el roadmap de organizaciones
-2. Revisa qué fase hemos completado
-3. Continúa con el siguiente paso pendiente
+Por favor: 
+1. Busca en project knowledge el archivo roadmap_organizaciones.md
+2. Estamos en la **XX** 
+3. Revisa en el código que tenemos hecho y que está pendiente de Fase XX
+4. Continúa con el siguiente paso pendiente
+
+**⚡ IMPORTANTE - Optimización de Tokens:**
+- ✅ **Solo artifact completo** para archivos nuevos o grandes reestructuras
+- ✅ **Para cambios pequeños:** Dame solo el fragmento + ubicación exacta donde agregarlo
+- ✅ **Formato preferido:** `// 🔧 AGREGAR después de línea X en archivo.ts:`
 
 Template de referencia: Módulo Noticias (100% completo)
 Stack: Next.js 15 + Supabase + TypeScript + shadcn/ui"

@@ -300,6 +300,18 @@ export default function OrganizacionDetailPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver
             </Button>
+
+            {/* ✅ NUEVO: Logo de la organización */}
+            {organizacion.logo_url && (
+              <div className="flex-shrink-0">
+                <img
+                  src={organizacion.logo_url}
+                  alt={`Logo de ${organizacion.nombre_oficial}`}
+                  className="w-16 h-16 object-contain rounded border bg-transparent"
+                />
+              </div>
+            )}
+
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
                 {organizacion.nombre_oficial}
