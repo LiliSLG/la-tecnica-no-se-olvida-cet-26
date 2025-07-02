@@ -61,11 +61,6 @@ export default async function HomePage() {
     historias: 0,
   };
 
-  console.log("📊 Server Public: Loaded stats:", safeStats);
-  console.log(
-    "📊 Server Public: Loaded featured noticias:",
-    noticiasDestacadas.length
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/3 to-accent/5">

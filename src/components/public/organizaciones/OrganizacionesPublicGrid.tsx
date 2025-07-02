@@ -26,12 +26,6 @@ export function OrganizacionesPublicGrid({
   // ✅ VALIDACIÓN DE PROPS PARA EVITAR ERRORES
   const organizacionesSeguras = organizaciones || [];
 
-  // ✅ DEBUG TEMPORAL PARA VER QUÉ ESTÁ PASANDO
-  console.log("🔍 OrganizacionesPublicGrid recibió:", {
-    organizaciones: organizacionesSeguras,
-    length: organizacionesSeguras.length,
-    type: typeof organizacionesSeguras
-  });
 
   // Resto del componente igual...
   // Tipos de organización para filtros
@@ -92,12 +86,56 @@ export function OrganizacionesPublicGrid({
 
   return (
     <div className="space-y-8">
-      {/* Debug info temporal */}
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-        <p><strong>🔍 Debug Info:</strong></p>
-        <p>Organizaciones recibidas: {organizacionesSeguras.length}</p>
-        <p>Organizaciones filtradas: {organizacionesFiltradas.length}</p>
-        <p>Props válidas: {organizaciones ? "✅" : "❌"}</p>
+      {/* Estadísticas rápidas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {organizacionesFiltradas.length}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {hasActiveFilters ? "Resultados" : "Total organizaciones"}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {
+                organizacionesSeguras.filter((org) => org.tipo === "empresa")
+                  .length
+              }
+            </div>
+            <div className="text-sm text-muted-foreground">Empresas</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {
+                organizacionesSeguras.filter(
+                  (org) => org.tipo === "institucion_educativa"
+                ).length
+              }
+            </div>
+            <div className="text-sm text-muted-foreground">Instituciones</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {
+                organizacionesSeguras.filter(
+                  (org) => org.tipo === "establecimiento_ganadero"
+                ).length
+              }
+            </div>
+            <div className="text-sm text-muted-foreground">Est. Ganaderos</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Búsqueda y filtros */}
@@ -190,55 +228,6 @@ export function OrganizacionesPublicGrid({
             </CardContent>
           </Card>
         )}
-      </div>
-
-      {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {organizacionesFiltradas.length}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {hasActiveFilters ? "Resultados" : "Total organizaciones"}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {organizacionesSeguras.filter((org) => org.tipo === "empresa").length}
-            </div>
-            <div className="text-sm text-muted-foreground">Empresas</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {
-                organizacionesSeguras.filter(
-                  (org) => org.tipo === "institucion_educativa"
-                ).length
-              }
-            </div>
-            <div className="text-sm text-muted-foreground">Instituciones</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {
-                organizacionesSeguras.filter(
-                  (org) => org.tipo === "establecimiento_ganadero"
-                ).length
-              }
-            </div>
-            <div className="text-sm text-muted-foreground">Est. Ganaderos</div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Grid de organizaciones */}

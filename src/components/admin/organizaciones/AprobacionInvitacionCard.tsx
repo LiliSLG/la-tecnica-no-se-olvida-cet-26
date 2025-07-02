@@ -24,8 +24,8 @@ import {
   Phone,
   Building,
   Users,
+  AlertTriangle,
 } from "lucide-react";
-
 // ✅ AGREGAR este componente al inicio del archivo, antes de AprobacionInvitacionCard
 interface QuickEmailInputProps {
   organizacion: OrganizacionRow;
@@ -229,16 +229,13 @@ export function AprobacionInvitacionCard({
 
     setLoading(true);
     try {
-      const updateData = {
-        estado_verificacion: "invitacion_enviada" as const,
-        fecha_ultima_invitacion: new Date().toISOString(),
-        updated_by_uid: user.id,
-        updated_at: new Date().toISOString(),
-      };
-
-      const result = await organizacionesService.update(
+      // Usar el nuevo método integrado
+      const result = await organizacionesService.generarTokenYEnviarInvitacion(
         organizacion.id,
-        updateData
+        user.id,
+        user.nombre && user.apellido
+          ? `${user.nombre} ${user.apellido}`
+          : undefined
       );
 
       if (result.success) {
@@ -433,6 +430,7 @@ export function AprobacionInvitacionCard({
 
         {/* Acciones de aprobación */}
         <div className="flex gap-2 pt-2 border-t">
+          {/* CASO 1: Pendientes de aprobación del admin */}
           {organizacion.estado_verificacion === "pendiente_aprobacion" && (
             <>
               <Button
@@ -441,7 +439,7 @@ export function AprobacionInvitacionCard({
                 className="flex-1"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                {loading ? "Aprobando..." : "Aprobar"}
+                {loading ? "Aprobando y enviando..." : "Aprobar y Enviar Email"}
               </Button>
               <Button
                 variant="destructive"
@@ -455,6 +453,7 @@ export function AprobacionInvitacionCard({
             </>
           )}
 
+          {/* CASO 2: Sin invitación y CON email */}
           {organizacion.estado_verificacion === "sin_invitacion" &&
             organizacion.email_contacto && (
               <Button
@@ -467,6 +466,7 @@ export function AprobacionInvitacionCard({
               </Button>
             )}
 
+          {/* CASO 3: Sin invitación y SIN email */}
           {organizacion.estado_verificacion === "sin_invitacion" &&
             !organizacion.email_contacto && (
               <QuickEmailInput
@@ -475,6 +475,44 @@ export function AprobacionInvitacionCard({
                 disabled={loading || isProcessing}
               />
             )}
+
+          {/* CASO 4: Invitación enviada (reenviar) */}
+          {organizacion.estado_verificacion === "invitacion_enviada" && (
+            <>
+              <Button
+                onClick={handleSendInvitation}
+                disabled={loading || isProcessing}
+                variant="outline"
+                className="flex-1"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {loading ? "Reenviando..." : "Reenviar Invitación"}
+              </Button>
+              <div className="flex-1 text-sm text-muted-foreground">
+                Enviada el{" "}
+                {organizacion.fecha_ultima_invitacion
+                  ? new Date(
+                      organizacion.fecha_ultima_invitacion
+                    ).toLocaleDateString()
+                  : "fecha desconocida"}
+              </div>
+            </>
+          )}
+
+          {/* CASO 5: Ya verificada */}
+          {organizacion.estado_verificacion === "verificada" && (
+            <div className="flex items-center gap-2 text-green-600 flex-1">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                Verificada{" "}
+                {organizacion.fecha_reclamacion
+                  ? `el ${new Date(
+                      organizacion.fecha_reclamacion
+                    ).toLocaleDateString()}`
+                  : ""}
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

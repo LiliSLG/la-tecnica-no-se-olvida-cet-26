@@ -84,12 +84,6 @@ export default async function NoticiaPublicaPage({
     const noticia = noticiaResult.data;
     const temas = temasResult.success ? temasResult.data || [] : [];
 
-    console.log("📊 Server Public: Loaded noticia:", {
-      titulo: noticia.titulo,
-      tipo: noticia.tipo,
-      temasCount: temas.length,
-    });
-
     // Helper functions
     const formatDate = (dateString: string | null) => {
       if (!dateString) return "Sin fecha";

@@ -7,6 +7,7 @@ import { AprobacionInvitacionCard } from "./AprobacionInvitacionCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import { Clock, CheckCircle, XCircle, Info } from "lucide-react";
 
 interface OrganizacionesPendientesPageProps {
@@ -27,6 +28,16 @@ export function OrganizacionesPendientesPage({
 
   const pendientesAprobacion = organizacionesPendientes.filter(
     (org) => org.estado_verificacion === "pendiente_aprobacion"
+  );
+
+  // Invitaciones enviadas sin reclamar
+  const invitacionesEnviadas = organizacionesPendientes.filter(
+    (org) => org.estado_verificacion === "invitacion_enviada"
+  );
+
+  // Ya verificadas (para referencia)
+  const yaVerificadas = organizacionesPendientes.filter(
+    (org) => org.estado_verificacion === "verificada"
   );
 
   const handleApprovalChange = (organizacionId: string) => {
@@ -51,29 +62,31 @@ export function OrganizacionesPendientesPage({
       </div>
 
       {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Sin Invitación
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{sinInvitacion.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Organizaciones creadas sin email
-            </p>
+            <div className="text-2xl font-bold text-gray-600">
+              {sinInvitacion.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Creadas sin email</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pendientes Aprobación
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-yellow-600">
               {pendientesAprobacion.length}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -84,16 +97,29 @@ export function OrganizacionesPendientesPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <XCircle className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Sin Reclamar</CardTitle>
+            <XCircle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {organizacionesPendientes.length}
+            <div className="text-2xl font-bold text-orange-600">
+              {invitacionesEnviadas.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Organizaciones por revisar
+              Invitación enviada, no reclamada
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Verificadas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {yaVerificadas.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Ya reclamadas</p>
           </CardContent>
         </Card>
       </div>
@@ -174,7 +200,77 @@ export function OrganizacionesPendientesPage({
           </div>
         </div>
       )}
+
+      {/* Sección: Invitaciones Enviadas (Sin Reclamar) */}
+      {invitacionesEnviadas.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Invitaciones Sin Reclamar</h2>
+            <Badge
+              variant="outline"
+              className="border-orange-300 text-orange-700"
+            >
+              {invitacionesEnviadas.length}
+            </Badge>
+          </div>
+
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              Estas organizaciones ya recibieron una invitación por email pero
+              aún no la han reclamado. Puedes reenviar la invitación si es
+              necesario.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-4">
+            {invitacionesEnviadas.map((organizacion) => (
+              <AprobacionInvitacionCard
+                key={organizacion.id}
+                organizacion={organizacion}
+                onApprovalChange={() => handleApprovalChange(organizacion.id)}
+                isProcessing={processingId === organizacion.id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sección: Ya Verificadas (Para referencia) */}
+      {yaVerificadas.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">
+              Organizaciones Verificadas
+            </h2>
+            <Badge
+              variant="outline"
+              className="border-green-300 text-green-700"
+            >
+              {yaVerificadas.length}
+            </Badge>
+          </div>
+
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              Estas organizaciones ya completaron el proceso de verificación
+              exitosamente.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-4">
+            {yaVerificadas.map((organizacion) => (
+              <AprobacionInvitacionCard
+                key={organizacion.id}
+                organizacion={organizacion}
+                onApprovalChange={() => handleApprovalChange(organizacion.id)}
+                isProcessing={processingId === organizacion.id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

@@ -621,10 +621,6 @@ class NoticiasService {
           };
         }) || [];
 
-      console.log(
-        "📊 Server Public: Loaded published noticias:",
-        transformedData.length
-      );
       return createSuccess(transformedData);
     } catch (error) {
       console.error(
@@ -695,10 +691,6 @@ class NoticiasService {
         temas: noticia_tema?.map((nt) => nt.temas).filter(Boolean) || [],
       };
 
-      console.log(
-        "📊 Server Public: Found published noticia:",
-        transformedData.titulo
-      );
       return createSuccess(transformedData);
     } catch (error) {
       console.error(
@@ -757,10 +749,7 @@ class NoticiasService {
           };
         }) || [];
 
-      console.log(
-        "📊 Server Public: Loaded featured noticias:",
-        transformedData.length
-      );
+
       return createSuccess(transformedData);
     } catch (error) {
       console.error(

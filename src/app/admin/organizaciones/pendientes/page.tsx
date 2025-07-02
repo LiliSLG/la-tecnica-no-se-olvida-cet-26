@@ -24,6 +24,7 @@ export default function OrganizacionesPendientesAdminPage() {
         const result = await organizacionesService.getAll(false);
 
         if (result.success && result.data) {
+          /*
           // Filtrar solo las que están pendientes de aprobación
           const pendientes = result.data.filter(
             (org) =>
@@ -31,6 +32,8 @@ export default function OrganizacionesPendientesAdminPage() {
               org.estado_verificacion === "sin_invitacion"
           );
           setOrganizaciones(pendientes);
+          */
+          setOrganizaciones(result.data);
         }
       } catch (error) {
         console.error("Error fetching organizaciones pendientes:", error);
