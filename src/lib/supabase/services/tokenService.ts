@@ -16,6 +16,8 @@ interface TokenData {
 
 class TokenService {
   // Generar token seguro con metadata
+  // 🔧 CAMBIAR línea 25 en /src/lib/supabase/services/tokenService.ts:
+
   generateToken(
     entityId: string,
     type: TokenType,
@@ -24,19 +26,16 @@ class TokenService {
     const expiresAt = Date.now() + expiryDays * 24 * 60 * 60 * 1000;
     const createdAt = Date.now();
 
-    // Formato: tipo-uuid-timestamp-expiry
-    return `${type}-${crypto.randomUUID()}-${createdAt}-${expiresAt}`;
+    return `${type}-${entityId}-${createdAt}-${expiresAt}`;
   }
 
   // Validar y parsear token
   parseToken(token: string): ServiceResult<TokenData> {
     try {
-      console.log("🔍 TokenService.parseToken - token:", token);
-
       const parts = token.split("-");
-      console.log("🔍 TokenService.parseToken - parts:", parts);
 
-      if (parts.length < 4) {
+      if (parts.length < 7) {
+        // ✅ UUID tiene 5 partes + tipo + timestamps = 7 mínimo
         console.log(
           "❌ TokenService.parseToken - parts insuficientes:",
           parts.length
@@ -52,14 +51,7 @@ class TokenService {
       const createdAt = parseInt(parts[parts.length - 2]);
       const expiresAt = parseInt(parts[parts.length - 1]);
 
-      // ✅ Reconstruir entityId correctamente
       const entityId = parts.slice(1, -2).join("-");
-
-      console.log("🔍 TokenService.parseToken - type:", type);
-      console.log("🔍 TokenService.parseToken - entityId:", entityId);
-      console.log("🔍 TokenService.parseToken - createdAt:", createdAt);
-      console.log("🔍 TokenService.parseToken - expiresAt:", expiresAt);
-      console.log("🔍 TokenService.parseToken - now:", Date.now());
 
       if (!type || !entityId || isNaN(createdAt) || isNaN(expiresAt)) {
         console.log("❌ TokenService.parseToken - datos malformados");

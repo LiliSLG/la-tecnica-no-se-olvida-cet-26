@@ -1198,6 +1198,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      update_organizacion_on_activation: {
+        Args: { org_id: string; user_id: string }
+        Returns: {
+          id: string
+          nombre_oficial: string
+          estado_verificacion: string
+        }[]
+      }
     }
     Enums: {
       categoria_principal_persona_enum:

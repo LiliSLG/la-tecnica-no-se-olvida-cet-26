@@ -20,6 +20,7 @@ import {
   ExternalLink,
   GraduationCap,
   PlusCircle,
+  Building,
 } from "lucide-react";
 
 type Persona = Database["public"]["Tables"]["personas"]["Row"];
@@ -45,6 +46,13 @@ const userSidebarLinks = [
     href: "/dashboard/proyectos",
     label: "Mis Proyectos",
     icon: FolderOpen,
+    section: "content",
+  },
+  {
+    id: "mis-organizaciones",
+    href: "/dashboard/organizaciones",
+    label: "Mis Organizaciones",
+    icon: Building,
     section: "content",
   },
   {

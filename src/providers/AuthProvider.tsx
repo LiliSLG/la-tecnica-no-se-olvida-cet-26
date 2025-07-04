@@ -133,7 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const processSession = useCallback(
     async (newSession: Session | null) => {
       console.log("🔄 Processing session:", newSession?.user?.email || "null");
-
+      console.log("🔍 processSession - iniciando con session:", session);
+      console.log("🔍 processSession - user ID:", session?.user?.id);
+      console.log("🔍 processSession - user email:", session?.user?.email);;
+      
       try {
         if (!newSession) {
           // No hay sesión
@@ -183,6 +186,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session: initialSession },
         } = await supabase.auth.getSession();
 
+        // ✅ AGREGAR AQUÍ:
+        console.log("🔍 AuthProvider - initialSession:", initialSession);
+        console.log(
+          "🔍 AuthProvider - user email:",
+          initialSession?.user?.email
+        );
+        console.log("🔍 AuthProvider - session valid:", !!initialSession);
+
         // Procesar sesión inicial
         await processSession(initialSession);
 
@@ -191,6 +202,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log("🔄 Auth state change:", event);
+
+          // ✅ AGREGAR AQUÍ:
+          console.log("🔍 AuthProvider - onAuthStateChange session:", session);
+          console.log(
+            "🔍 AuthProvider - onAuthStateChange user:",
+            session?.user?.email
+          );
 
           if (event === "SIGNED_OUT") {
             setSession(null);

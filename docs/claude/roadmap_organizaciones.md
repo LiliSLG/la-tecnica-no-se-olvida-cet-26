@@ -344,6 +344,12 @@ find src -name "*organizacion*" -type f
 
 ## 🎯 **INICIO RECOMENDADO EN NUEVO CHAT:**
 
+# BUG: ID mismatch en verificarConCuentaPersonal
+
+Problema: El método crea usuarios con IDs diferentes al de auth.users
+Causa: Lógica de signUp/signIn no maneja correctamente usuarios existentes
+Solución pendiente: Revisar y corregir el método para usar consistentemente el mismo UUID
+----------------------------------------------------------------------------------------
 ```
 "Hola! Necesito continuar con la implementación del módulo Organizaciones.
 

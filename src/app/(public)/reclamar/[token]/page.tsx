@@ -27,31 +27,16 @@ export async function generateMetadata({
   };
 }
 
+
 export default async function ReclamarTokenPage({
   params,
 }: ReclamarTokenPageProps) {
-  const { token } = params;
+  const { token } = await params;
 
-  // ✅ DEBUG: Ver exactamente qué token llega
-  console.log("🔍 Token recibido en página:", token);
-  console.log("🔍 Token length:", token.length);
-  console.log("🔍 Token parts:", token.split("-"));
-
-  console.log(
-    "🔍 Validando token de reclamación:",
-    token.substring(0, 20) + "..."
-  );
 
   try {
     // Validar token y obtener datos
     const result = await organizacionesService.validarToken(token);
-
-    // ✅ DEBUG: Ver resultado completo
-    console.log("🔍 Resultado validarToken:", {
-      success: result.success,
-      error: result.error,
-      data: result.data ? "existe" : "null",
-    });
 
     if (!result.success || !result.data) {
       return (
@@ -80,7 +65,6 @@ export default async function ReclamarTokenPage({
       );
     }
 
-    // ✅ Ahora TypeScript sabe que result.data existe
     const organizacion = result.data.organizacion;
     const yaReclamada = result.data.yaReclamada;
 
@@ -114,7 +98,7 @@ export default async function ReclamarTokenPage({
         </div>
       );
     }
-
+  
     // Mostrar formulario de reclamación
     return (
       <div className="container mx-auto py-12 px-4 max-w-4xl">

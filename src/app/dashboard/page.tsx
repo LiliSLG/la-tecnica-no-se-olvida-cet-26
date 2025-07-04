@@ -1,4 +1,4 @@
-// /src/app/(public)/dashboard/page.tsx - DASHBOARD CON SIDEBAR
+// /src/app/dashboard/page.tsx - DASHBOARD CON SIDEBAR
 "use client";
 
 import { useState, useEffect } from "react";
@@ -26,6 +26,7 @@ import {
   Settings,
   MapPin,
   TrendingUp,
+  Building,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -173,6 +174,21 @@ export default function DashboardPage() {
       badge: "Contenido",
     },
     {
+      title: "Mis Organizaciones",
+      description:
+        "Gestiona las organizaciones donde participas como administrador o miembro",
+      icon: Building, // ✅ Asegúrate de importar Building
+      href: "/dashboard/organizaciones",
+      stats: userStats
+        ? {
+            total: "X", // TODO: Obtener número real de organizaciones
+            verified: "X", // TODO: Obtener número de verificadas
+          }
+        : null,
+      isActive: true,
+      badge: "Organizaciones",
+    },
+    {
       title: "Mi Perfil",
       description:
         "Actualiza tu información personal, categoría y preferencias",
@@ -219,6 +235,8 @@ export default function DashboardPage() {
       href: "/dashboard/configuracion",
       isActive: false,
     },
+
+
   ];
 
   // Formatear categoría

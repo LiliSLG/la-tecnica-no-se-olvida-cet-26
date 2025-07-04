@@ -32,7 +32,6 @@ type OrganizacionInsert =
 type OrganizacionUpdate =
   Database["public"]["Tables"]["organizaciones"]["Update"];
 
-
 const TIPOS_VALIDOS = [
   "empresa",
   "institucion_educativa",
@@ -526,6 +525,15 @@ class OrganizacionesService {
     try {
       // 1. Obtener datos de la organización
       const orgResult = await this.getById(organizacionId);
+
+      if (!orgResult.success || !orgResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: `Organización no encontrada para ID: ${organizacionId}`,
+          code: "ORGANIZATION_NOT_FOUND",
+        });
+      }
+
       if (!orgResult.success || !orgResult.data) {
         return createError({
           name: "ValidationError",
@@ -747,6 +755,444 @@ class OrganizacionesService {
         name: "ServiceError",
         message: "Error validando token",
         code: "TOKEN_VALIDATION_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async activarOrganizacionConToken(
+    token: string,
+    password: string
+  ): Promise<ServiceResult<OrganizacionRow>> {
+    try {
+      console.log(
+        "🔍 activarOrganizacionConToken - iniciando con token:",
+        token.substring(0, 20) + "..."
+      );
+
+      // 1. Validar token primero
+      const tokenResult = await this.validarToken(token);
+      if (!tokenResult.success || !tokenResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: "Token inválido o expirado",
+          code: "INVALID_TOKEN",
+          details: tokenResult.error,
+        });
+      }
+
+      const { organizacion, yaReclamada } = tokenResult.data;
+      console.log(
+        "🔍 activarOrganizacionConToken - organizacion:",
+        organizacion.nombre_oficial
+      );
+      console.log("🔍 activarOrganizacionConToken - yaReclamada:", yaReclamada);
+
+      if (yaReclamada) {
+        return createError({
+          name: "ValidationError",
+          message: "Esta organización ya fue activada",
+          code: "ALREADY_CLAIMED",
+        });
+      }
+
+      if (!organizacion.email_contacto) {
+        return createError({
+          name: "ValidationError",
+          message: "La organización no tiene email de contacto configurado",
+          code: "NO_EMAIL_CONTACT",
+        });
+      }
+
+      console.log(
+        "🔍 activarOrganizacionConToken - creando cuenta con email:",
+        organizacion.email_contacto
+      );
+
+      // 2. Crear cuenta en Supabase Auth con el email de la organización
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: organizacion.email_contacto,
+        password: password,
+      });
+
+      if (authError || !authData.user) {
+        console.error("❌ Error en signUp:", authError);
+        return createError({
+          name: "AuthError",
+          message: authError?.message || "Error creando cuenta organizacional",
+          code: "SIGNUP_ERROR",
+          details: authError,
+        });
+      }
+
+      const organizationUserId = authData.user.id;
+      console.log("✅ Usuario creado:", organizationUserId);
+
+      console.log("🔍 ANTES DE UPDATE - organizacion.id:", organizacion.id);
+      console.log(
+        "🔍 ANTES DE UPDATE - organizationUserId:",
+        organizationUserId
+      );
+
+      // Verificar que la organización existe antes de actualizar
+      const { data: existingOrg, error: checkError } = await supabase
+        .from("organizaciones")
+        .select("id, nombre_oficial, estado_verificacion")
+        .eq("id", organizacion.id)
+        .single();
+
+      console.log("🔍 Organización existente:", existingOrg);
+      console.log("🔍 Error al buscar:", checkError);
+
+      if (checkError || !existingOrg) {
+        return createError({
+          name: "ValidationError",
+          message: "Organización no encontrada para actualizar",
+          code: "ORGANIZATION_NOT_FOUND_FOR_UPDATE",
+        });
+      }
+      // 3. Actualizar organización como reclamada (usando service role)
+      // 3. Actualizar organización como reclamada
+      console.log("🔍 Actualizando organización...");
+
+      const { data: updateData, error: updateError } = await supabase.rpc(
+        "update_organizacion_on_activation",
+        {
+          org_id: organizacion.id,
+          user_id: organizationUserId, // Este es el usuario organizacional, no una persona
+        }
+      );
+
+      console.log("🔍 Update result:", { updateData, updateError });
+
+      if (updateError) {
+        console.error("❌ Error actualizando organización:", updateError);
+        return createError({
+          name: "ServiceError",
+          message: "Error activando organización",
+          code: "ACTIVATION_ERROR",
+          details: updateError,
+        });
+      }
+
+      // Verificar la actualización
+      const { data: updatedOrg } = await supabase
+        .from("organizaciones")
+        .select("*")
+        .eq("id", organizacion.id)
+        .single();
+
+      console.log("✅ Organización activada:", updatedOrg);
+      return createSuccess(updatedOrg!);
+    } catch (error) {
+      console.error("❌ Error en activarOrganizacionConToken:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error procesando activación de organización",
+        code: "ACTIVATION_PROCESS_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async verificarConCuentaPersonal(
+    token: string,
+    datosPersona: {
+      nombre: string;
+      apellido: string;
+      email: string;
+      telefono?: string;
+      password: string;
+    }
+  ): Promise<ServiceResult<OrganizacionRow>> {
+    try {
+      console.log("🔍 verificarConCuentaPersonal - iniciando");
+
+      // 1. Validar token
+      const tokenResult = await this.validarToken(token);
+      if (!tokenResult.success || !tokenResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: "Token inválido o expirado",
+          code: "INVALID_TOKEN",
+          details: tokenResult.error,
+        });
+      }
+
+      const { organizacion, yaReclamada } = tokenResult.data;
+
+      if (yaReclamada) {
+        return createError({
+          name: "ValidationError",
+          message: "Esta organización ya fue verificada",
+          code: "ALREADY_CLAIMED",
+        });
+      }
+
+      let userId: string;
+      let authData: any;
+
+      // 2. Intentar crear cuenta o usar existente
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: datosPersona.email,
+          password: datosPersona.password,
+        });
+
+      if (signUpError) {
+        // Si el email ya existe, intentar login
+        if (
+          signUpError.message?.includes("already registered") ||
+          signUpError.message?.includes("already been registered")
+        ) {
+          console.log("🔍 Usuario ya existe, intentando login...");
+
+          const { data: loginData, error: loginError } =
+            await supabase.auth.signInWithPassword({
+              email: datosPersona.email,
+              password: datosPersona.password,
+            });
+
+          if (loginError || !loginData.user) {
+            return createError({
+              name: "AuthError",
+              message: "Email ya registrado pero contraseña incorrecta",
+              code: "USER_EXISTS_WRONG_PASSWORD",
+              details: loginError,
+            });
+          }
+
+          authData = loginData;
+          userId = loginData.user.id;
+          console.log("✅ Login exitoso con usuario existente:", userId);
+        } else {
+          return createError({
+            name: "AuthError",
+            message: signUpError?.message || "Error creando cuenta personal",
+            code: "SIGNUP_ERROR",
+            details: signUpError,
+          });
+        }
+      } else if (signUpData.user) {
+        authData = signUpData;
+        userId = signUpData.user.id;
+        console.log("✅ Usuario creado:", userId);
+      } else {
+        return createError({
+          name: "AuthError",
+          message: "No se pudo crear el usuario",
+          code: "NO_USER_CREATED",
+        });
+      }
+
+      console.log("🔍 UserID final para personas:", userId);
+
+      // 3. Verificar si ya existe registro en personas
+      const { data: existingPersona } = await supabase
+        .from("personas")
+        .select("id, email")
+        .eq("id", userId)
+        .single();
+
+      if (existingPersona) {
+        console.log(
+          "✅ Registro en personas ya existe:",
+          existingPersona.email
+        );
+      } else {
+        console.log("🔍 Creando registro en personas...");
+
+        // Crear registro en tabla personas
+        const { data: personaData, error: personaError } = await supabase
+          .from("personas")
+          .insert({
+            id: userId,
+            nombre: datosPersona.nombre,
+            apellido: datosPersona.apellido,
+            email: datosPersona.email,
+            telefono_contacto: datosPersona.telefono || null,
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (personaError) {
+          console.error("❌ Error creando persona:", personaError);
+          return createError({
+            name: "DatabaseError",
+            message: "Error creando perfil personal",
+            code: "PERSONA_CREATE_ERROR",
+            details: personaError,
+          });
+        }
+
+        console.log("✅ Persona creada:", personaData.email);
+      }
+
+      // 4. Verificar organización con la cuenta
+      const verificarResult = await this.vincularOrganizacionAUsuario(
+        token,
+        userId
+      );
+      if (!verificarResult.success) {
+        return createError({
+          name: "ServiceError",
+          message: "Cuenta procesada pero error vinculando organización",
+          code: "VERIFICATION_ERROR",
+          details: verificarResult.error,
+        });
+      }
+
+      console.log("✅ Verificación con cuenta personal completada");
+      return verificarResult;
+    } catch (error) {
+      console.error("❌ Error en verificarConCuentaPersonal:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error procesando verificación",
+        code: "VERIFICATION_PROCESS_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async vincularOrganizacionAUsuario(
+    token: string,
+    userId: string
+  ): Promise<ServiceResult<OrganizacionRow>> {
+    try {
+      console.log("🔍 vincularOrganizacionAUsuario");
+
+      // 1. Validar token
+      const tokenResult = await this.validarToken(token);
+      if (!tokenResult.success || !tokenResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: "Token inválido o expirado",
+          code: "INVALID_TOKEN",
+        });
+      }
+
+      const { organizacion } = tokenResult.data;
+
+      // 2. Usar función RPC para bypass RLS
+      const { data: updateData, error: updateError } = await supabase.rpc(
+        "update_organizacion_on_activation",
+        {
+          org_id: organizacion.id,
+          user_id: userId,
+        }
+      );
+
+      if (updateError) {
+        console.error("❌ Error en RPC:", updateError);
+        return createError({
+          name: "ServiceError",
+          message: "Error verificando organización",
+          code: "UPDATE_ERROR",
+          details: updateError,
+        });
+      }
+
+      // 3. Crear vinculación en persona_organizacion
+      const { error: vinculacionError } = await supabase
+        .from("persona_organizacion")
+        .insert({
+          persona_id: userId,
+          organizacion_id: organizacion.id,
+          cargo: "admin_organizacion",
+          fecha_inicio: new Date().toISOString(),
+          created_by_uid: userId,
+          updated_by_uid: userId,
+        });
+
+      if (vinculacionError) {
+        console.error("Error en vinculación (no crítico):", vinculacionError);
+      }
+
+      // 4. Obtener organización actualizada
+      const { data: orgActualizada } = await supabase
+        .from("organizaciones")
+        .select("*")
+        .eq("id", organizacion.id)
+        .single();
+
+      console.log("✅ Organización vinculada a usuario");
+      return createSuccess(orgActualizada || organizacion);
+    } catch (error) {
+      console.error("❌ Error en vincularOrganizacionAUsuario:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error vinculando organización",
+        code: "LINK_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async getMisOrganizaciones(userId: string): Promise<ServiceResult<any[]>> {
+    try {
+      console.log("🔍 getMisOrganizaciones - userId:", userId);
+      console.log("🔍 Ejecutando query persona_organizacion...");
+      const { data, error } = await supabase
+        .from("persona_organizacion")
+        .select(
+          `
+        cargo,
+        fecha_inicio,
+        created_at,
+        organizacion:organizaciones (
+          id,
+          nombre_oficial,
+          nombre_fantasia,
+          tipo,
+          descripcion,
+          logo_url,
+          estado_verificacion,
+          email_contacto,
+          abierta_a_colaboraciones
+        )
+      `
+        )
+        .eq("persona_id", userId)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("❌ Error cargando organizaciones:", error);
+        throw error;
+      }
+      
+      console.log("🔍 Query result - data:", data);
+      console.log("🔍 Query result - error:", error);
+      console.log("🔍 Raw data length:", data?.length || 0);
+
+      // Transformar datos para el frontend
+      const organizaciones =
+        data?.map((item) => ({
+          id: item.organizacion?.id,
+          nombre_oficial: item.organizacion?.nombre_oficial,
+          nombre_fantasia: item.organizacion?.nombre_fantasia,
+          tipo: item.organizacion?.tipo,
+          descripcion: item.organizacion?.descripcion,
+          logo_url: item.organizacion?.logo_url,
+          estado_verificacion: item.organizacion?.estado_verificacion,
+          email_contacto: item.organizacion?.email_contacto,
+          abierta_a_colaboraciones: item.organizacion?.abierta_a_colaboraciones,
+          cargo: item.cargo,
+          fecha_inicio: item.fecha_inicio,
+        })) || [];
+
+      console.log("✅ Organizaciones cargadas:", organizaciones.length);
+      return createSuccess(organizaciones);
+    } catch (error) {
+      console.error("❌ Error en getMisOrganizaciones:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error cargando organizaciones del usuario",
+        code: "DB_ERROR",
         details: error,
       });
     }
