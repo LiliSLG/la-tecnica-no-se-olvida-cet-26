@@ -343,13 +343,33 @@ find src -name "*organizacion*" -type f
 ---
 
 ## 🎯 **INICIO RECOMENDADO EN NUEVO CHAT:**
-
+-------------------------------------------------------------------------------------------
 # BUG: ID mismatch en verificarConCuentaPersonal
 
 Problema: El método crea usuarios con IDs diferentes al de auth.users
 Causa: Lógica de signUp/signIn no maneja correctamente usuarios existentes
 Solución pendiente: Revisar y corregir el método para usar consistentemente el mismo UUID
 ----------------------------------------------------------------------------------------
+### 🔐 **MEJORA: Sistema de Roles para Acceso Dashboard**
+**⏱️ Tiempo estimado: 45-60 min**
+
+🎯 **Implementar verificación de roles específicos:**
+- **Ubicación:** `/src/app/admin/ClientOnlyAdminContent.tsx` líneas 39-42
+- **Lógica actual:** Todos los usuarios autenticados → dashboard
+- **Lógica objetivo:** Solo usuarios con roles específicos → dashboard
+
+```typescript
+// Verificar roles específicos para dashboard
+const tieneAccesoDashboard = user.roles?.some(rol => 
+  ['tutor', 'autor', 'colaborador', 'estudiante_cet', 'docente_cet'].includes(rol)
+);
+
+if (tieneAccesoDashboard) {
+  router.replace("/dashboard");
+} else {
+  router.replace("/"); // Usuarios sin roles → homepage público
+}
+-------------------------------------------------------------------------------------------
 ```
 "Hola! Necesito continuar con la implementación del módulo Organizaciones.
 

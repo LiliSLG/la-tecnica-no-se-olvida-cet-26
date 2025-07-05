@@ -1,4 +1,4 @@
-// src/providers/AuthProvider.tsx - VERSIÓN SIMPLIFICADA Y ARREGLADA
+// src/providers/AuthProvider.tsx - VERSIÓN ARREGLADA
 "use client";
 
 import {
@@ -129,23 +129,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [toast]
   );
 
-  // Procesar sesión (obtener perfil + verificar admin)
+  // ✅ ARREGLO: Procesar sesión con logs correctos y sin race conditions
   const processSession = useCallback(
     async (newSession: Session | null) => {
       console.log("🔄 Processing session:", newSession?.user?.email || "null");
-      console.log("🔍 processSession - iniciando con session:", session);
-      console.log("🔍 processSession - user ID:", session?.user?.id);
-      console.log("🔍 processSession - user email:", session?.user?.email);;
-      
+
       try {
         if (!newSession) {
           // No hay sesión
+          console.log("❌ No session found");
           setSession(null);
           setUser(null);
           setIsAdmin(false);
           setIsLoading(false);
           return;
         }
+
+        // ✅ ARREGLO: Usar newSession en vez de session
+        console.log("🔍 Session found - user ID:", newSession.user?.id);
+        console.log("🔍 Session found - user email:", newSession.user?.email);
 
         // Hay sesión
         setSession(newSession);
@@ -154,9 +156,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userProfile = await fetchUserProfile(newSession.user);
         setUser(userProfile);
 
-        // Verificar admin status inmediatamente (sin setTimeout)
-        if (userProfile) {
+        // ✅ ARREGLO: Verificar admin status solo si hay perfil válido
+        if (userProfile && newSession.user?.id) {
+          console.log("🔍 User profile loaded, checking admin status...");
           await checkAdminStatus();
+        } else {
+          console.log("⚠️ No user profile, setting admin to false");
+          setIsAdmin(false);
         }
 
         setIsLoading(false);
@@ -186,13 +192,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session: initialSession },
         } = await supabase.auth.getSession();
 
-        // ✅ AGREGAR AQUÍ:
-        console.log("🔍 AuthProvider - initialSession:", initialSession);
         console.log(
-          "🔍 AuthProvider - user email:",
-          initialSession?.user?.email
+          "🔍 Initial session:",
+          initialSession?.user?.email || "null"
         );
-        console.log("🔍 AuthProvider - session valid:", !!initialSession);
+        console.log("🔍 Session valid:", !!initialSession);
 
         // Procesar sesión inicial
         await processSession(initialSession);
@@ -202,21 +206,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log("🔄 Auth state change:", event);
-
-          // ✅ AGREGAR AQUÍ:
-          console.log("🔍 AuthProvider - onAuthStateChange session:", session);
-          console.log(
-            "🔍 AuthProvider - onAuthStateChange user:",
-            session?.user?.email
-          );
+          console.log("🔍 New session user:", session?.user?.email || "null");
 
           if (event === "SIGNED_OUT") {
+            console.log("👋 User signed out");
             setSession(null);
             setUser(null);
             setIsAdmin(false);
             setIsSigningOut(false);
             setIsLoading(false);
           } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            console.log("🔑 User signed in or token refreshed");
             await processSession(session);
           }
         });

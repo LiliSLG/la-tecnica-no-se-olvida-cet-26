@@ -1,4 +1,8 @@
 // src/components/public/organizaciones/OrganizacionDetail.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { OrganizacionRow } from "@/lib/supabase/services/organizacionesService";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -85,18 +89,34 @@ const formatearFecha = (fecha: string | null) => {
 
 export function OrganizacionDetail({ organizacion }: OrganizacionDetailProps) {
   const tipoInfo = getTipoInfo(organizacion.tipo);
+  const router = useRouter();
+  const [showDashboardLink, setShowDashboardLink] = useState(false);
+
+  useEffect(() => {
+    // Detectar si viene del dashboard
+    const referrer = document.referrer;
+    const isDashboardReferrer = referrer.includes("/dashboard/organizaciones");
+    setShowDashboardLink(isDashboardReferrer);
+  }, []);
 
   return (
     <div className="space-y-8">
-      {/* Navegación de regreso */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/organizaciones">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a organizaciones
-          </Link>
+      {/* Botón volver inteligente */}
+      {showDashboardLink ? (
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver al Dashboard
         </Button>
-      </div>
+      ) : (
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/organizaciones")}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver a Organizaciones
+        </Button>
+      )}
 
       {/* Header principal */}
       <Card>

@@ -240,7 +240,7 @@ export function ReclamarOrganizacionForm({
 
         // Redirect después de 3 segundos al dashboard organizacional
         setTimeout(() => {
-          router.push("/organizacion/dashboard");
+          router.push("/dashboard/organizaciones"); 
         }, 3000);
       } else {
         toast({
@@ -355,7 +355,7 @@ export function ReclamarOrganizacionForm({
                     title: "¡Organización Vinculada!",
                     description: `${organizacion.nombre_oficial} ha sido vinculada a tu cuenta.`,
                   });
-                  router.push("/organizacion/dashboard");
+                  router.push("/dashboard/organizaciones"); 
                 } else {
                   toast({
                     title: "Error en la vinculación",

@@ -37,10 +37,14 @@ export default function ClientOnlyAdminContent({
       return;
     }
 
-    // Si hay sesión pero no es admin → homepage
+    // Si hay sesión pero no es admin → verificar si tiene dashboard
     if (session && user && isAdmin === false) {
-      console.log("❌ User is not admin, redirecting to homepage...");
-      router.replace("/");
+      console.log("❌ User is not admin, checking if has dashboard access...");
+
+      // Verificar si tiene roles que dan acceso a dashboard
+      // TODO: Implementar lógica de roles más adelante
+      // Por ahora, todos los usuarios autenticados van a dashboard
+      router.replace("/dashboard");
       return;
     }
 

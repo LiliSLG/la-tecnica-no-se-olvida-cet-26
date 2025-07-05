@@ -1198,12 +1198,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      toggle_organizacion_colaboraciones: {
+        Args: { org_id: string; nuevo_estado: boolean; user_id: string }
+        Returns: undefined
+      }
+      update_organizacion_logo: {
+        Args: { org_id: string; new_logo_url: string; user_id: string }
+        Returns: undefined
+      }
       update_organizacion_on_activation: {
         Args: { org_id: string; user_id: string }
         Returns: {
           id: string
           nombre_oficial: string
-          estado_verificacion: string
+          estado_verificacion: Database["public"]["Enums"]["estado_verificacion_enum"]
         }[]
       }
     }
