@@ -299,20 +299,8 @@ CREATE TYPE categoria_principal_persona_enum AS ENUM (
   'estudiante_cet',           -- Estudiantes actuales del CET
   'ex_alumno_cet',            -- Graduados del CET
   
-  -- Roles de mentores y apoyo
-  'tutor_invitado',           -- Mentores externos e internos
-  'colaborador_invitado',     -- Apoyo especializado en proyectos
-  'autor_invitado',           -- Creadores de contenido externo
-  
-  -- Comunidad rural y externa
-  'productor_rural',          -- Productores agropecuarios locales
-  'profesional_externo',      -- Profesionales de diversas áreas
-  'investigador',             -- Investigadores académicos o independientes
-  'comunidad_general',        -- Miembros de la comunidad local
-  
-  -- Estados administrativos
-  'otro',                     -- Casos especiales
-  'ninguno_asignado'          -- Estado temporal hasta verificación
+  'comunidad_activa',         -- Participan en proyectos
+  'comunidad_general'         -- Registrados sin proyectos
 );
 ```
 

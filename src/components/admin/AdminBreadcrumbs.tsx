@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 // Mapeo de rutas a nombres legibles
 const routeMap: Record<string, string> = {
   admin: "Dashboard",
-  personas: "Comunidad",
+  comunidad: "Comunidad",
   proyectos: "Proyectos",
   noticias: "Noticias",
   temas: "Temáticas",

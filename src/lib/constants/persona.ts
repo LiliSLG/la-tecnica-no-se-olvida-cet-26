@@ -4,15 +4,17 @@ export const CATEGORIAS_PRINCIPALES = [
   "docente_cet",
   "estudiante_cet",
   "ex_alumno_cet",
-  "productor_rural",
-  "profesional_externo",
-  "investigador",
+  "comunidad_activa",
   "comunidad_general",
-  "otro",
-  "ninguno_asignado",
-  "tutor_invitado",
-  "colaborador_invitado",
-  "autor_invitado",
+] as const;
+
+
+export const ESTADOS_VERIFICACION = [
+  "sin_invitacion",
+  "pendiente_aprobacion", 
+  "invitacion_enviada",
+  "verificada",
+  "rechazada"
 ] as const;
 
 export const ESTADOS_SITUACION_LABORAL = [

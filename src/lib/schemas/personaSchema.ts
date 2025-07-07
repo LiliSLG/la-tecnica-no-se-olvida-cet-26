@@ -6,6 +6,7 @@ import {
   PLATAFORMAS_PROFESIONALES,
   CAPACIDADES_PLATAFORMA,
   PROVINCIAS,
+  ESTADOS_VERIFICACION,
 } from "@/lib/constants/persona";
 
 // Schema for professional links
@@ -48,50 +49,58 @@ const personaSchemaRaw = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   apellido: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
   email: z.string().email("Email inválida").nullable(),
-  fotoUrl: z.string().url("URL inválida").nullable(),
-  categoriaPrincipal: z.enum(CATEGORIAS_PRINCIPALES),
+  foto_url: z.string().url("URL inválida").nullable(), 
+  categoria_principal: z.enum(CATEGORIAS_PRINCIPALES),
   activo: z.boolean().default(true),
-  tituloProfesional: z.string().nullable(),
-  descripcionPersonalOProfesional: z.string().nullable(),
-  areasDeInteresOExpertise: z.array(z.string()),
-  disponibleParaProyectos: z.boolean().default(false),
-  esExAlumnoCET: z.boolean().default(false),
-  anoCursadaActualCET: z.number().int().min(1).max(6).nullable(),
-  anoEgresoCET: z
+  titulo_profesional: z.string().nullable(),
+  descripcion_personal_o_profesional: z.string().nullable(),
+  areas_de_interes_o_expertise: z.array(z.string()), 
+  disponible_para_proyectos: z.boolean().default(false),
+  es_ex_alumno_cet: z.boolean().default(false),
+  ano_cursada_actual_cet: z.number().int().min(1).max(6).nullable(),
+  ano_egreso_cet: z
     .number()
     .int()
     .min(1900)
     .max(new Date().getFullYear())
     .nullable(),
-  titulacionObtenidaCET: z.string().nullable(),
-  proyectoFinalCETId: z.string().nullable(),
-  buscandoOportunidades: z.boolean().default(false),
-  estadoSituacionLaboral: z.enum(ESTADOS_SITUACION_LABORAL),
-  historiaDeExitoOResumenTrayectoria: z.string().nullable(),
-  empresaOInstitucionActual: z.string().nullable(),
-  cargoActual: z.string().nullable(),
-  ofreceColaboracionComo: z.array(z.string()),
-  telefonoContacto: z.string().nullable(),
-  linksProfesionales: z.array(linkProfesionalSchema),
-  ubicacionResidencial: ubicacionResidencialSchema,
-  visibilidadPerfil: z.enum(
+  titulacion_obtenida_cet: z.string().nullable(),
+  proyecto_final_cet_id: z.string().nullable(),
+  buscando_oportunidades: z.boolean().default(false),
+  estado_situacion_laboral: z.enum(ESTADOS_SITUACION_LABORAL),
+  historia_de_exito_o_resumen_trayectoria: z.string().nullable(),
+  empresa_o_institucion_actual: z.string().nullable(),
+  cargo_actual: z.string().nullable(),
+  ofrece_colaboracion_como: z.array(z.string()),
+  telefono_contacto: z.string().nullable(),
+  links_profesionales: z.array(linkProfesionalSchema), 
+  ubicacion_residencial: ubicacionResidencialSchema,
+  visibilidad_perfil: z.enum(
     VISIBILIDAD_PERFIL.map((v) => v.value) as [string, ...string[]]
   ),
   is_deleted: z.boolean().default(false),
   deleted_at: z.string().nullable(),
   deleted_by_uid: z.string().nullable(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });
 
 // Schema transformado para uso general (guardar)
 export const personaSchema = personaSchemaRaw.transform(
   (data: z.infer<typeof personaSchemaRaw>) => ({
     ...data,
-    areasDeInteresOExpertise: data.areasDeInteresOExpertise || [],
-    ofreceColaboracionComo: data.ofreceColaboracionComo || [],
-    linksProfesionales: data.linksProfesionales || [],
-    ubicacionResidencial: data.ubicacionResidencial,
+    areasDeInteresOExpertise: data.areas_de_interes_o_expertise || [],
+    ofreceColaboracionComo: data.ofrece_colaboracion_como || [],
+    linksProfesionales: data.links_profesionales || [],
+    ubicacionResidencial: data.ubicacion_residencial,
+    // Campos de verificación/invitación
+    estado_verificacion: z
+      .enum(ESTADOS_VERIFICACION.map((e) => e) as [string, ...string[]])
+      .default("sin_invitacion"),
+    token_reclamacion: z.string().nullable().optional(),
+    fecha_aprobacion_admin: z.string().nullable().optional(),
+    aprobada_por_admin_uid: z.string().nullable().optional(),
+    fecha_ultima_invitacion: z.string().nullable().optional(),
   })
 );
 
@@ -103,3 +112,40 @@ export const personaFormSchema = personaSchemaRaw.extend({
 });
 
 export type PersonaFormData = z.infer<typeof personaFormSchema>;
+
+// Schema mínimo para creación por admin (solo nombre + apellido)
+export const personaAdminCreateSchema = z.object({
+  nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  apellido: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  categoria_principal: z.enum(CATEGORIAS_PRINCIPALES),
+  
+  // Todos los demás campos opcionales
+  telefono_contacto: z.string().optional().or(z.literal("")),
+  descripcion_personal_o_profesional: z.string().optional().or(z.literal("")),
+  visibilidad_perfil: z.enum(
+    VISIBILIDAD_PERFIL.map((v) => v.value) as [string, ...string[]]
+  ).default("publico"),
+  activo: z.boolean().default(true),
+  disponible_para_proyectos: z.boolean().default(false),
+  es_ex_alumno_cet: z.boolean().default(false),
+  buscando_oportunidades: z.boolean().default(false),
+  estado_situacion_laboral: z.enum(ESTADOS_SITUACION_LABORAL).default("no_especificado"),
+  
+  // Campos CET opcionales
+  ano_cursada_actual_cet: z.number().int().min(1).max(6).optional().nullable(),
+  ano_egreso_cet: z.number().int().min(1900).max(new Date().getFullYear()).optional().nullable(),
+  titulacion_obtenida_cet: z.string().optional().or(z.literal("")),
+  
+  // Campos profesionales opcionales
+  titulo_profesional: z.string().optional().or(z.literal("")),
+  empresa_o_institucion_actual: z.string().optional().or(z.literal("")),
+  cargo_actual: z.string().optional().or(z.literal("")),
+  historia_de_exito_o_resumen_trayectoria: z.string().optional().or(z.literal("")),
+  
+  // Campos que se manejan por separado
+  foto_url: z.string().url().optional().nullable(),
+  proyecto_final_cet_id: z.string().optional().nullable(),
+});
+
+export type PersonaAdminCreateData = z.infer<typeof personaAdminCreateSchema>;

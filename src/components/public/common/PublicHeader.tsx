@@ -1,4 +1,4 @@
-// /src/components/public/common/PublicHeader.tsx - VERSIÓN CON SUBMENU COMUNIDAD
+// /src/components/public/common/PublicHeader.tsx 
 "use client";
 
 import { useState } from "react";
@@ -59,14 +59,14 @@ const publicNavItems = [
   },
   // Comunidad ahora es un submenu
   {
-    href: "/comunidad",
-    label: "Comunidad",
+    href: "/red",
+    label: "Nuestra red",
     icon: Users,
     public: true,
     submenu: [
       {
-        href: "/personas",
-        label: "Personas",
+        href: "/comunidad",
+        label: "Comunidad",
         icon: UserCheck,
         description: "Miembros de la comunidad",
       },

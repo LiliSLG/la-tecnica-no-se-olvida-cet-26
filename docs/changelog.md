@@ -1,5 +1,30 @@
 # Changelog
+## [07/01/25] Módulo Personas/Comunidad CRUD Completo**
+  - Formulario dinámico con tabs condicionales por tipo (Alumno/Docente/Comunidad Activa)
+  - Sistema de gestión de temas relacionados por persona
+  - Páginas admin: crear, editar, listar con DataTable
+  - Validación mínima para admin: solo nombre + apellido requeridos
+  - Selector de temas desde BD integrado en formularios
 
+- **🔧 Mejoras Técnicas**
+  - PersonaForm con 6 tabs: Básico, Ubicación, Contacto, CET, Trabajo, Profesional, Organizaciones
+  - Campos condicionales según categoría (CET para alumnos, Profesional para otros)
+  - Integración completa persona-tema con create/update/delete relaciones
+  - DataTable con filtros por categoría y estado de verificación
+
+### 🐛 Correcciones
+- Resolver constraint duplicate email permitiendo múltiples NULL
+- Corregir tipos TypeScript nullable/undefined en formularios  
+- Arreglar compatibilidad ColumnConfig con DataTable genérico
+- Implementar cleanEmail helper para manejo correcto de emails vacíos
+
+### 📊 Base de Datos
+- Actualizar constraint personas.email: único pero permite múltiples NULL
+- Convertir emails vacíos ("") a NULL para consistencia
+
+### 🎯 Progreso del Proyecto
+- **Personas**: ✅ CRUD Admin Completo (Create, Read, Update, Delete + Temas)
+- **Pendiente**: Lista mobile responsive, páginas públicas, sistema invitaciones
 ## [04/07/25] - **Módulo Organizaciones - COMPLETADO 100%**
 
 **✅ Funcionalidades Implementadas:**
@@ -452,10 +477,10 @@ Checklist Fase 1B:
 
 Archivos Principales:
 
-src/app/admin/personas/page.tsx: Lista principal
-src/app/admin/personas/new/page.tsx: Formulario de creación
-src/app/admin/personas/[id]/edit/page.tsx: Formulario de edición
-src/components/admin/personas/: Componentes específicos
+src/app/admin/comunidad/page.tsx: Lista principal
+src/app/admin/comunidad/new/page.tsx: Formulario de creación
+src/app/admin/comunidad/[id]/edit/page.tsx: Formulario de edición
+src/components/admin/comunidad/: Componentes específicos
 
 📋 ROADMAP COMPLETO POST-FASE 1
 Fase 2: Sistema de Permisos Avanzado

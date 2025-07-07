@@ -705,11 +705,14 @@ export type Database = {
           ano_cursada_actual_cet: number | null
           ano_egreso_cet: number | null
           apellido: string | null
+          aprobada_por_admin_uid: string | null
           areas_de_interes_o_expertise: string[] | null
           biografia: string | null
           buscando_oportunidades: boolean
           cargo_actual: string | null
-          categoria_principal: string | null
+          categoria_principal:
+            | Database["public"]["Enums"]["categoria_principal_persona_enum"]
+            | null
           created_at: string | null
           created_by_uid: string | null
           deleted_at: string | null
@@ -720,6 +723,9 @@ export type Database = {
           empresa_o_institucion_actual: string | null
           es_ex_alumno_cet: boolean
           estado_situacion_laboral: string | null
+          estado_verificacion: string | null
+          fecha_aprobacion_admin: string | null
+          fecha_ultima_invitacion: string | null
           foto_url: string | null
           historia_de_exito_o_resumen_trayectoria: string | null
           id: string
@@ -731,6 +737,7 @@ export type Database = {
           telefono_contacto: string | null
           titulacion_obtenida_cet: string | null
           titulo_profesional: string | null
+          token_reclamacion: string | null
           ubicacion_residencial: Json | null
           updated_at: string | null
           updated_by_uid: string | null
@@ -741,11 +748,14 @@ export type Database = {
           ano_cursada_actual_cet?: number | null
           ano_egreso_cet?: number | null
           apellido?: string | null
+          aprobada_por_admin_uid?: string | null
           areas_de_interes_o_expertise?: string[] | null
           biografia?: string | null
           buscando_oportunidades?: boolean
           cargo_actual?: string | null
-          categoria_principal?: string | null
+          categoria_principal?:
+            | Database["public"]["Enums"]["categoria_principal_persona_enum"]
+            | null
           created_at?: string | null
           created_by_uid?: string | null
           deleted_at?: string | null
@@ -756,6 +766,9 @@ export type Database = {
           empresa_o_institucion_actual?: string | null
           es_ex_alumno_cet?: boolean
           estado_situacion_laboral?: string | null
+          estado_verificacion?: string | null
+          fecha_aprobacion_admin?: string | null
+          fecha_ultima_invitacion?: string | null
           foto_url?: string | null
           historia_de_exito_o_resumen_trayectoria?: string | null
           id?: string
@@ -767,6 +780,7 @@ export type Database = {
           telefono_contacto?: string | null
           titulacion_obtenida_cet?: string | null
           titulo_profesional?: string | null
+          token_reclamacion?: string | null
           ubicacion_residencial?: Json | null
           updated_at?: string | null
           updated_by_uid?: string | null
@@ -777,11 +791,14 @@ export type Database = {
           ano_cursada_actual_cet?: number | null
           ano_egreso_cet?: number | null
           apellido?: string | null
+          aprobada_por_admin_uid?: string | null
           areas_de_interes_o_expertise?: string[] | null
           biografia?: string | null
           buscando_oportunidades?: boolean
           cargo_actual?: string | null
-          categoria_principal?: string | null
+          categoria_principal?:
+            | Database["public"]["Enums"]["categoria_principal_persona_enum"]
+            | null
           created_at?: string | null
           created_by_uid?: string | null
           deleted_at?: string | null
@@ -792,6 +809,9 @@ export type Database = {
           empresa_o_institucion_actual?: string | null
           es_ex_alumno_cet?: boolean
           estado_situacion_laboral?: string | null
+          estado_verificacion?: string | null
+          fecha_aprobacion_admin?: string | null
+          fecha_ultima_invitacion?: string | null
           foto_url?: string | null
           historia_de_exito_o_resumen_trayectoria?: string | null
           id?: string
@@ -803,12 +823,41 @@ export type Database = {
           telefono_contacto?: string | null
           titulacion_obtenida_cet?: string | null
           titulo_profesional?: string | null
+          token_reclamacion?: string | null
           ubicacion_residencial?: Json | null
           updated_at?: string | null
           updated_by_uid?: string | null
           visibilidad_perfil?: Database["public"]["Enums"]["visibilidad_perfil_enum"]
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_personas_created_by"
+            columns: ["created_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_personas_deleted_by"
+            columns: ["deleted_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_personas_updated_by"
+            columns: ["updated_by_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personas_aprobada_por_admin_uid_fkey"
+            columns: ["aprobada_por_admin_uid"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "personas_proyecto_final_cet_id_fkey"
             columns: ["proyecto_final_cet_id"]
@@ -1220,15 +1269,8 @@ export type Database = {
         | "docente_cet"
         | "estudiante_cet"
         | "ex_alumno_cet"
-        | "productor_rural"
-        | "profesional_externo"
-        | "investigador"
+        | "comunidad_activa"
         | "comunidad_general"
-        | "otro"
-        | "ninguno_asignado"
-        | "tutor_invitado"
-        | "colaborador_invitado"
-        | "autor_invitado"
       estado_proyecto:
         | "idea"
         | "en_desarrollo"
@@ -1420,15 +1462,8 @@ export const Constants = {
         "docente_cet",
         "estudiante_cet",
         "ex_alumno_cet",
-        "productor_rural",
-        "profesional_externo",
-        "investigador",
+        "comunidad_activa",
         "comunidad_general",
-        "otro",
-        "ninguno_asignado",
-        "tutor_invitado",
-        "colaborador_invitado",
-        "autor_invitado",
       ],
       estado_proyecto: [
         "idea",

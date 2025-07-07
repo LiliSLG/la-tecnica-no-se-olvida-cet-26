@@ -42,10 +42,10 @@ Checklist Fase 1B:
 
 Archivos Principales:
 
-src/app/admin/personas/page.tsx: Lista principal
-src/app/admin/personas/new/page.tsx: Formulario de creación
-src/app/admin/personas/[id]/edit/page.tsx: Formulario de edición
-src/components/admin/personas/: Componentes específicos
+src/app/admin/comunidad/page.tsx: Lista principal
+src/app/admin/comunidad/new/page.tsx: Formulario de creación
+src/app/admin/comunidad/[id]/edit/page.tsx: Formulario de edición
+src/components/admin/comunidad/: Componentes específicos
 
 📋 ROADMAP COMPLETO POST-FASE 1
 Fase 2: Sistema de Permisos Avanzado

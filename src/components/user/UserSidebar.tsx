@@ -117,11 +117,7 @@ function SidebarContent({
       estudiante_cet: "Estudiante CET",
       ex_alumno_cet: "Ex Alumno CET",
       docente_cet: "Docente CET",
-      tutor_invitado: "Tutor Invitado",
-      colaborador_invitado: "Colaborador",
-      productor_rural: "Productor Rural",
-      profesional_externo: "Profesional Externo",
-      investigador: "Investigador",
+      comunidad_activa: "Comunidad Activa",
       comunidad_general: "Comunidad General",
     };
     return categorias[categoria] || categoria;

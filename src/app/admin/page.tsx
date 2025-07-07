@@ -40,7 +40,7 @@ export default function AdminDashboard() {
       title: "Comunidad",
       description:
         "Gestionar las personas que integran la comunidad: estudiantes, ex estudiantes, tutores, colaboradores, docentes e invitados.",
-      href: "/admin/personas",
+      href: "/admin/comunidad",
       isActive: true,
       icon: Users,
       stats: { total: "24", new: "3" },

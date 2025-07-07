@@ -220,17 +220,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - **ex_alumno_cet**: Graduados del CET
 - **Permisos**: Crear/editar sus propios proyectos, colaborar en proyectos asignados
 
-#### Roles de Mentores y Colaboradores
-- **tutor_invitado**: Mentores externos o internos de proyectos
-- **colaborador_invitado**: Personas que apoyan en desarrollo de proyectos
-- **Permisos**: Acceso a proyectos específicos según asignación
-
-#### Comunidad y Externos
-- **productor_rural**: Productores agropecuarios locales
-- **profesional_externo**: Profesionales de diversas áreas
-- **investigador**: Investigadores académicos o independientes
-- **comunidad_general**: Miembros de la comunidad local
-- **Permisos**: Acceso de lectura, posible colaboración en proyectos específicos
+#### comunidad general
+ - comunidad_activa: Participan activamente en proyectos
+ - comunidad_general: Registrados sin proyectos asignados
 
 ### Flujo de Asignación de Roles
 1. **Registro**: Usuario se registra con categoria_principal básica

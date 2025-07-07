@@ -484,27 +484,9 @@ Performance: Solo cargar campos necesarios en queries públicas
 - **ex_alumno_cet**: Graduados del CET
   - *Permisos*: Cargar proyectos históricos, mentorear estudiantes actuales
 
-#### 🏫 Roles de Mentores y Apoyo
-- **tutor_invitado**: Mentores externos e internos
-  - *Permisos*: Acceso completo a proyectos asignados, guiar estudiantes
-- **colaborador_invitado**: Apoyo especializado en proyectos
-  - *Permisos*: Editar contenido específico de proyectos asignados
-- **autor_invitado**: Creadores de contenido externo
-  - *Permisos*: Crear contenido propio, gestionar sus contribuciones
-
-#### 🌾 Comunidad Rural y Externa
-- **productor_rural**: Productores agropecuarios locales
-  - *Permisos*: Compartir conocimiento práctico, acceso contenido técnico
-- **profesional_externo**: Profesionales de diversas áreas
-  - *Permisos*: Aportar expertise, revisar proyectos técnicos
-- **investigador**: Investigadores académicos o independientes
-  - *Permisos*: Acceso completo para investigación, colaborar en estudios
-- **comunidad_general**: Miembros de la comunidad local
-  - *Permisos*: Acceso lectura, participación limitada en discusiones
-
-#### 🔧 Roles Administrativos Especiales
-- **otro**: Casos especiales no cubiertos por categorías anteriores
-- **ninguno_asignado**: Estado temporal hasta verificación/asignación
+#### 👥 Comunidad General
+ - comunidad_activa: Participan activamente en proyectos
+ - comunidad_general: Registrados sin proyectos asignados
 
 ### Flujo de Gestión de Usuarios
 

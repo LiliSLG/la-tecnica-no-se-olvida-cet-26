@@ -32,7 +32,7 @@ type Persona = Database["public"]["Tables"]["personas"]["Row"];
 const sidebarLinks = [
   {
     id: "people",
-    href: "/admin/personas",
+    href: "/admin/comunidad",
     label: "Comunidad",
     icon: Users,
   },
