@@ -4,6 +4,8 @@ import { organizacionesService } from "@/lib/supabase/services/organizacionesSer
 import { OrganizacionDetail } from "@/components/public/organizaciones/OrganizacionDetail";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 interface OrganizacionDetailPageProps {
   params: {
     id: string;

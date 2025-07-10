@@ -4,6 +4,8 @@ import { personasService } from "@/lib/supabase/services/personasService";
 import { PersonaDetail } from "@/components/public/comunidad/PersonaDetail";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 interface PersonaDetailPageProps {
   params: {
     id: string;
