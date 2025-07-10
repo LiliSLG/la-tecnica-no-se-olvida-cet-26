@@ -1,5 +1,5 @@
-// src/components/shared/data-tables/DataTable.tsx - ARREGLADO
-import React, { useState } from "react";
+// src/components/shared/data-tables/DataTable.tsx - CON TOGGLE DE VISTA
+import React, { useState, useEffect } from "react";
 import {
   Search,
   ArrowUpDown,
@@ -8,6 +8,8 @@ import {
   X,
   Plus,
   Filter,
+  Table2,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +40,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { DataTableState, DataTableConfig } from "@/hooks/useDataTableState";
-// ✅ USAR EL HOOK CORRECTO
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +60,7 @@ export type DataColumnConfig<T> = {
   sortable?: boolean;
   className?: string;
   mobileHidden?: boolean;
+  cardHidden?: boolean; // 🆕 Para ocultar columnas en vista de cards
   render?: (value: any, item: T) => React.ReactNode;
 };
 
@@ -93,7 +101,31 @@ interface DataTableProps<T extends object> {
     };
   };
   pageSizes?: number[];
-  mobileCardView?: boolean; // ✅ PROP PARA HABILITAR CARDS
+  enableViewToggle?: boolean; // 🆕 Para habilitar/deshabilitar el toggle
+  defaultView?: "table" | "cards"; // 🆕 Vista por defecto (solo si no hay en localStorage)
+}
+
+// =============================================================================
+// HOOK PARA PERSISTIR VISTA EN LOCALSTORAGE
+// =============================================================================
+
+function useViewPreference(defaultView: "table" | "cards" = "table") {
+  const [viewMode, setViewMode] = useState<"table" | "cards">(defaultView);
+
+  useEffect(() => {
+    // Cargar preferencia desde localStorage al montar
+    const savedView = localStorage.getItem("datatable-view-preference");
+    if (savedView === "table" || savedView === "cards") {
+      setViewMode(savedView);
+    }
+  }, []);
+
+  const setView = (view: "table" | "cards") => {
+    setViewMode(view);
+    localStorage.setItem("datatable-view-preference", view);
+  };
+
+  return [viewMode, setView] as const;
 }
 
 // =============================================================================
@@ -119,7 +151,8 @@ export function DataTable<T extends object>({
   addLabel = "Agregar",
   emptyState,
   pageSizes = [5, 10, 20, 50],
-  mobileCardView = true, // ✅ DEFAULT TRUE
+  enableViewToggle = true, // 🆕 Por defecto habilitado
+  defaultView = "table", // 🆕 Vista por defecto
 }: DataTableProps<T>) {
   const {
     search,
@@ -138,8 +171,15 @@ export function DataTable<T extends object>({
   } = state;
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  // ✅ USAR EL HOOK CORRECTO
   const isMobile = useIsMobile();
+
+  // 🆕 Hook para persistir vista
+  const [viewMode, setViewMode] = useViewPreference(
+    isMobile ? "cards" : defaultView
+  );
+
+  // 🆕 Determinar vista efectiva
+  const effectiveViewMode = enableViewToggle ? viewMode : "table";
 
   // Handlers
   const handleSort = (column: keyof T) => {
@@ -168,43 +208,74 @@ export function DataTable<T extends object>({
     setSearch("");
   };
 
-  // Filtrar columnas visibles en móvil
-  const visibleColumns = React.useMemo(() => {
-    if (!isMobile || !mobileCardView) return columns;
-    return columns.filter((col) => !col.mobileHidden);
-  }, [columns, isMobile, mobileCardView]);
+  // 🆕 COMPONENTE TOGGLE DE VISTA
+  const ViewToggle = () => (
+    <TooltipProvider>
+      <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={effectiveViewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-8 w-8 p-0"
+            >
+              <Table2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Vista de tabla</TooltipContent>
+        </Tooltip>
 
-  // ✅ COMPONENTE MOBILE CARD MEJORADO
-  const MobileCard = ({ item }: { item: T }) => (
-    <Card className="group transition-all duration-200 hover:shadow-md border-border bg-card">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={effectiveViewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="h-8 w-8 p-0"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Vista de tarjetas</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+
+  // 🆕 COMPONENTE CARD MEJORADO PARA VISTA CARDS
+  const ResponsiveCard = ({ item }: { item: T }) => (
+    <Card className="group transition-all duration-200 hover:shadow-lg border-border bg-card hover:bg-accent/5">
       <CardContent className="p-4">
         <div className="space-y-3">
-          {/* Mostrar columnas visibles */}
-          {visibleColumns.map((column) => {
-            if (String(column.key).startsWith("action_")) {
-              return null; // Las acciones las renderizamos por separado
-            }
+          {/* Mostrar columnas visibles en cards */}
+          {columns
+            .filter((col) => {
+              if (String(col.key).startsWith("action_")) return false;
+              const dataCol = col as DataColumnConfig<T>;
+              return !dataCol.cardHidden;
+            })
+            .map((column) => {
+              const dataColumn = column as DataColumnConfig<T>;
+              const value = (item as any)[dataColumn.key];
+              const displayValue = dataColumn.render
+                ? dataColumn.render(value, item)
+                : String(value || "-");
 
-            const dataColumn = column as DataColumnConfig<T>;
-            const value = (item as any)[dataColumn.key];
-            const displayValue = dataColumn.render
-              ? dataColumn.render(value, item)
-              : String(value || "-");
-
-            return (
-              <div
-                key={String(column.key)}
-                className="flex justify-between items-start gap-3"
-              >
-                <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
-                  {column.label}:
-                </span>
-                <div className="text-sm text-right ml-2 min-w-0 flex-1">
-                  {displayValue}
+              return (
+                <div
+                  key={String(column.key)}
+                  className="flex justify-between items-start gap-3"
+                >
+                  <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
+                    {column.label}:
+                  </span>
+                  <div className="text-sm text-right ml-2 min-w-0 flex-1">
+                    {displayValue}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
           {/* Acciones */}
           {(() => {
@@ -269,7 +340,7 @@ export function DataTable<T extends object>({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={field.label} />
+                    <SelectValue placeholder={`Seleccionar ${field.label}`} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -282,17 +353,17 @@ export function DataTable<T extends object>({
                 </Select>
               </div>
             ) : (
-              <div key={field.key} className="flex items-center gap-3">
-                <Label htmlFor={field.key} className="text-sm font-medium">
-                  {field.label}
-                </Label>
+              <div key={field.key} className="flex items-center space-x-2">
                 <Switch
                   id={field.key}
-                  checked={filters[field.key] || false}
+                  checked={!!filters[field.key]}
                   onCheckedChange={(checked) =>
                     setFilters({ [field.key]: checked })
                   }
                 />
+                <Label htmlFor={field.key} className="text-sm font-medium">
+                  {field.label}
+                </Label>
               </div>
             )
           )}
@@ -305,100 +376,107 @@ export function DataTable<T extends object>({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {title && (
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {title}
-            </h1>
-            <p className="text-muted-foreground">
-              Gestiona y organiza el contenido de la plataforma
-            </p>
+        <div>
+          {title && (
+            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {/* 🆕 Toggle de vista */}
+          {enableViewToggle && !isMobile && <ViewToggle />}
+
+          {onAdd && (
+            <Button onClick={onAdd}>
+              <Plus className="h-4 w-4 mr-2" />
+              {addLabel}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Búsqueda y filtros */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Búsqueda */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Buscar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {search && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
+        {/* Filtros móviles */}
+        <MobileFilters />
+
+        {/* Filtros desktop */}
+        <div className="hidden md:flex items-center gap-3">
+          {config.filterFields.map((field) =>
+            field.type === "select" ? (
+              <Select
+                key={field.key}
+                value={filters[field.key] || "all"}
+                onValueChange={(value) =>
+                  setFilters({ [field.key]: value === "all" ? "" : value })
+                }
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder={field.label} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {field.options?.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div key={field.key} className="flex items-center space-x-2">
+                <Switch
+                  id={field.key}
+                  checked={!!filters[field.key]}
+                  onCheckedChange={(checked) =>
+                    setFilters({ [field.key]: checked })
+                  }
+                />
+                <Label htmlFor={field.key} className="text-sm">
+                  {field.label}
+                </Label>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Info y toggle móvil */}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {paginatedData.length} de {totalItems} elementos
+        </div>
+
+        {/* 🆕 Toggle móvil */}
+        {enableViewToggle && isMobile && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Vista:</span>
+            <ViewToggle />
           </div>
-        )}
-        {onAdd && (
-          <Button
-            onClick={onAdd}
-            className="flex items-center gap-2 w-full sm:w-auto shadow-sm"
-            size="default"
-          >
-            <Plus className="h-4 w-4" />
-            {addLabel}
-          </Button>
         )}
       </div>
 
-      {/* Controles de búsqueda y filtros */}
-      <Card className="border-border bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Búsqueda */}
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar en el contenido..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-10 bg-background/50 border-border"
-              />
-              {search && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* Filtros desktop */}
-            <div className="hidden md:flex items-center gap-4">
-              {config.filterFields.map((field) =>
-                field.type === "select" ? (
-                  <Select
-                    key={field.key}
-                    value={filters[field.key] || "all"}
-                    onValueChange={(value) =>
-                      setFilters({ [field.key]: value === "all" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder={field.label} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {field.options?.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div key={field.key} className="flex items-center gap-2">
-                    <Switch
-                      id={field.key}
-                      checked={filters[field.key] || false}
-                      onCheckedChange={(checked) =>
-                        setFilters({ [field.key]: checked })
-                      }
-                    />
-                    <Label htmlFor={field.key} className="text-sm">
-                      {field.label}
-                    </Label>
-                  </div>
-                )
-              )}
-            </div>
-
-            {/* Botón filtros móvil */}
-            <MobileFilters />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Contenido */}
+      {/* Contenido principal */}
       {paginatedData.length === 0 ? (
         <Card className="border-border">
           <CardContent className="p-8">
@@ -424,15 +502,16 @@ export function DataTable<T extends object>({
         </Card>
       ) : (
         <>
-          {/* ✅ VISTA MÓVIL: CARDS CONDICIONALES */}
-          {isMobile && mobileCardView ? (
-            <div className="space-y-3">
+          {/* 🆕 VISTA CONDICIONAL */}
+          {effectiveViewMode === "cards" ? (
+            /* Vista de Cards Responsiva */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedData.map((item, index) => (
-                <MobileCard key={index} item={item} />
+                <ResponsiveCard key={index} item={item} />
               ))}
             </div>
           ) : (
-            /* Vista desktop: Tabla */
+            /* Vista de Tabla */
             <Card className="border-border shadow-sm overflow-hidden bg-card">
               <div className="overflow-x-auto">
                 <Table>
@@ -444,23 +523,19 @@ export function DataTable<T extends object>({
                           className={cn(
                             "py-4 px-6 font-semibold",
                             isDataColumn(column) && column.sortable
-                              ? "cursor-pointer hover:bg-muted/50 transition-colors"
+                              ? "cursor-pointer hover:bg-muted/50 select-none"
                               : "",
                             column.className
                           )}
-                          onClick={() => {
-                            if (isDataColumn(column) && column.sortable) {
-                              handleSort(column.key);
-                            }
-                          }}
+                          onClick={() =>
+                            isDataColumn(column) && handleSort(column.key)
+                          }
                         >
                           <div className="flex items-center gap-2">
                             {column.label}
-                            {isDataColumn(column) &&
-                              column.sortable &&
-                              sort.column === column.key && (
-                                <ArrowUpDown className="h-4 w-4 text-primary" />
-                              )}
+                            {isDataColumn(column) && column.sortable && (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
                           </div>
                         </TableHead>
                       ))}
@@ -470,7 +545,7 @@ export function DataTable<T extends object>({
                     {paginatedData.map((item, index) => (
                       <TableRow
                         key={index}
-                        className="hover:bg-muted/30 transition-colors duration-150 border-border"
+                        className="hover:bg-muted/30 transition-colors border-border"
                       >
                         {columns.map((column) => (
                           <TableCell
@@ -496,64 +571,54 @@ export function DataTable<T extends object>({
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <Card className="border-border bg-card/30">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Mostrando {(currentPage - 1) * pageSize + 1} -{" "}
-                  {Math.min(currentPage * pageSize, totalItems)} de {totalItems}{" "}
-                  resultados
-                </p>
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(value) => handlePageSizeChange(Number(value))}
-                >
-                  <SelectTrigger className="w-[130px] h-8">
-                    <SelectValue placeholder="Por página" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pageSizes.map((size) => (
-                      <SelectItem key={size} value={size.toString()}>
-                        {size} por página
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Elementos por página:
+            </span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizes.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                  className="h-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">Anterior</span>
-                </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
 
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                </div>
+            <span className="text-sm text-muted-foreground px-4">
+              Página {currentPage} de {totalPages}
+            </span>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                  className="h-8"
-                >
-                  <span className="hidden sm:inline mr-2">Siguiente</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

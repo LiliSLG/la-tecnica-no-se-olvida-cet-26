@@ -1,4 +1,29 @@
 # Changelog
+
+## [10/07/25] 🚀 **FASE 5A: Sistema de Emails Reales Implementado**
+
+**✅ Completado:**
+- **Integración Resend + Edge Functions:** Sistema de envío real de emails implementado
+- **Edge Function `send-email`:** Función serverless para manejo seguro de emails
+- **Templates HTML completos:** Emails profesionales para organizaciones y personas  
+- **Variables de entorno:** Configuración segura de API keys
+- **Error handling robusto:** Manejo de errores con fallback en desarrollo
+- **Testing exitoso:** Envío real de emails verificado
+
+**🔧 Técnico:**
+- Edge Function desplegada en Supabase con CORS y validaciones
+- emailService.ts actualizado para usar función real vs simulación
+- Configuración Resend con dominio temporal (`noreply@resend.dev`)
+- Logs mejorados para debugging y monitoreo
+
+**📧 Funcionalidades:**
+- ✅ Invitaciones a organizaciones con links de reclamación
+- ✅ Invitaciones a personas para completar perfil  
+- ✅ Templates responsive con branding CET N°26
+- ✅ Manejo de tokens de seguridad
+- ✅ URLs dinámicas según entorno
+
+**🎯 Próximo:** Deploy en Vercel para testing con usuarios reales
 ## [07/01/25] Módulo Personas/Comunidad CRUD Completo**
   - Formulario dinámico con tabs condicionales por tipo (Alumno/Docente/Comunidad Activa)
   - Sistema de gestión de temas relacionados por persona

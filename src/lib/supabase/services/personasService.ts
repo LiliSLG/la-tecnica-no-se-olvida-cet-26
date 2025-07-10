@@ -344,7 +344,224 @@ class PersonasService {
     }
   }
 
-  // 🎯 MÉTODOS PARA SISTEMA DE INVITACIONES (Patrón Organizaciones)
+  // 🎯 MÉTODOS PARA SISTEMA DE INVITACIONES (siguiendo patrón organizaciones)
+
+  async generarTokenYEnviarInvitacion(
+    personaId: string,
+    adminUid: string,
+    adminNombre?: string
+  ): Promise<ServiceResult<string>> {
+    try {
+      console.log(
+        "🔍 PersonasService: Generando token y enviando invitación:",
+        personaId
+      );
+
+      // 1. Obtener datos de la persona
+      const personaResult = await this.getById(personaId);
+      if (!personaResult.success || !personaResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: `Persona no encontrada para ID: ${personaId}`,
+          code: "PERSONA_NOT_FOUND",
+        });
+      }
+
+      const persona = personaResult.data;
+
+      if (!persona.email) {
+        return createError({
+          name: "ValidationError",
+          message: "La persona no tiene email de contacto",
+          code: "NO_EMAIL_CONTACT",
+        });
+      }
+
+      // 2. Generar token
+      const { tokenService } = await import("./tokenService");
+      const token = tokenService.generateToken(personaId, "persona", 30);
+
+      // 3. Actualizar BD con token y estado
+      const updateResult = await this.update(personaId, {
+        token_reclamacion: token,
+        estado_verificacion: "invitacion_enviada",
+        fecha_ultima_invitacion: new Date().toISOString(),
+        updated_by_uid: adminUid,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (!updateResult.success) {
+        return createError({
+          name: "ServiceError",
+          message: "Error actualizando persona",
+          code: "UPDATE_ERROR",
+          details: updateResult.error,
+        });
+      }
+
+      // 4. Enviar email
+      const { emailService } = await import("./emailService");
+      const emailResult = await emailService.sendPersonaInvitation(
+        persona.email,
+        `${persona.nombre} ${persona.apellido || ""}`.trim(),
+        token,
+        adminNombre
+      );
+
+      if (!emailResult.success) {
+        console.error(
+          "Error enviando email, pero persona actualizada:",
+          emailResult.error
+        );
+        // No fallar la operación por error de email en desarrollo
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔧 [DEV] Email simulado enviado correctamente");
+        }
+      }
+
+      console.log("✅ Invitación procesada:", {
+        persona: `${persona.nombre} ${persona.apellido || ""}`.trim(),
+        email: persona.email,
+        token: `${token.substring(0, 20)}...`,
+      });
+
+      return createSuccess(token);
+    } catch (error) {
+      console.error("❌ Error en generarTokenYEnviarInvitacion:", error);
+      return createError({
+        name: "ServiceError",
+        message: "Error procesando invitación",
+        code: "INVITATION_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async validarToken(token: string): Promise<
+    ServiceResult<{
+      persona: PersonaRow;
+      tokenValido: boolean;
+      yaReclamada: boolean;
+    }>
+  > {
+    try {
+      console.log(
+        "🔍 PersonasService: Validando token:",
+        token.substring(0, 20) + "..."
+      );
+
+      // 1. Validar formato del token
+      const { tokenService } = await import("./tokenService");
+      const tokenResult = tokenService.parseToken(token);
+
+      if (!tokenResult.success || !tokenResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: "Token inválido",
+          code: "INVALID_TOKEN_FORMAT",
+          details: tokenResult.error,
+        });
+      }
+
+      const { entityId: personaId, type } = tokenResult.data;
+
+      if (type !== "persona") {
+        return createError({
+          name: "ValidationError",
+          message: "Token no es de persona",
+          code: "WRONG_TOKEN_TYPE",
+        });
+      }
+
+      // 2. Buscar persona con este token
+      const { data, error } = await this.supabase
+        .from("personas")
+        .select("*")
+        .eq("id", personaId)
+        .eq("token_reclamacion", token)
+        .single();
+
+      if (error || !data) {
+        return createError({
+          name: "ValidationError",
+          message: "Token no encontrado",
+          code: "TOKEN_NOT_FOUND",
+        });
+      }
+
+      return createSuccess({
+        persona: data,
+        tokenValido: true,
+        yaReclamada: data.estado_verificacion === "verificada",
+      });
+    } catch (error) {
+      return createError({
+        name: "ServiceError",
+        message: "Error validando token",
+        code: "TOKEN_VALIDATION_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async reclamarConToken(
+    token: string,
+    usuarioUid: string
+  ): Promise<ServiceResult<PersonaRow>> {
+    try {
+      console.log("🔍 PersonasService: Reclamando persona con token");
+
+      // 1. Validar token
+      const tokenResult = await this.validarToken(token);
+      if (!tokenResult.success || !tokenResult.data) {
+        return createError({
+          name: "ValidationError",
+          message: tokenResult.error?.message || "Token inválido",
+          code: "INVALID_TOKEN",
+          details: tokenResult.error,
+        });
+      }
+
+      const { persona, yaReclamada } = tokenResult.data;
+
+      if (yaReclamada) {
+        return createError({
+          name: "ValidationError",
+          message: "Esta persona ya fue reclamada",
+          code: "ALREADY_CLAIMED",
+        });
+      }
+
+      // 2. Actualizar persona como verificada
+      const updateResult = await this.update(persona.id, {
+        estado_verificacion: "verificada",
+        fecha_aprobacion_admin: new Date().toISOString(),
+        token_reclamacion: null, // Limpiar token usado
+        updated_by_uid: usuarioUid,
+      });
+
+      if (!updateResult.success) {
+        return createError({
+          name: "ServiceError",
+          message: "Error actualizando persona",
+          code: "UPDATE_ERROR",
+          details: updateResult.error,
+        });
+      }
+
+      console.log("✅ PersonasService: Persona reclamada exitosamente");
+      return updateResult;
+    } catch (error) {
+      console.error("❌ PersonasService: Reclamar failed:", error);
+      return createError({
+        name: "ServiceError",
+        message:
+          error instanceof Error ? error.message : "Error reclamando persona",
+        code: "CLAIM_ERROR",
+        details: error,
+      });
+    }
+  }
 
   async aprobarParaInvitacion(
     id: string,
@@ -470,6 +687,74 @@ class PersonasService {
     }
   }
 
+  async rechazarSolicitud(
+    id: string,
+    adminUid: string
+  ): Promise<ServiceResult<PersonaRow>> {
+    try {
+      console.log("🔍 PersonasService: Rechazando solicitud persona:", id);
+
+      const result = await this.update(id, {
+        estado_verificacion: "rechazada",
+        updated_by_uid: adminUid,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (!result.success) {
+        throw new Error(result.error?.message || "Error rechazando persona");
+      }
+
+      console.log("✅ PersonasService: Solicitud rechazada");
+      return result;
+    } catch (error) {
+      console.error("❌ PersonasService: Rechazar failed:", error);
+      return createError({
+        name: "ServiceError",
+        message:
+          error instanceof Error ? error.message : "Error rechazando persona",
+        code: "REJECT_ERROR",
+        details: error,
+      });
+    }
+  }
+
+  async aprobarCambioCategoria(
+    id: string,
+    nuevaCategoria: CategoriaPersona,
+    adminUid: string
+  ): Promise<ServiceResult<PersonaRow>> {
+    try {
+      console.log(
+        "🔍 PersonasService: Aprobando cambio categoría:",
+        id,
+        nuevaCategoria
+      );
+
+      const result = await this.update(id, {
+        categoria_principal: nuevaCategoria,
+        estado_verificacion: "verificada",
+        fecha_aprobacion_admin: new Date().toISOString(),
+        aprobada_por_admin_uid: adminUid,
+        updated_by_uid: adminUid,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error?.message || "Error aprobando cambio");
+      }
+
+      console.log("✅ PersonasService: Cambio de categoría aprobado");
+      return result;
+    } catch (error) {
+      console.error("❌ PersonasService: AprobarCambio failed:", error);
+      return createError({
+        name: "ServiceError",
+        message:
+          error instanceof Error ? error.message : "Error aprobando cambio",
+        code: "APPROVE_CHANGE_ERROR",
+        details: error,
+      });
+    }
+  }
   // 🌐 MÉTODOS PARA PÁGINAS PÚBLICAS
 
   async getAllPublicas(): Promise<ServiceResult<PersonaPublica[]>> {

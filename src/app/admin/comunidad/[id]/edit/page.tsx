@@ -11,10 +11,13 @@ import {
 } from "@/lib/supabase/services/personasService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
 
 function EditPersonaWrapper() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { isAdmin, isLoading: authLoading } = useAuth();
+
   const id = params.id as string;
   const tipoParam = searchParams.get("tipo");
 
@@ -72,14 +75,41 @@ function EditPersonaWrapper() {
     }
   }, [id]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">Cargando persona...</div>
+      <div className="container mx-auto py-8 px-4">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Editar Persona
+            </h1>
+            <p className="text-muted-foreground">
+              Cargando datos de la persona...
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="h-4 bg-muted rounded w-1/4 animate-pulse"></div>
+            <div className="h-10 bg-muted rounded animate-pulse"></div>
+            <div className="h-4 bg-muted rounded w-1/3 animate-pulse"></div>
+            <div className="h-32 bg-muted rounded animate-pulse"></div>
+          </div>
+        </div>
       </div>
     );
   }
-
+  // No admin access
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-red-600">Acceso Denegado</h1>
+          <p className="text-muted-foreground">
+            No tienes permisos para acceder a esta sección.
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (error || !personaData) {
     return (
       <div className="container mx-auto p-6">

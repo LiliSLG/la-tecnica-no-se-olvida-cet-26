@@ -110,75 +110,173 @@ class EmailService {
   // 🎯 TEMPLATE PARA PERSONAS (futuro)
   getPersonaInvitationTemplate(
     personaNombre: string,
-    proyectoNombre: string,
-    token: string
+    token: string,
+    adminNombre?: string
   ): EmailTemplate {
     const reclamarUrl = `${this.baseUrl}/reclamar/${token}`;
 
     return {
-      subject: `Invitación a participar en "${proyectoNombre}"`,
-      html: `<!-- Similar estructura, pero para proyectos -->`,
-      text: `Invitación a participar en proyecto: ${proyectoNombre}...`,
+      subject: `Invitación para completar tu perfil en La Técnica no se Olvida`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0;">La Técnica no se Olvida</h1>
+            <p style="color: #f0f0f0; margin: 5px 0 0 0;">CET N°26 - Ingeniero Jacobacci</p>
+          </div>
+          
+          <div style="padding: 30px; background: white;">
+            <h2 style="color: #333; margin-bottom: 20px;">¡Hola ${personaNombre}!</h2>
+            
+            <p style="color: #666; line-height: 1.6;">
+              ${
+                adminNombre ? `${adminNombre}` : "El equipo"
+              } te invita a completar tu perfil en nuestra plataforma de la comunidad CET.
+            </p>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #333;">¿Qué puedes hacer?</h3>
+              <ul style="color: #666; padding-left: 20px;">
+                <li>Completar tu información personal y profesional</li>
+                <li>Conectar con otros miembros de la comunidad</li>
+                <li>Participar en proyectos y colaboraciones</li>
+                <li>Gestionar la visibilidad de tu perfil</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${reclamarUrl}" 
+                 style="background: #667eea; color: white; padding: 15px 30px; 
+                        text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Completar mi Perfil
+              </a>
+            </div>
+            
+            <p style="color: #999; font-size: 14px; margin-top: 30px;">
+              Si no solicitaste esta invitación, puedes ignorar este email.
+              <br>
+              Este enlace expira en 30 días.
+            </p>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;">
+            <p>CET N°26 "La Técnica no se Olvida"</p>
+            <p>Ingeniero Jacobacci, Río Negro, Argentina</p>
+          </div>
+        </div>
+      `,
+      text: `
+        La Técnica no se Olvida - CET N°26
+        
+        ¡Hola ${personaNombre}!
+        
+        ${
+          adminNombre ? `${adminNombre}` : "El equipo"
+        } te invita a completar tu perfil 
+        en nuestra plataforma de la comunidad CET.
+        
+        Para completar tu perfil, visita:
+        ${reclamarUrl}
+        
+        ¿Qué puedes hacer?
+        - Completar tu información personal y profesional
+        - Conectar con otros miembros de la comunidad
+        - Participar en proyectos y colaboraciones
+        - Gestionar la visibilidad de tu perfil
+        
+        Si no solicitaste esta invitación, puedes ignorar este email.
+        Este enlace expira en 30 días.
+        
+        CET N°26 "La Técnica no se Olvida"
+        Ingeniero Jacobacci, Río Negro, Argentina
+      `,
     };
   }
 
   // ===== ENVÍO DE EMAILS =====
+async sendEmail({
+  to,
+  template,
+  variables = {},
+}: SendEmailParams): Promise<ServiceResult<boolean>> {
+  try {
+    console.log("📧 Enviando email a:", to);
 
-  async sendEmail({
-    to,
-    template,
-    variables = {},
-  }: SendEmailParams): Promise<ServiceResult<boolean>> {
-    try {
-      console.log("📧 Enviando email a:", to);
+    // Reemplazar variables en el template
+    let { subject, html, text } = template;
 
-      // Reemplazar variables en el template
-      let { subject, html, text } = template;
+    Object.entries(variables).forEach(([key, value]) => {
+      const placeholder = `{{${key}}}`;
+      subject = subject.replace(new RegExp(placeholder, "g"), value);
+      html = html.replace(new RegExp(placeholder, "g"), value);
+      text = text.replace(new RegExp(placeholder, "g"), value);
+    });
 
-      Object.entries(variables).forEach(([key, value]) => {
-        const placeholder = `{{${key}}}`;
-        subject = subject.replace(new RegExp(placeholder, "g"), value);
-        html = html.replace(new RegExp(placeholder, "g"), value);
-        text = text.replace(new RegExp(placeholder, "g"), value);
-      });
-
-      // 🔧 AQUÍ IRA LA INTEGRACIÓN REAL
-      // Por ahora, simulamos el envío
-      if (process.env.NODE_ENV === "development") {
-        console.log("📧 [DEV] Email simulado:", {
-          to,
-          subject,
-          htmlPreview: html.substring(0, 100) + "...",
-        });
-
-        // En desarrollo, guardamos en localStorage para debug
-        if (typeof window !== "undefined") {
-          const emails = JSON.parse(localStorage.getItem("dev_emails") || "[]");
-          emails.push({
-            to,
-            subject,
-            html,
-            sentAt: new Date().toISOString(),
-          });
-          localStorage.setItem("dev_emails", JSON.stringify(emails.slice(-10))); // Solo últimos 10
-        }
-
-        return createSuccess(true);
-      }
-
-      // 🎯 PRODUCCIÓN: Integrar con Supabase Edge Functions o Resend
-      // TODO: Implementar envío real
-      throw new Error("Email service no configurado para producción");
-    } catch (error) {
-      console.error("❌ Error enviando email:", error);
-      return createError({
-        name: "EmailError",
-        message: "Error enviando email",
-        code: "EMAIL_SEND_ERROR",
-        details: error,
-      });
+    // 🚀 ENVÍO REAL CON EDGE FUNCTION
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error("NEXT_PUBLIC_SUPABASE_URL no configurado");
     }
+
+    const functionUrl = `${supabaseUrl}/functions/v1/send-email`;
+    
+    console.log("🔗 Llamando a Edge Function:", functionUrl);
+
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        to,
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      console.error("❌ Error en Edge Function:", result);
+      throw new Error(result.error || "Error enviando email");
+    }
+
+    console.log("✅ Email enviado exitosamente:", result.id);
+    return createSuccess(true);
+
+  } catch (error) {
+    console.error("❌ Error enviando email:", error);
+    
+    // 🔧 FALLBACK: En desarrollo, mostrar el contenido
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔧 [FALLBACK] Mostrando email en consola:");
+      console.log("Para:", to);
+      console.log("Asunto:", template.subject);
+      console.log("HTML preview:", template.html.substring(0, 200) + "...");
+      
+      // Seguir guardando en localStorage para debug
+      if (typeof window !== "undefined") {
+        const emails = JSON.parse(localStorage.getItem("dev_emails") || "[]");
+        emails.push({
+          to,
+          subject: template.subject,
+          html: template.html,
+          sentAt: new Date().toISOString(),
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        localStorage.setItem("dev_emails", JSON.stringify(emails.slice(-10)));
+      }
+    }
+
+    return createError({
+      name: "EmailError",
+      message: error instanceof Error ? error.message : "Error enviando email",
+      code: "EMAIL_SEND_ERROR",
+      details: error,
+    });
   }
+}
 
   // ===== MÉTODOS DE CONVENIENCIA =====
 
@@ -210,15 +308,26 @@ class EmailService {
   async sendPersonaInvitation(
     email: string,
     personaNombre: string,
-    proyectoNombre: string,
-    token: string
+    token: string,
+    adminNombre?: string
   ): Promise<ServiceResult<boolean>> {
     const template = this.getPersonaInvitationTemplate(
       personaNombre,
-      proyectoNombre,
-      token
+      token,
+      adminNombre
     );
 
+    // ✅ Log para fácil copy-paste en desarrollo
+    if (process.env.NODE_ENV === "development") {
+      console.log("🎯 EMAIL PERSONA COMPLETO GENERADO:");
+      console.log("Para:", email);
+      console.log("Asunto:", template.subject);
+      console.log("🔗 LINK DIRECTO (click para abrir):");
+      console.log(
+        `%c${this.baseUrl}/reclamar/${token}`,
+        "background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;"
+      );
+    }
     return this.sendEmail({ to: email, template });
   }
 }

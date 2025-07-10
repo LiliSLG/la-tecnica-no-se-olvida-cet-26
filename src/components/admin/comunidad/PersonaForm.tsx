@@ -62,6 +62,15 @@ import {
   X,
   Plus,
 } from "lucide-react";
+import {
+  ESTADOS_SITUACION_LABORAL,
+  VISIBILIDAD_PERFIL,
+  AREAS_INTERES,
+  ESPECIALIDADES_CET,
+  PROVINCIAS,
+  PLATAFORMAS_PROFESIONALES,
+  TIPOS_COLABORACION,
+} from "@/lib/constants/persona";
 
 type CategoriaPersona =
   Database["public"]["Enums"]["categoria_principal_persona_enum"];
@@ -73,45 +82,6 @@ interface PersonaFormProps {
   initialData?: any;
   redirectPath?: string;
 }
-
-// Constantes para opciones
-const ESTADOS_SITUACION_LABORAL = [
-  { value: "empleado", label: "Empleado" },
-  { value: "emprendedor", label: "Emprendedor" },
-  { value: "estudiante", label: "Estudiante" },
-  { value: "buscando_empleo", label: "Buscando empleo" },
-  { value: "jubilado", label: "Jubilado" },
-  { value: "otro", label: "Otro" },
-  { value: "no_especificado", label: "No especificado" },
-];
-
-const VISIBILIDAD_PERFIL = [
-  { value: "publico", label: "Público" },
-  { value: "solo_registrados_plataforma", label: "Solo registrados" },
-  { value: "privado", label: "Privado" },
-  { value: "solo_admins_y_propio", label: "Solo admins" },
-];
-
-const AREAS_INTERES = [
-  "Agropecuario",
-  "Tecnología",
-  "Educación",
-  "Salud",
-  "Medio Ambiente",
-  "Desarrollo Social",
-  "Investigación",
-  "Producción Animal",
-  "Agricultura Sostenible",
-  "Energías Renovables",
-  "Innovación",
-  "Capacitación",
-  "Extensión Rural",
-  "Desarrollo Comunitario",
-  "Gastronomía",
-  "Turismo Rural",
-  "Biotecnología",
-  "Recursos Naturales",
-];
 
 export function PersonaForm({
   tipo,
@@ -526,6 +496,49 @@ export function PersonaForm({
           title: "Éxito",
           description: `${tipoInfo.label} creado correctamente.`,
         });
+        // Si tiene email, enviar invitación automáticamente
+        if (cleanEmail(values.email) && result.data?.id) {
+          try {
+            // Actualizar tipo_solicitud para el sistema de invitaciones
+            await personasService.update(result.data.id, {
+              tipo_solicitud: "invitacion_admin",
+              updated_by_uid: user.id,
+            });
+
+            const adminNombre =
+              user.nombre && user.apellido
+                ? `${user.nombre} ${user.apellido}`
+                : undefined;
+
+            const invitationResult =
+              await personasService.generarTokenYEnviarInvitacion(
+                result.data.id,
+                user.id,
+                adminNombre
+              );
+
+            if (invitationResult.success) {
+              toast({
+                title: "Invitación enviada automáticamente",
+                description: `Se envió una invitación a ${cleanEmail(
+                  values.email
+                )} para completar su perfil`,
+                duration: 5000, // Mostrar más tiempo para que vean ambos toasts
+              });
+            } else {
+              console.error(
+                "Error enviando invitación automática:",
+                invitationResult.error
+              );
+              // No mostramos error al usuario porque la persona se creó correctamente
+            }
+          } catch (error) {
+            console.error("Error en auto-invitación:", error);
+            // No mostramos error al usuario porque la persona se creó correctamente
+          }
+        }
+
+        router.push(redirectPath);
       }
       router.push(redirectPath);
     } catch (error) {
