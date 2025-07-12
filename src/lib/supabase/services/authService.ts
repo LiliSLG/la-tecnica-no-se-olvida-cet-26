@@ -72,14 +72,22 @@ class AuthService {
   async signUp(
     email: string,
     password: string,
-    userData: { nombre?: string }
+    userData: { 
+      nombre?: string;
+      apellido?: string;
+      categoria_principal?: string;
+      es_ex_alumno_cet?: boolean;
+      estado_verificacion?: string;
+      tipo_solicitud?: string | null; 
+      disponible_para_proyectos?: boolean; 
+    }
   ): Promise<ServiceResult<{ user: Persona; session: any }>> {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
-
+  
       if (authError) {
         return createError({
           name: "ServiceError",
@@ -88,7 +96,7 @@ class AuthService {
           details: authError,
         });
       }
-
+  
       if (!authData.user) {
         return createError({
           name: "ServiceError",
@@ -96,24 +104,27 @@ class AuthService {
           code: "AUTH_ERROR",
         });
       }
-
-      // Create user profile
+  
       const { data: persona, error: personaError } = await supabase
-        .from("personas")
-        .insert({
-          id: authData.user.id,
-          email: email,
-          nombre: userData.nombre || email.split("@")[0],
-          activo: true,
-          es_ex_alumno_cet: false,
-          buscando_oportunidades: false,
-          disponible_para_proyectos: false,
-          visibilidad_perfil:
-            "privado" as Database["public"]["Enums"]["visibilidad_perfil_enum"],
-        })
-        .select()
-        .single();
-
+      .from("personas")
+      .insert({
+        id: authData.user.id,  // ← AGREGAR ESTA LÍNEA (es crucial para RLS)
+        email: email,
+        nombre: userData.nombre || email.split("@")[0],
+        apellido: userData.apellido,
+        categoria_principal: userData.categoria_principal as Database["public"]["Enums"]["categoria_principal_persona_enum"] || "comunidad_general",
+        es_ex_alumno_cet: userData.es_ex_alumno_cet || false,
+        estado_verificacion: userData.estado_verificacion as Database["public"]["Enums"]["estado_verificacion_enum"] || "verificada",
+        tipo_solicitud: userData.tipo_solicitud,
+        disponible_para_proyectos: userData.disponible_para_proyectos || false,
+        activo: true,
+        buscando_oportunidades: false,
+        visibilidad_perfil: "privado" as Database["public"]["Enums"]["visibilidad_perfil_enum"],
+        created_by_uid: authData.user.id,
+      })
+      .select()
+      .single();
+  
       if (personaError || !persona) {
         return createError({
           name: "ServiceError",
@@ -122,7 +133,7 @@ class AuthService {
           details: personaError,
         });
       }
-
+  
       return createSuccess({
         user: persona,
         session: authData.session,

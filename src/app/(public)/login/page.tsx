@@ -208,26 +208,20 @@ function LoginPageContent() {
                 )}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="pt-4 border-t">
-              <div className="text-center space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Para testing y desarrollo:
-                </p>
-                <div className="flex flex-col gap-2">
-                  <Badge variant="outline" className="justify-center text-xs">
-                    admin@test.com / admin123
-                  </Badge>
-                  <Badge variant="secondary" className="justify-center text-xs">
-                    Credenciales de prueba
-                  </Badge>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
-
+        {/* Footer del formulario */}
+        <div className="text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            ¿No tienes cuenta?{" "}
+            <Link
+              href="/registro"
+              className="text-primary hover:underline font-medium"
+            >
+              Crear cuenta
+            </Link>
+          </p>
+        </div>
         {/* Back to Home */}
         <div className="text-center">
           <Button variant="ghost" size="sm" asChild>

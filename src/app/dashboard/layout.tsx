@@ -13,7 +13,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading, isAdmin, signOut } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Verificar autenticación
@@ -22,6 +22,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       redirect("/login");
     }
   }, [user, isLoading]);
+
+  // Verificar si tiene acceso a dashboard
+  useEffect(() => {
+    if (!isLoading && user && isAdmin !== undefined) {
+      const needsDashboard =
+        user.categoria_principal === "estudiante_cet" ||
+        user.categoria_principal === "ex_alumno_cet" ||
+        user.categoria_principal === "docente_cet" ||
+        user.categoria_principal === "comunidad_activa" ||
+        isAdmin; // ← Usar isAdmin del hook
+
+      if (!needsDashboard) {
+        console.log(
+          "❌ Usuario no tiene acceso a dashboard, redirigiendo a home"
+        );
+        redirect("/?mensaje=sin-dashboard");
+      }
+    }
+  }, [user, isLoading, isAdmin]);
 
   // Loading state
   if (isLoading) {
